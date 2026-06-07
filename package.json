@@ -1,0 +1,18 @@
+{
+  "name": "julians-adventure",
+  "version": "0.1.0",
+  "description": "A text-free 2D top-down adventure game for Julian. First minigame: fishing.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
