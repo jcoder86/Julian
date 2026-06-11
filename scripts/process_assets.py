@@ -39,7 +39,11 @@ RAW_DIR = REPO_ROOT / "assets" / "raw"
 CLEAN_DIR = REPO_ROOT / "assets" / "clean"
 
 # Filename prefixes we skip outright (handled as-is by scenes).
-SKIP_PREFIXES = ("backdrop",)
+#   backdrop    -- painterly scene used as-is (no chromakey)
+#   foreground  -- near-camera layer, transparent PNG (no chromakey needed)
+# Note: cloud strips DO run through chromakey -- AI image tools typically
+# output green-screen, and the script no-ops on already-transparent inputs.
+SKIP_PREFIXES = ("backdrop", "foreground")
 
 # Chromakey tuning -- values are in [0, 255] image space.
 # These work well for a typical "Hollywood green" backdrop (#00ff00-ish).
@@ -120,12 +124,41 @@ def rembg_remove(img: Image.Image) -> Image.Image:
     return remove(img)
 
 
+def crop_empty_vertical(img: Image.Image) -> Image.Image:
+    """
+    Trim near-empty top and bottom rows. "Near-empty" means rows whose count
+    of mostly-opaque pixels (alpha >= 128) is below 10% of the row with the
+    densest content. This removes the soft feathered cloud edges that have
+    technically non-zero alpha but contribute nothing visually, so the
+    cropped image starts and ends where actual cloud BODIES live. Width is
+    preserved to keep horizontal tiling intact.
+    """
+    arr = np.asarray(img.convert("RGBA"))
+    alpha = arr[..., 3]
+    # Per-row count of mostly-opaque pixels.
+    row_density = (alpha >= 128).sum(axis=1)
+    max_density = int(row_density.max())
+    if max_density == 0:
+        return img
+    threshold = max(1, int(max_density * 0.10))
+    rows_significant = row_density >= threshold
+    if not rows_significant.any():
+        return img
+    ymin, ymax = np.where(rows_significant)[0][[0, -1]]
+    return img.crop((0, int(ymin), img.width, int(ymax) + 1))
+
+
 def process_one(path: Path, use_rembg: bool) -> Path:
     img = Image.open(path)
     if use_rembg:
         cleaned = rembg_remove(img)
     else:
         cleaned = chromakey_remove(img)
+
+    # Cloud strips: crop away the transparent rows above/below the cloud band
+    # so the scene can scale the whole image into its band without empty margins.
+    if path.name.lower().startswith("cloud"):
+        cleaned = crop_empty_vertical(cleaned)
 
     out_path = CLEAN_DIR / path.name
     CLEAN_DIR.mkdir(parents=True, exist_ok=True)

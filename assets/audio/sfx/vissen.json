@@ -1,0 +1,138 @@
+{
+  "file": "vissen.mp3",
+  "totalDuration": 52.323,
+  "phrases": {
+    "small_roach": {
+      "start": 0.36,
+      "duration": 0.92
+    },
+    "small_rudd": {
+      "start": 1.88,
+      "duration": 1.14
+    },
+    "small_perch": {
+      "start": 3.6,
+      "duration": 1.02
+    },
+    "small_bream": {
+      "start": 5.18,
+      "duration": 1.06
+    },
+    "small_tench": {
+      "start": 6.76,
+      "duration": 1.04
+    },
+    "small_carp": {
+      "start": 8.46,
+      "duration": 1.04
+    },
+    "small_pike": {
+      "start": 10.26,
+      "duration": 0.88
+    },
+    "small_zander": {
+      "start": 11.86,
+      "duration": 1.34
+    },
+    "small_chub": {
+      "start": 13.64,
+      "duration": 1.22
+    },
+    "small_bass": {
+      "start": 15.34,
+      "duration": 1.44
+    },
+    "small_trout": {
+      "start": 17.38,
+      "duration": 1.08
+    },
+    "medium_roach": {
+      "start": 19.1,
+      "duration": 0.64
+    },
+    "medium_rudd": {
+      "start": 20.38,
+      "duration": 0.94
+    },
+    "medium_perch": {
+      "start": 21.88,
+      "duration": 0.62
+    },
+    "medium_bream": {
+      "start": 22.94,
+      "duration": 0.64
+    },
+    "medium_tench": {
+      "start": 24.0,
+      "duration": 0.62
+    },
+    "medium_carp": {
+      "start": 24.96,
+      "duration": 0.66
+    },
+    "medium_pike": {
+      "start": 26.06,
+      "duration": 0.54
+    },
+    "medium_zander": {
+      "start": 27.04,
+      "duration": 0.92
+    },
+    "medium_chub": {
+      "start": 28.36,
+      "duration": 0.8
+    },
+    "medium_bass": {
+      "start": 29.5,
+      "duration": 0.96
+    },
+    "medium_trout": {
+      "start": 30.92,
+      "duration": 0.7
+    },
+    "large_roach": {
+      "start": 32.04,
+      "duration": 0.96
+    },
+    "large_rudd": {
+      "start": 33.5,
+      "duration": 1.3
+    },
+    "large_perch": {
+      "start": 35.32,
+      "duration": 1.0
+    },
+    "large_bream": {
+      "start": 36.94,
+      "duration": 1.0
+    },
+    "large_tench": {
+      "start": 38.72,
+      "duration": 1.02
+    },
+    "large_carp": {
+      "start": 40.38,
+      "duration": 1.14
+    },
+    "large_pike": {
+      "start": 42.5,
+      "duration": 0.96
+    },
+    "large_zander": {
+      "start": 44.38,
+      "duration": 1.28
+    },
+    "large_chub": {
+      "start": 46.48,
+      "duration": 1.22
+    },
+    "large_bass": {
+      "start": 48.52,
+      "duration": 1.46
+    },
+    "large_trout": {
+      "start": 50.78,
+      "duration": 1.14
+    }
+  }
+}

@@ -88,6 +88,100 @@ The two knobs live at the top of `process_assets.py`:
 If you see a green halo, lower `CHROMA_LOW`. If the subject is being eaten
 into, raise `CHROMA_HIGH`.
 
+## Animated backdrop
+
+Drop `assets/raw/backdrop.mp4` next to the static PNG. The scene prefers
+the video when present and loops it silently. Constraints:
+
+* **Seamlessly loopable** (first and last frame match) -- otherwise you
+  see a hard cut every loop.
+* **H.264 MP4** for broad browser compatibility. WEBM/VP9 also fine if
+  you swap the loader URL.
+* **No audio track** (we mute anyway).
+* Aim for 16:9 aspect ratio and < 20 MB so HMR stays snappy.
+
+The python pipeline ignores `backdrop*` files, so MP4s in `raw/` are
+served untouched. If both `backdrop.mp4` and `backdrop.png` exist, the
+video wins.
+
+### Foreground layer
+
+Anything near-camera that should stay in front of the drifting clouds
+goes in `assets/raw/foreground.png` -- typically the overhanging tree
+branch baked into the backdrop. The layer is rendered at depth 3
+(above clouds, below characters), cover-scaled to the canvas just like
+the backdrop, so its silhouette stays pixel-aligned.
+
+Constraints:
+
+* Same aspect ratio as the backdrop so cover-scaling lines up.
+* **Native PNG transparency** -- not green-screen. The python pipeline
+  skips any filename prefixed `foreground`.
+* Transparent everywhere except where the foreground element sits.
+
+How to make it: open `backdrop.png` in Photopea (free, in-browser) or
+Photoshop, erase everything except the tree branch (or whatever you
+want in the foreground), save as `foreground.png` in `assets/raw/`.
+
+If the file is missing the layer just doesn't render -- clouds will
+visibly pass over the tree branch, which looks slightly off but is not
+a crash.
+
+The layer gets a gentle programmatic sway (rotation tween) so the branch
+appears to move in the wind even though the PNG itself is static. Tune
+via `FOREGROUND_SWAY_AMPLITUDE` (degrees) and `FOREGROUND_SWAY_PERIOD_MS`
+in `FishingScene.js`. Set amplitude to 0 if you later upgrade to a true
+animated foreground (e.g. an alpha-channel WebM that already moves).
+
+### Decoupled cloud layer (parallax)
+
+Clouds are a **separate layer** that scrolls horizontally and infinitely
+via Phaser's `TileSprite`. The backdrop video itself should have a clean
+**cloud-free sky** -- the cloud layer on top does the drifting, scoped to
+the sky band **above** the mountains so the silhouettes never get covered.
+
+Drop a transparent-background cloud strip at `assets/raw/clouds.png`:
+
+* Horizontal strip, e.g. 2048x512 (whatever fits the band height).
+* **Native PNG transparency** -- not green-screen. The python pipeline
+  skips any filename prefixed `cloud` so the file is served as-is.
+* **Side-to-side tileable** -- the leftmost column of pixels must match
+  the rightmost so the seam is invisible while scrolling. Most AI image
+  tools have a "tileable" option, or you can prompt
+  *"seamlessly tileable horizontal cloud strip on transparent background"*.
+
+If the file is missing the cloud layer just doesn't render -- the rest
+of the scene still works.
+
+Tunables in `FishingScene.js`:
+
+| constant                        | meaning |
+| ------------------------------- | ------- |
+| `CLOUD_BAND_HEIGHT_RATIO`       | top fraction of canvas devoted to clouds (default 0.50) |
+| `CLOUD_SCROLL_SPEED_PX_PER_SEC` | horizontal drift in displayed px/sec (default 6) |
+| `CLOUD_ALPHA`                   | layer opacity (default 0.95) |
+
+The source PNG's natural vertical cloud distribution maps proportionally
+into the band, so scattering happens at asset-creation time, not in
+code. For real depth you can scale up later -- swap the single layer for
+multiple stacked `TileSprite`s with different scales/speeds/alphas
+(classic parallax stack).
+
+## Asset sprite architecture
+
+The scene prefers **separate** Julian and Dirk sprites so Julian can have
+his own cast animation later without Dirk moving along. Asset preference
+order in `FishingScene._buildCharacters`:
+
+1. `assets/clean/julian_fishing.png` + `assets/clean/dirk_sitting.png`
+   (preferred -- animation-ready)
+2. `assets/clean/julian_dirk_fishing.png` (transitional fallback, logs a
+   warning to the browser console)
+3. Plain grey placeholder rectangle (first-ever run)
+
+For a clean composition, `backdrop.png` must contain **only** the
+landscape -- no Julian, no Dirk. The sprite layers handle the characters.
+
 ## Tunable visual constants (FishingScene)
 
 Exported from `src/scenes/FishingScene.js` so you can iterate without
@@ -95,13 +189,20 @@ hunting through the file:
 
 | constant            | meaning |
 | ------------------- | ------- |
-| `SPRITE_SCALE`      | sprite height as a fraction of canvas height (0.55 - 0.65 looks natural) |
+| `SPRITE_SCALE`      | Julian sprite height as a fraction of canvas height |
+| `DIRK_SCALE`        | Dirk sprite height as a fraction of canvas height |
+| `JULIAN_ANCHOR_X/Y` | Julian's bottom-left anchor in canvas coords |
+| `DIRK_OFFSET_X/Y`   | Dirk position relative to Julian's anchor |
 | `WATER_BOUNDS`      | `{x, y, width, height}` rectangle for cast hit-testing |
-| `ROD_TIP_OFFSET_X`  | rod-tip X offset from the sprite's top-left, in displayed pixels |
-| `ROD_TIP_OFFSET_Y`  | rod-tip Y offset from the sprite's top-left, in displayed pixels |
+| `ROD_TIP_OFFSET_X`  | rod-tip X offset from Julian's top-left, in displayed pixels |
+| `ROD_TIP_OFFSET_Y`  | rod-tip Y offset from Julian's top-left, in displayed pixels |
 
-Dial in `ROD_TIP_OFFSET_*` after the sprite is rendered -- pick the values
-that put the line origin exactly on the rod tip.
+### Calibrating the rod tip
+
+In-game: press **C** to toggle calibration mode. A red dot appears at the
+current rod-tip position. **Shift+Click** anywhere on the sprite to set a
+new rod tip; the browser console logs the offset values to paste back
+into `ROD_TIP_OFFSET_X/Y`. Press **C** again to turn off.
 
 ## Save data
 
