@@ -1,0 +1,6 @@
+services:
+  julian:
+    build: .
+    ports:
+      - "3003:80"
+    restart: unless-stopped
