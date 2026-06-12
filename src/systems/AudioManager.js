@@ -193,7 +193,25 @@ export class AudioManager {
         volume: MUSIC_VOLUME,
         ...opts,
       });
-      this.currentMusic.play();
+      // iOS Safari blocks WebAudio playback until the user has tapped
+      // the page once. The play() call below silently no-ops while
+      // sound.locked is true. Defer the actual start to the UNLOCKED
+      // event so the first tap (anywhere on the page) kicks the music
+      // off. On desktop sound.locked is false from the start and the
+      // play() runs immediately.
+      if (this.scene.sound.locked) {
+        const pending = this.currentMusic;
+        // 'unlocked' === Phaser.Sound.Events.UNLOCKED. Use the string
+        // so AudioManager doesn't need to import Phaser directly.
+        this.scene.sound.once('unlocked', () => {
+          // Only resume if this is still the active music instance --
+          // e.g. user tapped START so fast that stopMusic() already
+          // ran. We don't want to revive a stopped track.
+          if (this.currentMusic === pending) pending.play();
+        });
+      } else {
+        this.currentMusic.play();
+      }
     } catch (e) {
       console.warn(`[MUSIC] play failed for ${key}`, e);
     }
