@@ -141,7 +141,11 @@ export class TitleScene extends Phaser.Scene {
     img.style.height = '100vh';
     img.style.objectFit = 'cover';
     img.style.objectPosition = 'center';
-    img.style.zIndex = '-2';
+    // z-index 0 sits BELOW #game (z-index: 1, set in index.html) but
+    // ABOVE html's background paint. Negative z-index proved unreliable
+    // on iPad Safari -- the element could end up hidden behind the html
+    // background paint regardless of fallback colour.
+    img.style.zIndex = '0';
     img.style.pointerEvents = 'none';
     img.style.backgroundColor = '#1c2530';   // visible behind the img while it decodes
     document.body.appendChild(img);

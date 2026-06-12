@@ -38,6 +38,13 @@
         /* Clip absolutely-positioned children (cloud DIVs) so they can't
            spill into letterbox bars on browsers with non-16:9 aspects. */
         overflow: hidden;
+        /* Explicit stacking context for the canvas + cloud DOM layers, so
+           the TitleScene's fullscreen <img> background can sit below it
+           with a NON-negative z-index. iPad Safari has known bugs that
+           hide fixed-positioned elements with z-index < 0 behind the
+           html background; positive z-index avoids that. */
+        position: relative;
+        z-index: 1;
       }
       /* Hide tap-highlight on mobile so taps feel snappy. */
       * {
