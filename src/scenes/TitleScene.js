@@ -128,18 +128,39 @@ export class TitleScene extends Phaser.Scene {
   _setupDomBackground() {
     const div = document.createElement('div');
     div.className = 'title-bg';
+    // Match the FishingScene video element's pattern (which is known to
+    // work on iPad Safari): explicit corner positioning + vw/vh sizing,
+    // z-index -2 to sit behind the (transparent) Phaser canvas, and an
+    // absolute URL anchored at root so the service worker resolves it
+    // unambiguously.
     div.style.position = 'fixed';
-    div.style.inset = '0';
-    div.style.backgroundImage = "url('clean/start.png')";
+    div.style.top = '0';
+    div.style.left = '0';
+    div.style.width = '100vw';
+    div.style.height = '100vh';
+    div.style.backgroundColor = '#1c2530';   // fallback visible during load + on 404
     div.style.backgroundSize = 'cover';
     div.style.backgroundPosition = 'center';
     div.style.backgroundRepeat = 'no-repeat';
-    div.style.zIndex = '-3';        // behind the FishingScene's video (-2) if any
+    div.style.zIndex = '-2';
     div.style.pointerEvents = 'none';
     document.body.appendChild(div);
     this._domBgEl = div;
 
-    // Guarantee cleanup on any scene exit.
+    // Preload via <img> so we know the asset has decoded into the
+    // browser cache before we attach the URL as the div's background.
+    // Without this, the SW intercept can return stale or fail silently.
+    const img = new Image();
+    img.onload = () => {
+      if (this._domBgEl) {
+        this._domBgEl.style.backgroundImage = `url('${img.src}')`;
+      }
+    };
+    img.onerror = () => {
+      console.warn('[TitleScene] start.png failed to load:', img.src);
+    };
+    img.src = '/clean/start.png';
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._teardownDomBackground());
   }
 
