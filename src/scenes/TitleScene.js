@@ -16,27 +16,14 @@ export class TitleScene extends Phaser.Scene {
   constructor() { super('TitleScene'); }
 
   create() {
-    // Background: start.png is a 4:3 image (1448x1086). Fit by HEIGHT so
-    // the full painted scene is visible without cropping the top or
-    // bottom. The 16:9 canvas leaves dark bars on the LEFT and RIGHT;
-    // body.backgroundColor (set below) covers them seamlessly.
-    //
-    // We store the visible image's right-edge x so the buttons can be
-    // positioned WITHIN the painted scene rather than against the canvas
-    // edge (which would land them in the dark letterbox).
-    if (this.textures.exists(TEX.START_BG)) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEX.START_BG);
-      bg.setOrigin(0.5);
-      bg.setScale(GAME_HEIGHT / bg.height);
-      bg.setDepth(0);
-      this._bgRightX = GAME_WIDTH / 2 + bg.displayWidth / 2;
-      this._bgLeftX  = GAME_WIDTH / 2 - bg.displayWidth / 2;
-    } else {
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2,
-                         GAME_WIDTH, GAME_HEIGHT, 0x1c2530).setDepth(0);
-      this._bgRightX = GAME_WIDTH;
-      this._bgLeftX  = 0;
-    }
+    // Background as a DOM <div> behind the (transparent) Phaser canvas.
+    // Mirrors the FishingScene's DOM video trick: the painted 4:3 scene
+    // fills the entire device viewport via CSS `background-size: cover`,
+    // so on an iPad (also 4:3) it lines up edge-to-edge without
+    // letterbox. Without this, a Phaser-rendered bg would get
+    // double-letterboxed (canvas 16:9 in a 4:3 viewport AND a 4:3 image
+    // in a 16:9 canvas) and the scene would shrink to ~50% screen area.
+    this._setupDomBackground();
 
     // Match the catch-display approach: keep the canvas letterbox bars
     // dark instead of showing whatever sat behind the canvas.
@@ -65,11 +52,11 @@ export class TitleScene extends Phaser.Scene {
   }
 
   _buildPrimaryButton() {
-    // Bottom-right placement WITHIN the painted scene -- positioned from
-    // the actual displayed image's right edge, not the canvas edge, so
-    // the button doesn't land in the letterbox.
+    // Bottom-right of the canvas. Because the DOM background fills the
+    // device viewport (no letterbox), canvas-right == screen-right on
+    // a 4:3 iPad.
     const W = 280, H = 90;
-    const btnX = this._bgRightX - 28 - W / 2;
+    const btnX = GAME_WIDTH - 36 - W / 2;
     const btnY = Math.round(GAME_HEIGHT * 0.78);
 
     // Drop shadow.
@@ -109,10 +96,9 @@ export class TitleScene extends Phaser.Scene {
   }
 
   _buildGuestButton() {
-    // Sit directly under the primary START button (also bottom-right,
-    // within the painted scene, not against the canvas edge).
+    // Directly under the primary button, same canvas-right alignment.
     const W = 280;
-    const btnX = this._bgRightX - 28 - W / 2;
+    const btnX = GAME_WIDTH - 36 - W / 2;
     const btnY = Math.round(GAME_HEIGHT * 0.90);
 
     // Just a small text link with a hit-area.
@@ -133,8 +119,34 @@ export class TitleScene extends Phaser.Scene {
   _enterGame(profile) {
     SaveSystem.setProfile(profile);
     document.body.style.backgroundColor = '';
+    this._teardownDomBackground();
     // Stop the title theme so it doesn't overlap with FishingScene ambient.
     if (this.audio) this.audio.stopMusic();
     this.scene.start('FishingScene');
+  }
+
+  _setupDomBackground() {
+    const div = document.createElement('div');
+    div.className = 'title-bg';
+    div.style.position = 'fixed';
+    div.style.inset = '0';
+    div.style.backgroundImage = "url('clean/start.png')";
+    div.style.backgroundSize = 'cover';
+    div.style.backgroundPosition = 'center';
+    div.style.backgroundRepeat = 'no-repeat';
+    div.style.zIndex = '-3';        // behind the FishingScene's video (-2) if any
+    div.style.pointerEvents = 'none';
+    document.body.appendChild(div);
+    this._domBgEl = div;
+
+    // Guarantee cleanup on any scene exit.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._teardownDomBackground());
+  }
+
+  _teardownDomBackground() {
+    if (this._domBgEl) {
+      this._domBgEl.remove();
+      this._domBgEl = null;
+    }
   }
 }
