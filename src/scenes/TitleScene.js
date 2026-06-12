@@ -35,6 +35,9 @@ export class TitleScene extends Phaser.Scene {
     // be playing before we start a fresh one.
     this.sound.stopByKey(MUSIC.START);
     this.audio = new AudioManager(this);
+    // AudioManager defers actual playback to the 'unlocked' event when
+    // sound.locked is true (iOS Safari before first tap), so calling
+    // this now is safe -- it will start the moment the user taps.
     this.audio.playMusic(MUSIC.START, { volume: 0.20 });
 
     // Hard guarantee: when this scene shuts down for ANY reason, kill
@@ -44,9 +47,28 @@ export class TitleScene extends Phaser.Scene {
       this.sound.stopByKey(MUSIC.START);
     });
 
+    // === Invisible tap-to-start overlay ===
+    // Show ONLY the painted scene at first. The START + guest buttons
+    // are deliberately hidden until any tap lands on the page. That tap
+    // serves two purposes:
+    //   1. It unlocks WebAudio on iOS Safari so the title theme starts.
+    //   2. It reveals the buttons, so a child doesn't waste their first
+    //      tap on a visible button that wouldn't have triggered audio
+    //      anyway (we want the audio to be heard, not skipped past).
+    // We use a fullscreen invisible Phaser zone so we don't need an
+    // extra DOM listener; pointerdown on a Phaser Zone has the same
+    // gesture-credibility for iOS' audio unlock as any other tap.
+    this._tapZone = this.add.zone(0, 0, GAME_WIDTH, GAME_HEIGHT)
+      .setOrigin(0, 0)
+      .setInteractive()
+      .setDepth(100);
+    this._tapZone.once('pointerdown', () => this._revealStartUI());
+  }
+
+  _revealStartUI() {
+    if (this._tapZone) { this._tapZone.destroy(); this._tapZone = null; }
     // === START button (big, primary) ===
     this._buildPrimaryButton();
-
     // === Start-as-guest (small, secondary) ===
     this._buildGuestButton();
   }
