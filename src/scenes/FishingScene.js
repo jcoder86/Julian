@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { weightedPick, legacyShape, fishTextureKey } from '../data/fish.js';
+import { weightedPick, legacyShape, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
 import { DEFAULT_BAIT_ID, baitSimpleTextureKey } from '../data/baits.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
 import { TEX } from './BootScene.js';
@@ -231,8 +231,11 @@ const BITE_DELAY_MIN = 3000;
 const BITE_DELAY_MAX = 15000;
 const NIBBLE_MIN = 1000;
 const NIBBLE_MAX = 2000;
-const DIVE_MIN = 800;
-const DIVE_MAX = 1500;
+// Bobber-under-water grace window (player can still tap to catch).
+// Bumped +20% on top of the original 800/1500 so 4-year-old reaction
+// times have a bit more slack.
+const DIVE_MIN = 960;
+const DIVE_MAX = 1800;
 
 // Bite variations: each bite cycle randomly picks one. The relative weights
 // control how often each shows up. Tweak after first playtest.
@@ -305,26 +308,31 @@ const STATE = Object.freeze({
   CATCHING: 'catching',
 });
 
-// Phase 7: which fish require the reeling-in widget instead of a single tap.
-// Predators are always demanding; "large" peaceful fish are too.
-const REEL_REQUIRED_SPECIES = new Set(['carp', 'pike', 'zander']);
-function requiresReel(pick) {
-  return REEL_REQUIRED_SPECIES.has(pick.species) || pick.size === 'large';
-}
+// All fish use the reel widget now. Common little ones need just one
+// turn (a flick of the wrist); rare giants take ~9 turns. Kept as a
+// function so future "tap-only" carve-outs can be re-introduced here.
+function requiresReel(_pick) { return true; }
 
-// Turns of the reel needed to land a fish, scaled by its actual cm length.
-// Tuned so medium fish take a bit more work and large fish noticeably so.
-// Formula: 1 + ceil(cm/20). Capped at 8 so the largest pike (130cm) is
-// challenging but still doable for a 4-year-old.
-//   25cm -> 3 turns
-//   50cm -> 4 turns
-//   70cm -> 5 turns
-//   100cm -> 6 turns
-//   125cm -> 8 turns
-//   130cm -> 8 turns (cap)
+// Turns of the reel needed to land a fish, combining the fish's cm length
+// with how rare its species is. Two small fish of the same length still
+// differ in turn count when one species is rarer than the other -- e.g.
+// a small carp (speciesWeight 35) takes more turns than a small bream
+// (speciesWeight 75) at the same length.
+//
+// Formula: ceil(0.5 + cm/25 + (100 - speciesWeight)/30), clamped to [1, 9].
+// Sample turns:
+//   roach  small   9cm  (w100) -> 1   (very fast flick)
+//   bream  small  12cm  (w 75) -> 2
+//   carp   small  20cm  (w 35) -> 4   <-- > bream small, as requested
+//   carp   medium 55cm  (w 35) -> 6
+//   pike   large 125cm  (w 20) -> 9   (cap, hardest fish)
+//   trout  large  55cm  (w  6) -> 6
 function reelTurnsFor(pick) {
   const cm = pick.lengthCm ?? 30;
-  return Math.min(8, Math.max(2, 1 + Math.ceil(cm / 20)));
+  const weight = FISH_BY_ID[pick.species]?.speciesWeight ?? 50;
+  const cmTurns     = cm / 25;
+  const rarityTurns = (100 - weight) / 30;
+  return Math.max(1, Math.min(9, Math.ceil(0.5 + cmTurns + rarityTurns)));
 }
 
 export class FishingScene extends Phaser.Scene {
@@ -364,8 +372,14 @@ export class FishingScene extends Phaser.Scene {
     this._buildCalibrationOverlay();
 
     // Dynamic line from rod tip to bobber, redrawn each frame in update().
+    // Depth 8 puts the line BEHIND Julian (depth 10) and Dirk (depth 9),
+    // above the foreground branch (3) and the water background (0). When
+    // Julian fishes to the left, the line passes diagonally across his
+    // body -- without this, the line drew on top and broke depth-reading
+    // (line "in front of" Julian's torso looks wrong). The rod itself
+    // stays on top (depth 11) so the line tucks neatly behind it.
     this.lineGfx = this.add.graphics();
-    this.lineGfx.setDepth(15);
+    this.lineGfx.setDepth(8);
 
     // Single global input handler -- state machine decides what to do.
     this.input.on('pointerdown', this._onPointerDown, this);
