@@ -430,14 +430,18 @@ export class FishingScene extends Phaser.Scene {
     if (this.rodLongSprite) this._recomputeRodTip();
 
     // REELING: drag the (hidden) bobber from where the fish was hooked
-    // toward a point right in front of the pier as the player cranks the
-    // reel. The line-draw below picks it up automatically, so the line
-    // visibly shortens AND pulls toward Julian as progress increases.
+    // toward the live rod tip as the player cranks the reel. Reading
+    // rodTip each frame guarantees the endpoint stays glued to Julian's
+    // rod -- it can never lerp past him into thin air on his LEFT
+    // (a fixed endX behind Julian's centre did exactly that for
+    // right-side casts when the lerp overshot the visual midline).
     if (this.state === STATE.REELING && this.reelOverlay && this.reelEnd && this.bobber) {
       const p = Phaser.Math.Clamp(
         this.reelOverlay.accumulatedRadians / this.reelOverlay.requiredRadians, 0, 1);
-      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, this.reelEnd.endX, p);
-      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, this.reelEnd.endY, p);
+      const endX = this.rodTip.x;
+      const endY = waterTopAt(endX) + 14;
+      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, endX, p);
+      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, endY, p);
     }
 
     this.lineGfx.clear();
@@ -1602,10 +1606,15 @@ export class FishingScene extends Phaser.Scene {
     this.state = STATE.DIVE;
     this.audio.playSfx(SFX.DIVE);
     // Strike window opens: show "fish on" indicator above Julian + a
-    // single ping. Cleared in _catchFish / _resurfaceAndIdle / _enterReady
-    // / _missBite so it can never linger past its window.
-    this._showFishOn();
-    this.audio.playSfx(SFX.FISHON);
+    // single ping, but with a 500ms beat so it doesn't fire on top of
+    // the dive splash. State-check guards against a quick strike or
+    // resurface before the timer fires. Cleared in _catchFish /
+    // _resurfaceAndIdle / _enterReady / _missBite.
+    this.time.delayedCall(500, () => {
+      if (this.state !== STATE.DIVE) return;
+      this._showFishOn();
+      this.audio.playSfx(SFX.FISHON);
+    });
 
     if (this.nibbleTween) {
       this.nibbleTween.stop();
@@ -1724,15 +1733,12 @@ export class FishingScene extends Phaser.Scene {
     // wildly across the canvas.
     this.tweens.killTweensOf(this.bobber);
 
-    // Where the fish currently is (underwater, where it got hooked) -- and
-    // where it'll be pulled to as the player cranks the reel. The line
-    // visibly tracks this lerp in update(), passing slightly below the
-    // water surface so it reads as "into the water".
+    // Where the fish currently is (underwater, where it got hooked). The
+    // endpoint is computed in update() from the live rod tip so the line
+    // pulls TOWARD Julian's rod and stops there -- never past him.
     const startX = this.bobber ? this.bobber.x : this.rodTip.x;
     const startY = (this.bobber ? this.bobber.y : this.rodTip.y) + 8;
-    const endX   = JULIAN_ANCHOR_X + 80;          // just in front of the pier
-    const endY   = waterTopAt(endX) + 14;          // a touch below the surface
-    this.reelEnd = { startX, startY, endX, endY };
+    this.reelEnd = { startX, startY };
 
     // The fish is "on the line" -- hide the bobber sprite; only the line
     // is drawn during this phase, pulling toward the pier endpoint.
@@ -1755,17 +1761,14 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
-        // Plant the bobber at the near-pier endpoint and make it visible
-        // so the catch-leap arcs UP out of the water from right in front
-        // of the dock -- the visible "fish jumps out" moment.
+        // Plant the bobber right under the rod tip and make it visible
+        // so the catch-leap arcs UP from there -- the "fish jumps out"
+        // moment in front of Julian.
         if (this.bobber) {
           this.bobber.setVisible(true);
-          this.bobber.x = endX;
-          this.bobber.y = endY;
+          this.bobber.x = this.rodTip.x;
+          this.bobber.y = waterTopAt(this.rodTip.x) + 14;
         }
-        // Splash + applause fire from _performCatchLeap / CatchDisplayScene;
-        // no extra sfx here so we don't stack sounds at the reel-success
-        // moment.
         this._performCatchLeap(pick);
         this.reelEnd = null;
       },
