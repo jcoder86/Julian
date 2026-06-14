@@ -1718,6 +1718,12 @@ export class FishingScene extends Phaser.Scene {
     this.state = STATE.REELING;
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
+    // Kill any in-flight bobber tween (the DIVE tween is still moving x/y
+    // when the player strikes mid-dive). Without this, the dive tween and
+    // our update()-driven lerp fight every frame and the bobber jitters
+    // wildly across the canvas.
+    this.tweens.killTweensOf(this.bobber);
+
     // Where the fish currently is (underwater, where it got hooked) -- and
     // where it'll be pulled to as the player cranks the reel. The line
     // visibly tracks this lerp in update(), passing slightly below the
