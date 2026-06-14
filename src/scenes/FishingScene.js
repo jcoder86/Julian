@@ -430,19 +430,16 @@ export class FishingScene extends Phaser.Scene {
     if (this.rodLongSprite) this._recomputeRodTip();
 
     // REELING: drag the (hidden) bobber from where the fish was hooked
-    // toward the water surface right below Julian's HAND -- not the rod
-    // tip, which sits way out over the water. The hand is where the rod
-    // attaches to Julian, so "endpoint under the rod" really means "at
-    // the shore right in front of Julian". The lerp pulls the fish past
-    // the rod-tip and on toward Julian, so the line goes from out-over-
-    // water at p=0 to ducking back UNDER the rod-tip at p=1 -- exactly
-    // the "fish has been reeled all the way in" feel.
+    // toward the water directly UNDER the rod tip. The line then hangs
+    // straight down from the rod into the water (no horizontal sag,
+    // since dx -> 0) -- exactly "the fish is reeled in, dangling
+    // beneath the rod" at full progress. endY is well below the water
+    // surface so the underwater dip reads clearly on a busy backdrop.
     if (this.state === STATE.REELING && this.reelOverlay && this.reelEnd && this.bobber) {
       const p = Phaser.Math.Clamp(
         this.reelOverlay.accumulatedRadians / this.reelOverlay.requiredRadians, 0, 1);
-      const hand = this._julianHandSceneCoord();
-      const endX = hand.x;
-      const endY = waterTopAt(endX) + 14;
+      const endX = this.rodTip.x;
+      const endY = waterTopAt(endX) + 40;
       this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, endX, p);
       this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, endY, p);
     }
@@ -1613,7 +1610,7 @@ export class FishingScene extends Phaser.Scene {
     // the dive splash. State-check guards against a quick strike or
     // resurface before the timer fires. Cleared in _catchFish /
     // _resurfaceAndIdle / _enterReady / _missBite.
-    this.time.delayedCall(250, () => {
+    this.time.delayedCall(125, () => {
       if (this.state !== STATE.DIVE) return;
       this._showFishOn();
       this.audio.playSfx(SFX.FISHON);
@@ -1764,15 +1761,13 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
-        // Plant the bobber at the water surface right in front of Julian
-        // (below his hand) and make it visible -- the catch-leap then
-        // arcs UP from there: the fish has been reeled all the way in
-        // and breaks the surface "vlak voor je".
+        // Plant the bobber in the water right under the rod tip so the
+        // catch-leap arcs UP from there -- the "fish breaks the surface
+        // right under the rod" moment.
         if (this.bobber) {
-          const hand = this._julianHandSceneCoord();
           this.bobber.setVisible(true);
-          this.bobber.x = hand.x;
-          this.bobber.y = waterTopAt(hand.x) + 14;
+          this.bobber.x = this.rodTip.x;
+          this.bobber.y = waterTopAt(this.rodTip.x) + 40;
         }
         this._performCatchLeap(pick);
         this.reelEnd = null;

@@ -47,6 +47,53 @@ function safeSet(key, value) {
   }
 }
 
+function safeRemove(key) {
+  try {
+    window.localStorage.removeItem(namespaced(key));
+  } catch (e) {
+    console.warn('[SaveSystem] remove failed', e);
+  }
+}
+
+// One-shot migration: on Julian's profile, drop every species except
+// pike (snoek) from the trophy/count tables, and clear lastCatch if it
+// wasn't a pike. Guarded by a sentinel key so it only ever runs once
+// per device. Triggered from setProfile() so it runs the moment Julian
+// taps START on the title screen.
+const KEEP_ONLY_PIKE_MIGRATION_KEY = 'migration_keep_only_pike_v1';
+const KEEP_SPECIES = 'pike';
+function _runMigrationsForActiveProfile() {
+  if (_activeProfile !== 'julian') return;
+  if (safeGet(KEEP_ONLY_PIKE_MIGRATION_KEY) === 'done') return;
+
+  // Per-species maps: keep only the pike entry if present.
+  for (const key of [FISH_COUNTS_KEY, CATCH_COUNTS_BY_SIZE_KEY, BEST_CATCHES_KEY]) {
+    const raw = safeGet(key);
+    if (raw == null) continue;
+    try {
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === 'object') {
+        const filtered = (obj[KEEP_SPECIES] !== undefined)
+          ? { [KEEP_SPECIES]: obj[KEEP_SPECIES] }
+          : {};
+        safeSet(key, JSON.stringify(filtered));
+      }
+    } catch { /* ignore corrupt entries */ }
+  }
+
+  // lastCatch: clear if it's not a pike (HUD icon would otherwise still
+  // show e.g. a roach as the most-recent fish).
+  const lastRaw = safeGet(LAST_CATCH_KEY);
+  if (lastRaw) {
+    try {
+      const last = JSON.parse(lastRaw);
+      if (!last || last.species !== KEEP_SPECIES) safeRemove(LAST_CATCH_KEY);
+    } catch { safeRemove(LAST_CATCH_KEY); }
+  }
+
+  safeSet(KEEP_ONLY_PIKE_MIGRATION_KEY, 'done');
+}
+
 export const SaveSystem = {
   /**
    * Switch the active profile. All subsequent reads/writes use the new
@@ -55,6 +102,7 @@ export const SaveSystem = {
    */
   setProfile(name) {
     _activeProfile = name || 'julian';
+    _runMigrationsForActiveProfile();
   },
 
   /** Returns the currently active profile name. */
