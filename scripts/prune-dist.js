@@ -17,6 +17,7 @@ const RAW_KEEP = new Set([
   'backdrop.mp4',
   'backdrop.png',
   'catch.png',
+  'fishon.png',
 ]);
 
 // Files anywhere else under dist/ that are backups / dev-only.

@@ -41,6 +41,9 @@ export const TEX = Object.freeze({
   REEL_HANDLE: 'reel-handle',
   // Catch-screen "continue" button -- circular green Apple-style icon.
   PLAY:        'play',
+  // "Fish on!" indicator that pops above Julian's head during the DIVE
+  // window so the player knows it's now-or-never to strike.
+  FISHON:      'fishon',
   // NOTE: julian_dirk_general is processed by the asset pipeline but
   // intentionally NOT preloaded here -- it's parked for the future
   // overworld scene per spec.
@@ -106,6 +109,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image(TEX.REEL_HANDLE, 'clean/reel-handle.png');
     // Catch-screen continue button.
     this.load.image(TEX.PLAY,        'clean/play.png');
+    // "Fish on!" indicator. Lives in raw/ -- hand-authored transparent PNG,
+    // skips the chromakey/clean pipeline.
+    this.load.image(TEX.FISHON,      'raw/fishon.png');
 
     // Bulk-load all fish, bait and float sprites. Each key matches the
     // file name produced by scripts/split_atlas.py.

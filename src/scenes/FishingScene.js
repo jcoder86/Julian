@@ -368,6 +368,7 @@ export class FishingScene extends Phaser.Scene {
     this._buildForeground();
     this._buildCharacters();
     this._buildBobber();
+    this._buildFishOnIndicator();
     this._buildCollectionButton();
     this._buildCalibrationOverlay();
 
@@ -427,6 +428,17 @@ export class FishingScene extends Phaser.Scene {
     // Recompute rod tip every frame so the fishing line follows the
     // rotating rod-long sprite (cast / strike animations).
     if (this.rodLongSprite) this._recomputeRodTip();
+
+    // REELING: drag the (hidden) bobber from where the fish was hooked
+    // toward a point right in front of the pier as the player cranks the
+    // reel. The line-draw below picks it up automatically, so the line
+    // visibly shortens AND pulls toward Julian as progress increases.
+    if (this.state === STATE.REELING && this.reelOverlay && this.reelEnd && this.bobber) {
+      const p = Phaser.Math.Clamp(
+        this.reelOverlay.accumulatedRadians / this.reelOverlay.requiredRadians, 0, 1);
+      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, this.reelEnd.endX, p);
+      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, this.reelEnd.endY, p);
+    }
 
     this.lineGfx.clear();
     if (this.bobber && this.state !== STATE.READY && this.state !== STATE.CATCHING) {
@@ -1078,6 +1090,50 @@ export class FishingScene extends Phaser.Scene {
     this.bobberHomeY = y;
   }
 
+  /**
+   * "Fish on!" indicator -- a small sprite that pops above Julian's head
+   * the moment the bobber goes under. Hidden by default; toggled from
+   * the state-machine transitions (visible only during DIVE).
+   *
+   * Sized to ~70% of Julian's display height for clear visibility on an
+   * iPad. Depth 14 keeps it above Julian (10) and the rod (11) but below
+   * the HUD icons and the catch overlay.
+   */
+  _buildFishOnIndicator() {
+    if (!this.textures.exists(TEX.FISHON) || !this.julianSprite) {
+      this.fishOnSprite = null;
+      return;
+    }
+    const julianTopY = this.julianSprite.y - this.julianSprite.displayHeight;
+    const cx = this.julianSprite.x + this.julianSprite.displayWidth / 2;
+    const cy = julianTopY - 30;
+    const spr = this.add.image(cx, cy, TEX.FISHON);
+    const targetH = this.julianSprite.displayHeight * 0.55;
+    spr.setScale(targetH / spr.height);
+    spr.setOrigin(0.5, 1);
+    spr.setDepth(14);
+    spr.setVisible(false);
+    this.fishOnSprite = spr;
+
+    // Gentle bob so it reads as "attention-getter" without being chaotic.
+    this.tweens.add({
+      targets: spr,
+      y: { from: cy, to: cy - 8 },
+      duration: 380,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  _showFishOn() {
+    if (this.fishOnSprite) this.fishOnSprite.setVisible(true);
+  }
+
+  _hideFishOn() {
+    if (this.fishOnSprite) this.fishOnSprite.setVisible(false);
+  }
+
   _buildCollectionButton() {
     // HUD: three stacked icons on the right edge.
     //   top:    fish   -- shows last-caught fish, tap to open collection
@@ -1348,6 +1404,7 @@ export class FishingScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   _enterReady() {
+    this._hideFishOn();
     this._cancelAllPhaseLogic();
     this.state = STATE.READY;
     // Idle pose (head facing left, looking at us) while the rod is in hand
@@ -1544,6 +1601,11 @@ export class FishingScene extends Phaser.Scene {
     if (this.state !== STATE.NIBBLE) return;
     this.state = STATE.DIVE;
     this.audio.playSfx(SFX.DIVE);
+    // Strike window opens: show "fish on" indicator above Julian + a
+    // single ping. Cleared in _catchFish / _resurfaceAndIdle / _enterReady
+    // / _missBite so it can never linger past its window.
+    this._showFishOn();
+    this.audio.playSfx(SFX.FISHON);
 
     if (this.nibbleTween) {
       this.nibbleTween.stop();
@@ -1585,6 +1647,7 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _resurfaceAndIdle() {
+    this._hideFishOn();
     const base = this.bobberBaseScale ?? 1;
     this.tweens.add({
       targets: this.bobber,
@@ -1605,6 +1668,7 @@ export class FishingScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   _missBite() {
+    this._hideFishOn();
     this.audio.playSfx(SFX.MISS);
     this._stopPhaseTimer();
     if (this.nibbleTween) {
@@ -1624,6 +1688,7 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _catchFish() {
+    this._hideFishOn();
     this._stopPhaseTimer();
     this._stopBobTween();
 
@@ -1653,9 +1718,23 @@ export class FishingScene extends Phaser.Scene {
     this.state = STATE.REELING;
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
-    // The fish is now "on the line" -- bobber is being pulled under, so we
-    // hide it during reeling and let the line dangle to where it sank.
-    if (this.bobber) this.bobber.setVisible(false);
+    // Where the fish currently is (underwater, where it got hooked) -- and
+    // where it'll be pulled to as the player cranks the reel. The line
+    // visibly tracks this lerp in update(), passing slightly below the
+    // water surface so it reads as "into the water".
+    const startX = this.bobber ? this.bobber.x : this.rodTip.x;
+    const startY = (this.bobber ? this.bobber.y : this.rodTip.y) + 8;
+    const endX   = JULIAN_ANCHOR_X + 80;          // just in front of the pier
+    const endY   = waterTopAt(endX) + 14;          // a touch below the surface
+    this.reelEnd = { startX, startY, endX, endY };
+
+    // The fish is "on the line" -- hide the bobber sprite; only the line
+    // is drawn during this phase, pulling toward the pier endpoint.
+    if (this.bobber) {
+      this.bobber.setVisible(false);
+      this.bobber.x = startX;
+      this.bobber.y = startY;
+    }
 
     const turns = reelTurnsFor(pick);
     // Position: bottom-right, clear of the 3-icon HUD stack (which lives at
@@ -1670,17 +1749,19 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
-        // Snap the bobber back to the rod tip so the catch-leap animation
-        // has a sensible start point (the bobber was hidden during reeling).
+        // Plant the bobber at the near-pier endpoint and make it visible
+        // so the catch-leap arcs UP out of the water from right in front
+        // of the dock -- the visible "fish jumps out" moment.
         if (this.bobber) {
           this.bobber.setVisible(true);
-          this.bobber.x = this.rodTip.x;
-          this.bobber.y = this.rodTip.y;
+          this.bobber.x = endX;
+          this.bobber.y = endY;
         }
         // Splash + applause fire from _performCatchLeap / CatchDisplayScene;
         // no extra sfx here so we don't stack sounds at the reel-success
         // moment.
         this._performCatchLeap(pick);
+        this.reelEnd = null;
       },
     });
   }

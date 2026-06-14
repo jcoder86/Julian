@@ -13,6 +13,7 @@ export const SFX = Object.freeze({
   CATCH:    'catch',        // legacy; CATCH = SPLASH + APPLAUSE now
   REEL:     'reel',         // looping click while the player cranks the reel
   APPLAUSE: 'applause',     // played on catch display open
+  FISHON:   'fishon',       // one-shot ping when the bobber goes under (strike window opens)
 });
 
 // Music keys.
