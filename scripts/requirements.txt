@@ -1,5 +1,7 @@
 Pillow>=10.0.0
 numpy>=1.24.0
+# make_sky_mask.py (connected components, morphology, blur).
+scipy>=1.10.0
 # Optional -- only needed for --use-rembg fallback. The script imports lazily.
 rembg>=2.0.50
 onnxruntime>=1.16.0

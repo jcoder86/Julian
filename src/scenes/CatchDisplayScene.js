@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
+import {
+  WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP,
+} from '../constants.js';
+import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
 import { fishTextureKey, speciesNlName } from '../data/fish.js';
 import { AudioManager, SFX } from '../systems/AudioManager.js';
@@ -38,6 +41,23 @@ const WIGGLE_AMPLITUDE_DEG = 3;
 const WIGGLE_DURATION_MS   = 1200;
 const WIGGLE_HOLD_MS       = 400;     // delay between flop cycles
 
+// catch.png is a 4:3 painting like the rest. When a wider screen crops it
+// top and bottom, lean toward the top so Julian's head (upper-left of the
+// painting) stays in the picture.
+const VIEW_ALIGN_Y = 0.25;
+
+// The fish sits on the dock planks, this far down the VISIBLE part of the
+// painting (0.59 of a full 4:3 view = the spot it has always had on iPad).
+const FISH_Y_FRACTION = 0.59;
+// Gap between the fish's belly and the centre of the first label.
+const LABEL_GAP = 90;
+// Breathing room kept between the catch block and the screen edges.
+const CATCH_EDGE_MARGIN = 14;
+
+// Play button (bottom-right).
+const PLAY_BTN_SIZE   = 230;
+const PLAY_BTN_MARGIN = 30;
+
 export class CatchDisplayScene extends Phaser.Scene {
   constructor() { super('CatchDisplayScene'); }
 
@@ -51,28 +71,29 @@ export class CatchDisplayScene extends Phaser.Scene {
     // field we touch during a run, here.
     this._closed = false;
     this._hiddenVideoEl = null;
+    this._catchGroup = null;
+    this._catchMetrics = null;
+    this._playGroup = null;
   }
 
   create() {
-    // Hide the FishingScene's DOM video backdrop so it doesn't peek through
-    // the canvas letterbox bars (catch.png is 4:3 vs canvas 16:9, so on a
-    // 4:3 iPad screen there'd otherwise be a video-colored band above/below).
+    // The catch painting covers the whole screen, so the FishingScene's
+    // DOM video behind the canvas is invisible here -- hide it so the
+    // browser doesn't keep compositing a video nobody can see.
     this._hiddenVideoEl = document.querySelector('video');
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = 'none';
 
-    // Solid dark backing so the canvas letterbox bars also read as "catch
-    // mode" rather than showing through to whatever sits behind it.
-    document.body.style.backgroundColor = '#1c2530';
-
-    // Cover-mode background image.
+    // Background: the 4:3 painting stretched over exactly the world rect.
+    // The canvas covers the screen, so this is full-bleed on every device.
+    const worldCx = WORLD_LEFT + WORLD_WIDTH / 2;
+    const worldCy = WORLD_TOP + WORLD_HEIGHT / 2;
     if (this.textures.exists(TEX.CATCH_BG)) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEX.CATCH_BG);
+      const bg = this.add.image(worldCx, worldCy, TEX.CATCH_BG);
       bg.setOrigin(0.5);
-      const scale = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
-      bg.setScale(scale);
+      bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
       bg.setDepth(0);
     } else {
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x1c2530).setDepth(0);
+      this.add.rectangle(worldCx, worldCy, WORLD_WIDTH, WORLD_HEIGHT, 0x1c2530).setDepth(0);
     }
 
     // Audio sequence on the catch-display:
@@ -86,17 +107,26 @@ export class CatchDisplayScene extends Phaser.Scene {
       this.time.delayedCall(700, () => this.audio.playVoice(species, size));
     }
 
-    // Fish sprite, scaled by its length in centimetres.
+    // Fish sprite, scaled by its length in centimetres. The fish, its
+    // labels and its sparkles live in ONE container (origin = the fish's
+    // centre) so _applyLayout can re-centre the whole block -- and shrink
+    // it on small screens -- without touching the individual pieces.
     if (species && size) {
       const key = fishTextureKey(species, size);
       if (this.textures.exists(key)) {
-        const fishX = GAME_WIDTH / 2;
-        const fishY = GAME_HEIGHT * 0.62;
+        const group = this.add.container(0, 0);
+        group.setDepth(10);
 
-        const fish = this.add.image(fishX, fishY, key);
+        const fish = this.add.image(0, 0, key);
         const targetW = Math.max(MIN_FISH_DISPLAY_WIDTH, (lengthCm || 30) * PX_PER_CM);
         fish.setScale(targetW / fish.width);
-        fish.setDepth(10);
+        const halfW = fish.displayWidth / 2;
+        const halfH = fish.displayHeight / 2;
+
+        // Children draw in the order they are added: glow (large fish
+        // only) behind the fish, then labels, then sparkles on top.
+        if (size === 'large') group.add(this._makeGlow(halfW, halfH));
+        group.add(fish);
 
         // Slower, calmer flop -- yoyo with a small hold-still between cycles.
         this.tweens.add({
@@ -115,10 +145,11 @@ export class CatchDisplayScene extends Phaser.Scene {
         // Julian clean and groups the catch info together. Sizes shrunk
         // 20% per playtest feedback ("texts iets kleiner + meer naar
         // onder").
-        let nextLabelY = fishY + fish.displayHeight / 2 + 90;
+        let nextLabelY = halfH + LABEL_GAP;
+        let blockBottom = halfH;
         if (lengthCm) {
           const cmLabel = this.add.text(
-            fishX, nextLabelY,
+            0, nextLabelY,
             `${lengthCm} CM`, {
               fontFamily: 'sans-serif',
               fontSize: '37px',
@@ -126,13 +157,15 @@ export class CatchDisplayScene extends Phaser.Scene {
               color: '#ffffff',
               stroke: '#000000',
               strokeThickness: 4,
-            }).setOrigin(0.5).setDepth(11);
+            }).setOrigin(0.5);
+          group.add(cmLabel);
+          blockBottom = nextLabelY + cmLabel.height / 2;
           nextLabelY += cmLabel.height + 12;
         }
         const nlName = speciesNlName(species);
         if (nlName) {
-          this.add.text(
-            fishX, nextLabelY,
+          const nameLabel = this.add.text(
+            0, nextLabelY,
             nlName, {
               fontFamily: 'sans-serif',
               fontSize: '42px',
@@ -140,15 +173,24 @@ export class CatchDisplayScene extends Phaser.Scene {
               color: '#ffd24a',
               stroke: '#000000',
               strokeThickness: 5,
-            }).setOrigin(0.5).setDepth(11);
+            }).setOrigin(0.5);
+          group.add(nameLabel);
+          blockBottom = nextLabelY + nameLabel.height / 2;
         }
 
         // Sparkles only for "large" -- visually marks an impressive catch.
         if (size === 'large') {
-          this._addSparkles(fish);
+          this._addSparkles(group, halfW, halfH);
         }
+
+        this._catchGroup = group;
+        // Extents of the block around the container origin (unscaled).
+        this._catchMetrics = { halfWidth: halfW, top: halfH, bottom: blockBottom };
       }
     }
+
+    // Camera + placement of the catch block for this screen.
+    bindLayout(this, { alignY: VIEW_ALIGN_Y }, (layout) => this._applyLayout(layout));
 
     // Big green Play button in the bottom-right corner. Only this button
     // closes the catch screen -- elsewhere taps do NOTHING. Gives the
@@ -161,27 +203,59 @@ export class CatchDisplayScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Called on create and on every resize / rotation.
+   */
+  _applyLayout(layout) {
+    if (!layout) return;
+    const view = layout.view;
+    const safe = layout.safe;
+
+    // Catch block: at its usual spot on the dock, but always fully on
+    // screen. If the block is taller or wider than the screen (a huge
+    // pike on a phone) it is scaled down to fit.
+    if (this._catchGroup && this._catchMetrics) {
+      const m = this._catchMetrics;
+      const availW = safe.width  - CATCH_EDGE_MARGIN * 2;
+      const availH = safe.height - CATCH_EDGE_MARGIN * 2;
+      const k = Math.min(1, availW / (m.halfWidth * 2), availH / (m.top + m.bottom));
+      let y = view.top + view.height * FISH_Y_FRACTION;
+      y = Math.min(y, safe.bottom - CATCH_EDGE_MARGIN - m.bottom * k);
+      y = Math.max(y, safe.top + CATCH_EDGE_MARGIN + m.top * k);
+      this._catchGroup.setScale(k);
+      this._catchGroup.setPosition(view.centerX, y);
+    }
+
+    // Play button: bottom-right corner of the screen, inside the safe
+    // area. Shrinks on short screens so it never dominates a phone.
+    if (this._playGroup) {
+      const k = Math.min(1, (safe.height * 0.34) / PLAY_BTN_SIZE);
+      const inset = (PLAY_BTN_MARGIN + PLAY_BTN_SIZE / 2) * k;
+      this._playGroup.setScale(k);
+      this._playGroup.setPosition(safe.right - inset, safe.bottom - inset);
+    }
+  }
+
   _buildPlayButton() {
-    // The button is a hand-authored sprite (clean/play.png). We render
-    // it at a fixed canvas size; it stays static (no scale-tween) to
-    // avoid sub-pixel jitter. A separate rounded-rectangle halo pulses
-    // behind it for the "tap me" cue -- shape matches the button.
-    const BTN_DISPLAY_SIZE = 230;
-    const btnX = GAME_WIDTH  - 30 - BTN_DISPLAY_SIZE / 2;
-    const btnY = GAME_HEIGHT - 30 - BTN_DISPLAY_SIZE / 2;
+    // The button is a hand-authored sprite (clean/play.png). It stays
+    // static (no scale-tween) to avoid sub-pixel jitter. A separate
+    // rounded-rectangle halo pulses behind it for the "tap me" cue --
+    // shape matches the button. Both sit in one container that
+    // _applyLayout pins to the screen corner.
+    const group = this.add.container(0, 0);
+    group.setDepth(40);
 
     // Halo as a rounded-rect Graphics. Tweening scale+alpha on a
     // Graphics object is jitter-free since it's vector, not a texture.
     const halo = this.add.graphics();
     const HALO_PAD    = 8;     // just outside the metal-rim edge
     const HALO_RADIUS = 34;
-    const haloW = BTN_DISPLAY_SIZE + HALO_PAD * 2;
-    const haloH = BTN_DISPLAY_SIZE + HALO_PAD * 2;
+    const haloW = PLAY_BTN_SIZE + HALO_PAD * 2;
+    const haloH = PLAY_BTN_SIZE + HALO_PAD * 2;
     halo.fillStyle(0x4ecd5a, 1);
     halo.fillRoundedRect(-haloW / 2, -haloH / 2, haloW, haloH, HALO_RADIUS);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    halo.setPosition(btnX, btnY);
-    halo.setDepth(40);
+    group.add(halo);
     this.tweens.add({
       targets: halo,
       alpha: { from: 0.15, to: 0.55 },
@@ -193,33 +267,55 @@ export class CatchDisplayScene extends Phaser.Scene {
     });
 
     // The button itself: STATIC. Crisp at all times.
-    const btn = this.add.image(btnX, btnY, TEX.PLAY);
-    const scale = BTN_DISPLAY_SIZE / Math.max(btn.width, btn.height);
+    const btn = this.add.image(0, 0, TEX.PLAY);
+    const scale = PLAY_BTN_SIZE / Math.max(btn.width, btn.height);
     btn.setScale(scale);
-    btn.setDepth(41);
     btn.setInteractive({ useHandCursor: true });
     btn.on('pointerdown', () => this._close());
+    group.add(btn);
+
+    this._playGroup = group;
+    this._applyLayout(this.layout);
   }
 
   /**
-   * Random twinkling sparkles around a sprite. Uses small additive
-   * yellow-white circles tween'd in alpha + scale with random delays so
-   * the cluster feels alive rather than synchronised.
+   * A soft golden outer glow behind a large fish -- completes the "rare!"
+   * feel. Centred on the catch container's origin (= the fish).
    */
-  _addSparkles(fish) {
-    const b = fish.getBounds();
-    const pad = Math.max(b.width, b.height) * 0.18;
-    const sparkles = [];
+  _makeGlow(halfW, halfH) {
+    const glow = this.add.circle(0, 0, Math.max(halfW, halfH) * 2 * 0.6, 0xffd24a, 0.18);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: glow,
+      alpha: { from: 0.18, to: 0.42 },
+      scale: { from: 1.0, to: 1.15 },
+      duration: 1100,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    return glow;
+  }
+
+  /**
+   * Random twinkling sparkles around the fish. Uses small additive
+   * yellow-white circles tween'd in alpha + scale with random delays so
+   * the cluster feels alive rather than synchronised. Positions are
+   * relative to the catch container's origin (= the fish's centre).
+   */
+  _addSparkles(group, halfW, halfH) {
+    const width = halfW * 2;
+    const height = halfH * 2;
+    const pad = Math.max(width, height) * 0.18;
 
     const COUNT = 14;
     for (let i = 0; i < COUNT; i++) {
-      const sx = b.x - pad + Math.random() * (b.width + pad * 2);
-      const sy = b.y - pad + Math.random() * (b.height + pad * 2);
+      const sx = -halfW - pad + Math.random() * (width + pad * 2);
+      const sy = -halfH - pad + Math.random() * (height + pad * 2);
       const radius = 3 + Math.random() * 5;
       const sparkle = this.add.circle(sx, sy, radius, 0xffeaa0, 0);
       sparkle.setBlendMode(Phaser.BlendModes.ADD);
-      sparkle.setDepth(12);
-      sparkles.push(sparkle);
+      group.add(sparkle);
 
       this.tweens.add({
         targets: sparkle,
@@ -232,24 +328,6 @@ export class CatchDisplayScene extends Phaser.Scene {
         delay: Math.random() * 1200,
       });
     }
-
-    // A soft golden outer glow behind the fish completes the "rare!" feel.
-    const glow = this.add.circle(
-      fish.x, fish.y,
-      Math.max(b.width, b.height) * 0.6,
-      0xffd24a, 0.18,
-    );
-    glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.setDepth(9);   // behind fish, in front of background
-    this.tweens.add({
-      targets: glow,
-      alpha: { from: 0.18, to: 0.42 },
-      scale: { from: 1.0, to: 1.15 },
-      duration: 1100,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
   }
 
   _close() {
@@ -257,7 +335,6 @@ export class CatchDisplayScene extends Phaser.Scene {
     this._closed = true;
     // Restore the DOM video backdrop for the fishing scene.
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = '';
-    document.body.style.backgroundColor = '';
     // Defer the scene transition to the NEXT frame. Calling scene.stop()
     // synchronously from inside Phaser's pointerdown processing loses the
     // SHUTDOWN action silently -- the scene keeps running. delayedCall(0)

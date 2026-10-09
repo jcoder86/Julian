@@ -1,8 +1,27 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
-import { TEX } from './BootScene.js';
+import {
+  GAME_HEIGHT,
+  WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP,
+} from '../constants.js';
+import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { AudioManager, MUSIC } from '../systems/AudioManager.js';
+
+// When a screen wider than 4:3 has to crop the painting top and bottom,
+// keep the top: that is where the logo and Julian's face are. 0 = keep the
+// very top, 0.5 = crop evenly. Used for BOTH the camera and the DOM
+// background's object-position so the two always show the same slice.
+const VIEW_ALIGN_Y = 0.1;
+
+// Button block (design px). START is the container origin; the guest link
+// hangs below it.
+const START_W = 280;
+const START_H = 90;
+const START_MARGIN_RIGHT = 36;
+const START_Y = Math.round(GAME_HEIGHT * 0.78);
+const GUEST_OFFSET_Y = Math.round(GAME_HEIGHT * 0.90) - START_Y;
+// Room the block needs between START's centre and the bottom of the screen.
+const START_MIN_BOTTOM_GAP = 150;
 
 /**
  * Title screen with start.png as the painted background.
@@ -16,18 +35,13 @@ export class TitleScene extends Phaser.Scene {
   constructor() { super('TitleScene'); }
 
   create() {
-    // Background as a DOM <div> behind the (transparent) Phaser canvas.
-    // Mirrors the FishingScene's DOM video trick: the painted 4:3 scene
-    // fills the entire device viewport via CSS `background-size: cover`,
-    // so on an iPad (also 4:3) it lines up edge-to-edge without
-    // letterbox. Without this, a Phaser-rendered bg would get
-    // double-letterboxed (canvas 16:9 in a 4:3 viewport AND a 4:3 image
-    // in a 16:9 canvas) and the scene would shrink to ~50% screen area.
-    this._setupDomBackground();
+    this._startUi = null;
 
-    // Match the catch-display approach: keep the canvas letterbox bars
-    // dark instead of showing whatever sat behind the canvas.
-    document.body.style.backgroundColor = '#1c2530';
+    // Background as a DOM <img> behind the (transparent) Phaser canvas.
+    // The painting is 4:3; object-fit: cover makes it fill any screen, and
+    // the browser scales the full-resolution PNG straight to device pixels
+    // (sharper than routing it through the canvas).
+    this._setupDomBackground();
 
     // Title-screen music at slightly lower volume than gameplay ambient.
     // Use game.sound (global) and stopByKey to defend against duplicate
@@ -47,6 +61,9 @@ export class TitleScene extends Phaser.Scene {
       this.sound.stopByKey(MUSIC.START);
     });
 
+    // Camera + screen-anchored pieces (background box, button block).
+    bindLayout(this, { alignY: VIEW_ALIGN_Y }, (layout) => this._applyLayout(layout));
+
     // === Invisible tap-to-start overlay ===
     // Show ONLY the painted scene at first. The START + guest buttons
     // are deliberately hidden until any tap lands on the page. That tap
@@ -55,10 +72,11 @@ export class TitleScene extends Phaser.Scene {
     //   2. It reveals the buttons, so a child doesn't waste their first
     //      tap on a visible button that wouldn't have triggered audio
     //      anyway (we want the audio to be heard, not skipped past).
-    // We use a fullscreen invisible Phaser zone so we don't need an
-    // extra DOM listener; pointerdown on a Phaser Zone has the same
-    // gesture-credibility for iOS' audio unlock as any other tap.
-    this._tapZone = this.add.zone(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    // We use a world-sized invisible Phaser zone (the visible screen is
+    // always a slice of the world) so we don't need an extra DOM listener;
+    // pointerdown on a Phaser Zone has the same gesture-credibility for
+    // iOS' audio unlock as any other tap.
+    this._tapZone = this.add.zone(WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT)
       .setOrigin(0, 0)
       .setInteractive()
       .setDepth(100);
@@ -67,36 +85,61 @@ export class TitleScene extends Phaser.Scene {
 
   _revealStartUI() {
     if (this._tapZone) { this._tapZone.destroy(); this._tapZone = null; }
-    // === START button (big, primary) ===
-    this._buildPrimaryButton();
-    // === Start-as-guest (small, secondary) ===
-    this._buildGuestButton();
+    if (this._startUi) return;
+
+    // One container for the whole button block so a resize / rotation
+    // only has to move a single object.
+    const ui = this.add.container(0, 0);
+    ui.setDepth(10);
+    this._buildPrimaryButton(ui);
+    this._buildGuestButton(ui);
+    this._startUi = ui;
+    this._applyLayout(this.layout);
   }
 
-  _buildPrimaryButton() {
-    // Bottom-right of the canvas. Because the DOM background fills the
-    // device viewport (no letterbox), canvas-right == screen-right on
-    // a 4:3 iPad.
-    const W = 280, H = 90;
-    const btnX = GAME_WIDTH - 36 - W / 2;
-    const btnY = Math.round(GAME_HEIGHT * 0.78);
+  /**
+   * Called on create and on every resize / rotation.
+   */
+  _applyLayout(layout) {
+    if (!layout) return;
+
+    // Background: exactly the game container's box (not 100vw/100vh --
+    // on phones those can be larger than the visible area).
+    if (this._domBgEl) {
+      const c = layout.container;
+      this._domBgEl.style.left   = `${c.left}px`;
+      this._domBgEl.style.top    = `${c.top}px`;
+      this._domBgEl.style.width  = `${c.width}px`;
+      this._domBgEl.style.height = `${c.height}px`;
+    }
+
+    // Buttons: pinned to the right edge of the screen (inside the safe
+    // area). Vertically they keep their spot in the design frame, unless
+    // the screen is too short for that -- then they move up to stay fully
+    // visible.
+    if (this._startUi) {
+      const safe = layout.safe;
+      this._startUi.setPosition(
+        safe.right - START_MARGIN_RIGHT - START_W / 2,
+        Math.min(START_Y, safe.bottom - START_MIN_BOTTOM_GAP),
+      );
+    }
+  }
+
+  _buildPrimaryButton(ui) {
+    // START sits at the container origin. Children draw in the order they
+    // are added: shadow, halo, pill, label.
+    const W = START_W, H = START_H;
 
     // Drop shadow.
     for (let i = 0; i < 5; i++) {
-      const sh = this.add.rectangle(btnX + 4, btnY + 6, W + i * 4, H + i * 3,
-                                    0x000000, 0.07);
-      sh.setDepth(9);
+      ui.add(this.add.rectangle(4, 6, W + i * 4, H + i * 3, 0x000000, 0.07));
     }
-    // Main pill -- olive-green to match the painted style of start.png.
-    const pill = this.add.rectangle(btnX, btnY, W, H, 0x35b94a, 1);
-    pill.setStrokeStyle(4, 0xffffff, 1);
-    pill.setDepth(10);
-    pill.setInteractive({ useHandCursor: true });
 
     // Pulsing halo behind for "tap me" cue (vector-only, no PNG jitter).
-    const halo = this.add.rectangle(btnX, btnY, W + 30, H + 30, 0x4ecd5a, 0.30);
+    const halo = this.add.rectangle(0, 0, W + 30, H + 30, 0x4ecd5a, 0.30);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    halo.setDepth(9);
+    ui.add(halo);
     this.tweens.add({
       targets: halo,
       alpha: { from: 0.12, to: 0.50 },
@@ -105,42 +148,44 @@ export class TitleScene extends Phaser.Scene {
       yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    this.add.text(btnX, btnY, 'START', {
+    // Main pill -- olive-green to match the painted style of start.png.
+    const pill = this.add.rectangle(0, 0, W, H, 0x35b94a, 1);
+    pill.setStrokeStyle(4, 0xffffff, 1);
+    pill.setInteractive({ useHandCursor: true });
+    ui.add(pill);
+
+    ui.add(this.add.text(0, 0, 'START', {
       fontFamily: 'sans-serif',
       fontSize: '52px',
       fontStyle: 'bold',
       color: '#ffffff',
       stroke: '#0a3914',
       strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(11);
+    }).setOrigin(0.5));
 
     pill.on('pointerdown', () => this._enterGame('julian'));
   }
 
-  _buildGuestButton() {
-    // Directly under the primary button, same canvas-right alignment.
-    const W = 280;
-    const btnX = GAME_WIDTH - 36 - W / 2;
-    const btnY = Math.round(GAME_HEIGHT * 0.90);
-
+  _buildGuestButton(ui) {
+    // Directly under the primary button, same right alignment.
     // Just a small text link with a hit-area.
-    const label = this.add.text(btnX, btnY, 'start as guest', {
+    const label = this.add.text(0, GUEST_OFFSET_Y, 'start as guest', {
       fontFamily: 'sans-serif',
       fontSize: '22px',
       fontStyle: 'bold',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(11);
+    }).setOrigin(0.5);
     label.setInteractive({ useHandCursor: true });
     label.on('pointerover', () => label.setColor('#ffd24a'));
     label.on('pointerout',  () => label.setColor('#ffffff'));
     label.on('pointerdown', () => this._enterGame('guest'));
+    ui.add(label);
   }
 
   _enterGame(profile) {
     SaveSystem.setProfile(profile);
-    document.body.style.backgroundColor = '';
     this._teardownDomBackground();
     // Stop the title theme so it doesn't overlap with FishingScene ambient.
     if (this.audio) this.audio.stopMusic();
@@ -157,12 +202,14 @@ export class TitleScene extends Phaser.Scene {
     img.src = '/clean/start.png';
     img.alt = '';
     img.style.position = 'fixed';
+    // Box = the game container; kept in sync by _applyLayout.
     img.style.top = '0';
     img.style.left = '0';
-    img.style.width = '100vw';
-    img.style.height = '100vh';
+    img.style.width = '100%';
+    img.style.height = '100%';
     img.style.objectFit = 'cover';
-    img.style.objectPosition = 'center';
+    // Same crop rule as the camera (see VIEW_ALIGN_Y).
+    img.style.objectPosition = `50% ${VIEW_ALIGN_Y * 100}%`;
     // z-index 0 sits BELOW #game (z-index: 1, set in index.html) but
     // ABOVE html's background paint. Negative z-index proved unreliable
     // on iPad Safari -- the element could end up hidden behind the html

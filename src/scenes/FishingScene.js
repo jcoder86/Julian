@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
+import {
+  GAME_WIDTH, GAME_HEIGHT,
+  WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP, WORLD_RIGHT, WORLD_BOTTOM,
+} from '../constants.js';
+import { bindLayout } from '../systems/Layout.js';
 import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, legacyShape, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
@@ -54,11 +58,14 @@ const DIRK_BREATH_Y_LIFT_PX    = 1.2;
  * points. waterTopAt(x) does linear interpolation between samples.
  *
  * Re-run the script when the backdrop changes, then paste the new
- * WATERLINE_SAMPLES output back here. Press 'W' in-game to see the
- * curve as a debug overlay.
+ * output into WATERLINE_RAW. Press 'W' in-game to see the curve as a
+ * debug overlay.
  */
-// Auto-detected from assets/raw/backdrop.png.
-export const WATERLINE_SAMPLES = [
+// Auto-detected from assets/raw/backdrop.png. The detector resized the 4:3
+// painting to 1280x720, so x runs across the painting's full width but y
+// is in a squashed 720-high space -- NOT design coordinates. Converted
+// below.
+const WATERLINE_RAW = [
   [   0, 346], [  20, 347], [  40, 438], [  60, 450], [  81, 455],
   [ 101, 457], [ 121, 454], [ 142, 442], [ 162, 438], [ 182, 415],
   [ 203, 379], [ 223, 378], [ 243, 408], [ 264, 381], [ 284, 374],
@@ -73,6 +80,13 @@ export const WATERLINE_SAMPLES = [
   [1117, 326], [1137, 288], [1158, 282], [1178, 286], [1198, 276],
   [1219, 276], [1239, 284], [1259, 267], [1280, 264],
 ];
+
+// The same curve in design coordinates: the painting is WORLD_HEIGHT tall
+// and starts at WORLD_TOP. With this the cast area follows the painted
+// water's edge exactly, on every screen shape.
+export const WATERLINE_SAMPLES = WATERLINE_RAW.map(
+  ([x, y]) => [x, WORLD_TOP + y * (WORLD_HEIGHT / 720)]
+);
 
 export function waterTopAt(x) {
   if (x <= WATERLINE_SAMPLES[0][0]) return WATERLINE_SAMPLES[0][1];
@@ -90,33 +104,50 @@ export function waterTopAt(x) {
   return y0 + (y1 - y0) * t;
 }
 
-// Bounding rectangle (kept for the click-area). Real hit-test lives in
-// _isInsideWater() using the per-x sampled curve.
+// Bounding rectangle of the water (kept for the click-area). Real hit-test
+// lives in _isInsideWater() using the per-x sampled curve.
 const _minY = Math.min(...WATERLINE_SAMPLES.map(p => p[1]));
 export const WATER_BOUNDS = Object.freeze({
-  x: 0, y: _minY, width: GAME_WIDTH, height: GAME_HEIGHT - _minY,
+  x: WORLD_LEFT, y: _minY, width: WORLD_WIDTH, height: WORLD_BOTTOM - _minY,
 });
 
 /**
- * Cloud parallax stack -- DOM-based, OUTSIDE the Phaser canvas.
+ * Cloud parallax stack -- DOM <div>s behind the (transparent) canvas, in
+ * front of the backdrop video. Kept in the DOM because the browser scales
+ * and scrolls the big cloud PNGs far more smoothly than a canvas sprite
+ * would at ~1px/sec.
  *
- * Rendering clouds as plain <div> elements with background-image + JS-driven
- * background-position scrolling means they fill the VIEWPORT, not the canvas.
- * On iPad (4:3) with our 16:9 canvas FIT-letterboxed, the cloud layers can
- * cover the canvas letterbox bars too -- reaching all the way to the top of
- * the iPad screen, which Phaser-in-canvas clouds physically cannot do.
+ * They are positioned from the scene layout, in the SAME coordinates as
+ * everything else: the band starts at the top of the visible sky and ends
+ * at a fixed line in the painting, just above the mountains.
  *
- * Heights are in viewport-height units (vh); 15vh = 15% of iPad screen.
- * Both layers anchor at viewport top (top: 0).
+ * Heights are design px. On a 4:3 screen the whole sky is visible and a
+ * layer is exactly this tall (192 = 20% of the world height). On wider
+ * screens the top of the painting is cropped away, so the band shrinks
+ * with the remaining sky -- but never below CLOUD_MIN_SCALE, where it is
+ * allowed to drift over the mountain tops instead.
  */
-export const CLOUD_BACK_HEIGHT_VH = 20;    // distant layer height as % of viewport
-                                            // -- 22+ starts overlapping tree-line on iPad 4:3
-export const CLOUD_BACK_SPEED     = 1;     // px/sec horizontal drift (slow = far away)
+export const CLOUD_BACK_HEIGHT    = 192;   // distant layer; taller starts overlapping the tree-line
+export const CLOUD_BACK_SPEED     = 1.25;  // design px/sec horizontal drift (slow = far away)
 export const CLOUD_BACK_ALPHA     = 0.55;  // atmospheric fading, slightly translucent
 
-export const CLOUD_FRONT_HEIGHT_VH = 18;   // near layer (larger, more present)
-export const CLOUD_FRONT_SPEED     = 3;    // ~3x back = visible parallax depth
-export const CLOUD_FRONT_ALPHA     = 0.85;
+export const CLOUD_FRONT_HEIGHT   = 172.8; // near layer (larger, more present)
+export const CLOUD_FRONT_SPEED    = 3.75;  // ~3x back = visible parallax depth
+export const CLOUD_FRONT_ALPHA    = 0.85;
+
+export const CLOUD_MIN_SCALE      = 0.5;
+
+/**
+ * Sky mask: an alpha image of where the backdrop painting is sky
+ * (generated from backdrop.mp4 by scripts/make_sky_mask.py). Applied to
+ * the cloud strips as a CSS mask, so clouds pass BEHIND the tree tops and
+ * mountain ridges instead of in front of them -- which matters most on
+ * wide screens, where little sky is left and the strip overlaps the
+ * terrain. The image covers the top SKY_MASK_FRACTION of the painting,
+ * full width. If it fails to load the clouds simply stay unmasked.
+ */
+const SKY_MASK_SRC      = 'clean/sky-mask.png';
+const SKY_MASK_FRACTION = 320 / 720;
 
 /**
  * Foreground sway -- programmatic wind for the static foreground PNG
@@ -132,18 +163,16 @@ export const FOREGROUND_SWAY_AMPLITUDE = 1.2;       // degrees peak-to-zero
 export const FOREGROUND_SWAY_PERIOD_MS = 3500;      // full back-and-forth cycle
 
 /**
- * Julian sprite position: where to anchor his bottom-left in canvas coords.
- * Dirk slides relative to this point (see DIRK_OFFSET below).
+ * Julian sprite position: where to anchor his bottom-left, in design
+ * coordinates. Dirk slides relative to this point (see DIRK_OFFSET below).
  *
- * On a 4:3 iPad with our 16:9 backdrop covered to full viewport, the source
- * video gets ~140px cropped from each horizontal edge. Pushing Julian right
- * by ~80 keeps Dirk's silhouette on the painted dock rather than on the
- * cropped grass edge.
+ * Design coordinates are locked to the painting (design x 0..1280 is the
+ * painting's full width, design y -120..840 its full height), so this
+ * spot on the dock is the same on every screen shape.
  */
-// Julian's bottom-left in canvas coords. After the Phase 7 shrink the
-// sprite's footprint is much smaller, so we nudge the anchor a bit toward
-// the centre and lift it upward so Julian sits higher on the dock rather
-// than at the canvas floor.
+// After the Phase 7 shrink the sprite's footprint is much smaller, so we
+// nudge the anchor a bit toward the centre and lift it upward so Julian
+// sits higher on the dock rather than at the bottom of the frame.
 export const JULIAN_ANCHOR_X = 260;
 export const JULIAN_ANCHOR_Y = GAME_HEIGHT - 80;
 
@@ -289,13 +318,35 @@ const LINE_ALPHA = 0.85;
 const LINE_BEZIER_SEGMENTS = 24;
 
 // Bobber depth-scaling. The float is rendered smaller when dropped near
-// the horizon (top of WATER_BOUNDS) and full-size when dropped at the
-// player's feet (bottom of WATER_BOUNDS). Linear interpolation between
-// the two extremes -- t=0 at WATER_BOUNDS.y, t=1 at WATER_BOUNDS.y+height.
+// the horizon and full-size when dropped at the player's feet. Linear
+// interpolation between the two extremes -- t=0 at BOBBER_DEPTH_FAR_Y,
+// t=1 at BOBBER_DEPTH_NEAR_Y (design y; the far shore sits at ~265).
 // FAR was 0.45 -- shrunk to 0.22 so a cast at the painted horizon really
 // reads as "miles away".
 const BOBBER_SCALE_FAR  = 0.22;   // furthest dropped (top of water)
 const BOBBER_SCALE_NEAR = 1.0;    // closest dropped (bottom of water)
+const BOBBER_DEPTH_FAR_Y  = 264;
+const BOBBER_DEPTH_NEAR_Y = GAME_HEIGHT;
+
+// Which slice of the painting must survive when a wide screen crops it
+// top and bottom: Julian and Dirk sit on the dock with their feet at
+// design y ~626, so keep a strip of planks below them on screen.
+const VIEW_KEEP_BOTTOM = 668;
+// On screens narrower than 4:3 the sides are cropped instead; lean left
+// so the dock (and Dirk, at x ~175) stays in view.
+const VIEW_ALIGN_X = 0.3;
+
+// HUD icon stack (top-right) -- design px.
+const HUD_ICON_SIZE   = 110;
+const HUD_ICON_MARGIN = 14;
+const HUD_ICON_STEP   = HUD_ICON_SIZE + HUD_ICON_MARGIN;
+const HUD_ICON_COUNT  = 3;
+
+// Reel widget (bottom-right): distance of its centre from the screen
+// corner, and the radius its pulsing glow can reach.
+const REEL_OFFSET_X    = 200;
+const REEL_OFFSET_Y    = 130;
+const REEL_GLOW_RADIUS = 170;
 
 // State machine. Mirrors the spec phases.
 const STATE = Object.freeze({
@@ -382,6 +433,15 @@ export class FishingScene extends Phaser.Scene {
     this.lineGfx = this.add.graphics();
     this.lineGfx.setDepth(8);
 
+    // Camera + everything that is anchored to the screen rather than to
+    // the painting (HUD, reel) or lives in the DOM (video, clouds). Runs
+    // now and again on every resize / rotation.
+    bindLayout(
+      this,
+      { alignX: VIEW_ALIGN_X, keepBottom: VIEW_KEEP_BOTTOM },
+      (layout) => this._applyLayout(layout),
+    );
+
     // Single global input handler -- state machine decides what to do.
     this.input.on('pointerdown', this._onPointerDown, this);
 
@@ -389,39 +449,32 @@ export class FishingScene extends Phaser.Scene {
     this.events.on(Phaser.Scenes.Events.WAKE, () => this._enterReady());
   }
 
+  /**
+   * Re-anchor everything that follows the screen rather than the painting.
+   * Called by bindLayout() on create and on every resize / rotation.
+   */
+  _applyLayout(layout) {
+    this._layoutBackdropVideo(layout);
+    this._layoutClouds(layout);
+    this._layoutHud(layout);
+    if (this.reelOverlay) {
+      const pos = this._reelPosition();
+      this.reelOverlay.setPosition(pos.x, pos.y);
+    }
+    if (this.calibrationHint) {
+      this.calibrationHint.setPosition(layout.safe.left + 10, layout.safe.bottom - 28);
+    }
+  }
+
   update(_time, delta) {
-    // DOM cloud parallax: each layer scrolls bg-position-x; horizontal
-    // dimensions are pinned to the canvas's bounding rect. Since cloud
-    // DIVs are children of #game (position: absolute), we compute left
-    // as canvas-rect-left MINUS gameDiv-rect-left to stay within #game's
-    // coordinate space.
+    // DOM cloud parallax: each layer just scrolls its background. Position
+    // and size are set from the layout (see _layoutClouds), so there is no
+    // per-frame DOM measuring.
     if (this.cloudDomLayers && this.cloudDomLayers.length) {
       const dt = delta / 1000;
-      const canvas = this.game.canvas;
-      const gameDiv = document.getElementById('game');
-      let leftPx = null;
-      let widthPx = null;
-      let clipPath = null;
-      if (canvas && gameDiv) {
-        const cRect = canvas.getBoundingClientRect();
-        const gRect = gameDiv.getBoundingClientRect();
-        leftPx = cRect.left - gRect.left;
-        widthPx = cRect.width;
-        // Belt + suspenders: even with overflow:hidden on #game some browser
-        // emulation modes still spill DOM children. clip-path forces the
-        // visible region to exactly match the canvas horizontal extent.
-        const insetLeft  = Math.max(0, cRect.left - gRect.left);
-        const insetRight = Math.max(0, (gRect.left + gRect.width) - (cRect.left + cRect.width));
-        clipPath = `inset(0 ${insetRight}px 0 ${insetLeft}px)`;
-      }
       for (const layer of this.cloudDomLayers) {
-        layer.pos -= layer.speed * dt;
+        layer.pos -= layer.cssSpeed * dt;
         layer.el.style.backgroundPositionX = `${layer.pos}px`;
-        if (leftPx !== null) {
-          layer.el.style.left = `${leftPx}px`;
-          layer.el.style.width = `${widthPx}px`;
-          layer.el.style.clipPath = clipPath;
-        }
       }
     }
 
@@ -492,14 +545,14 @@ export class FishingScene extends Phaser.Scene {
   }
 
   /**
-   * Map a canvas-Y inside WATER_BOUNDS to a relative bobber scale.
-   * y near the water-horizon (top of WATER_BOUNDS) returns BOBBER_SCALE_FAR;
-   * y at the bottom of WATER_BOUNDS returns BOBBER_SCALE_NEAR.
-   * Values outside the band clamp to the nearer extreme.
+   * Map a design-y on the water to a relative bobber scale.
+   * y near the water-horizon returns BOBBER_SCALE_FAR; y at the player's
+   * feet returns BOBBER_SCALE_NEAR. Values outside the band clamp to the
+   * nearer extreme.
    */
   _bobberDepthScale(y) {
     const t = Phaser.Math.Clamp(
-      (y - WATER_BOUNDS.y) / WATER_BOUNDS.height,
+      (y - BOBBER_DEPTH_FAR_Y) / (BOBBER_DEPTH_NEAR_Y - BOBBER_DEPTH_FAR_Y),
       0, 1
     );
     return Phaser.Math.Linear(BOBBER_SCALE_FAR, BOBBER_SCALE_NEAR, t);
@@ -522,8 +575,8 @@ export class FishingScene extends Phaser.Scene {
       this._buildImageBackdrop();
     } else {
       this.backdropImage = this.add.rectangle(
-        GAME_WIDTH / 2, GAME_HEIGHT / 2,
-        GAME_WIDTH, GAME_HEIGHT,
+        WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2,
+        WORLD_WIDTH, WORLD_HEIGHT,
         0x205070
       ).setDepth(0);
     }
@@ -546,11 +599,13 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildImageBackdrop() {
-    const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEX.BACKDROP);
+    // The painting IS the world: stretch it over exactly the world rect so
+    // it lines up with the video that replaces it once loaded.
+    const bg = this.add.image(
+      WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2, TEX.BACKDROP
+    );
     bg.setOrigin(0.5);
-    // Cover mode: uniform scale, fill canvas, crop overflow.
-    const scale = Math.max(GAME_WIDTH / bg.width, GAME_HEIGHT / bg.height);
-    bg.setScale(scale);
+    bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
     bg.setDepth(0);
     this.backdropImage = bg;
   }
@@ -568,53 +623,22 @@ export class FishingScene extends Phaser.Scene {
     videoEl.crossOrigin = 'anonymous';
 
     videoEl.addEventListener('loadeddata', () => {
-      const gameDiv = document.getElementById('game');
-      if (!gameDiv) return;
-
-      // Video fills the entire viewport (not pinned to canvas rect).
-      // On iPad 4:3 with a 16:9 backdrop:
-      //   - Video uses object-fit: cover so the painterly scene covers the
-      //     whole iPad screen (slight horizontal crop at the source edges)
-      //   - Phaser canvas stays at 16:9 in the middle via Scale.FIT, but its
-      //     "letterbox" area is no longer empty -- the video shows through
-      //   - Clouds / Julian / Dirk render in canvas coords, naturally on top
-      //     of the video. They appear inside the lake scene rather than
-      //     floating in dead space next to it.
-      // Some DevTools mobile-emulation modes (and some real mobile browsers)
-      // make 100vw / 100% underflow the actual viewport by a few px due to
-      // scrollbar reservation or device-chrome math. Brute-force: set explicit
-      // pixel dimensions from window.innerWidth/Height and keep them updated.
+      // backdrop.mp4 is a 16:9 file holding the 4:3 painting with black
+      // bars baked in left and right. We give the <video> the painting's
+      // own 4:3 box (the world rect, see _layoutBackdropVideo) and let
+      // object-fit: cover fill it by height -- which crops exactly those
+      // bars away. The painting then sits pixel-for-pixel under the canvas
+      // on every screen shape, so nothing drawn in the canvas can end up
+      // "beside" it.
       videoEl.style.position = 'fixed';
-      videoEl.style.top = '0';
-      videoEl.style.left = '0';
       videoEl.style.objectFit = 'cover';
       // Backdrop sits DEEPEST. Cloud DOM layers (z-index -1) drift in front
       // of it but still behind the Phaser canvas.
       videoEl.style.zIndex = '-2';
       videoEl.style.pointerEvents = 'none';
       document.body.appendChild(videoEl);
-
-      const updateVideoSize = () => {
-        videoEl.style.width = `${window.innerWidth}px`;
-        videoEl.style.height = `${window.innerHeight}px`;
-      };
-      updateVideoSize();
-      window.addEventListener('resize', updateVideoSize);
-      this._updateVideoSize = updateVideoSize;
-
-      // Belt + suspenders: keep updating each frame for cases where the
-      // viewport changes without firing a resize event (zoom, devtools).
-      const tickSize = () => {
-        if (this._tickSizeCancelled) return;
-        updateVideoSize();
-        this._tickSizeHandle = requestAnimationFrame(tickSize);
-      };
-      this._tickSizeCancelled = false;
-      this._tickSizeHandle = requestAnimationFrame(tickSize);
-
-      console.log(
-        `[FishingScene] DOM video viewport-fill: window=${window.innerWidth}x${window.innerHeight}`
-      );
+      this.backdropVideoEl = videoEl;
+      this._layoutBackdropVideo(this.layout);
 
       // Hide the still-image fallback now that the video is showing.
       if (this.backdropImage) {
@@ -625,7 +649,6 @@ export class FishingScene extends Phaser.Scene {
         console.warn('[FishingScene] backdrop video autoplay blocked:', err);
       });
 
-      this.backdropVideoEl = videoEl;
       console.log(
         `[FishingScene] DOM video backdrop attached: ${videoEl.videoWidth}x${videoEl.videoHeight}`
       );
@@ -639,23 +662,27 @@ export class FishingScene extends Phaser.Scene {
     // Kick off the load (some browsers don't start without it).
     videoEl.load();
 
-    // Clean up the DOM video + resize listeners on scene shutdown.
+    // Clean up the DOM video on scene shutdown.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this._tickSizeCancelled = true;
-      if (this._tickSizeHandle) {
-        cancelAnimationFrame(this._tickSizeHandle);
-        this._tickSizeHandle = null;
-      }
-      if (this._updateVideoSize) {
-        window.removeEventListener('resize', this._updateVideoSize);
-        this._updateVideoSize = null;
-      }
       if (this.backdropVideoEl) {
         this.backdropVideoEl.pause();
         this.backdropVideoEl.remove();
         this.backdropVideoEl = null;
       }
     });
+  }
+
+  /**
+   * Pin the backdrop <video> to the world rect, in viewport CSS px.
+   */
+  _layoutBackdropVideo(layout) {
+    const el = this.backdropVideoEl;
+    if (!el || !layout) return;
+    const r = layout.cssRect(WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT);
+    el.style.left   = `${layout.container.left + r.left}px`;
+    el.style.top    = `${layout.container.top + r.top}px`;
+    el.style.width  = `${r.width}px`;
+    el.style.height = `${r.height}px`;
   }
 
   _buildForeground() {
@@ -690,8 +717,19 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildClouds() {
-    // Phaser canvas can't reach the iPad letterbox area, so clouds live in
-    // the DOM (inside #game), pinned to its top edge.
+    // Clouds live in the DOM (inside #game, behind the canvas). Geometry
+    // comes from the scene layout -- see _layoutClouds.
+    this._spawnDomClouds();
+
+    // Clean up DOM layers when the scene shuts down or sleeps.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._removeDomClouds());
+    this.events.on(Phaser.Scenes.Events.SLEEP, () => this._removeDomClouds());
+    this.events.on(Phaser.Scenes.Events.WAKE, () => {
+      if (this.cloudDomLayers.length === 0) this._spawnDomClouds();
+    });
+  }
+
+  _spawnDomClouds() {
     this.cloudDomLayers = [];
 
     // Cleanup any stale cloud DIVs from previous mounts (HMR / scene wake).
@@ -700,32 +738,52 @@ export class FishingScene extends Phaser.Scene {
     }
 
     this._addDomCloudLayer({
-      src:       'clean/clouds-back.png',
-      heightVh:  CLOUD_BACK_HEIGHT_VH,
-      alpha:     CLOUD_BACK_ALPHA,
-      speed:     CLOUD_BACK_SPEED,
+      src:    'clean/clouds-back.png',
+      height: CLOUD_BACK_HEIGHT,
+      alpha:  CLOUD_BACK_ALPHA,
+      speed:  CLOUD_BACK_SPEED,
     });
     this._addDomCloudLayer({
-      src:       'clean/clouds-front.png',
-      heightVh:  CLOUD_FRONT_HEIGHT_VH,
-      alpha:     CLOUD_FRONT_ALPHA,
-      speed:     CLOUD_FRONT_SPEED,
+      src:    'clean/clouds-front.png',
+      height: CLOUD_FRONT_HEIGHT,
+      alpha:  CLOUD_FRONT_ALPHA,
+      speed:  CLOUD_FRONT_SPEED,
     });
 
-    // Clean up DOM layers when the scene shuts down or sleeps.
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._removeDomClouds());
-    this.events.on(Phaser.Scenes.Events.SLEEP, () => this._removeDomClouds());
-    this.events.on(Phaser.Scenes.Events.WAKE, () => {
-      if (this.cloudDomLayers.length === 0) this._buildClouds();
-    });
+    this._applySkyMask();
+    this._layoutClouds(this.layout);
   }
 
-  _addDomCloudLayer({ src, heightVh, alpha, speed }) {
+  /**
+   * Mask the cloud strips with the sky mask -- but only once the image is
+   * known to have loaded. A CSS mask whose image fails to load hides the
+   * element completely, and unmasked clouds beat no clouds.
+   */
+  _applySkyMask() {
+    const apply = () => {
+      this._skyMaskReady = true;
+      for (const layer of this.cloudDomLayers || []) {
+        const st = layer.el.style;
+        st.webkitMaskImage = `url(${SKY_MASK_SRC})`;
+        st.maskImage = `url(${SKY_MASK_SRC})`;
+        st.webkitMaskRepeat = 'no-repeat';
+        st.maskRepeat = 'no-repeat';
+      }
+      this._layoutClouds(this.layout);
+    };
+    if (this._skyMaskReady) { apply(); return; }
+    if (this._skyMaskProbe) return;            // still loading
+    const probe = new Image();
+    probe.onload = apply;
+    probe.onerror = () => console.log('[FishingScene] no sky mask, clouds stay unmasked');
+    probe.src = SKY_MASK_SRC;
+    this._skyMaskProbe = probe;
+  }
+
+  _addDomCloudLayer({ src, height, alpha, speed }) {
     // Attach to #game (Phaser's parent div) with position: absolute, NOT to
-    // body with position: fixed. DevTools mobile emulation pins fixed-position
-    // elements to the actual browser viewport (ignoring the simulated iPad
-    // viewport) -- so a 1180px fixed-width strip ends up wider than the iPad
-    // emulation visible area. Anchored to #game it respects the emulation.
+    // body with position: fixed -- #game clips them to the screen and gives
+    // them the same origin the layout's CSS rects are measured from.
     const parent = document.getElementById('game') || document.body;
     if (getComputedStyle(parent).position === 'static') {
       parent.style.position = 'relative';
@@ -734,11 +792,10 @@ export class FishingScene extends Phaser.Scene {
     const div = document.createElement('div');
     div.className = 'julian-cloud';            // tag for cleanup
     div.style.position = 'absolute';
-    div.style.top = '0';
-    // Width and left get synced to the canvas's bounding rect each frame in
-    // update() -- so on dev monitors where the canvas is centered with side
-    // letterbox, clouds match the canvas span exactly.
-    div.style.height = `${heightVh}vh`;
+    // The painting always covers the full screen width, so the strip
+    // simply spans the container; top + height come from _layoutClouds.
+    div.style.left = '0';
+    div.style.width = '100%';
     div.style.backgroundImage = `url(${src})`;
     div.style.backgroundRepeat = 'repeat-x';
     div.style.backgroundSize = 'auto 100%';
@@ -747,7 +804,45 @@ export class FishingScene extends Phaser.Scene {
     div.style.pointerEvents = 'none';
     parent.appendChild(div);
 
-    this.cloudDomLayers.push({ el: div, pos: 0, speed });
+    this.cloudDomLayers.push({ el: div, pos: 0, height, speed, cssSpeed: 0 });
+  }
+
+  /**
+   * Fit each cloud strip into the visible sky. The band's lower edge is a
+   * fixed line in the painting (just above the mountains); its upper edge
+   * is the top of the screen. Wider screens show less sky, so the band --
+   * and the clouds in it -- shrink with it, down to CLOUD_MIN_SCALE.
+   */
+  _layoutClouds(layout) {
+    if (!layout || !this.cloudDomLayers) return;
+    const bandTop = Math.max(WORLD_TOP, layout.view.top);
+    // Where the sky mask sits on screen: glued to the painting.
+    const mask = layout.cssRect(
+      WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT * SKY_MASK_FRACTION
+    );
+    for (const layer of this.cloudDomLayers) {
+      const skyBottom = WORLD_TOP + layer.height;
+      const height = Math.max(skyBottom - bandTop, layer.height * CLOUD_MIN_SCALE);
+      const r = layout.cssRect(layout.view.left, bandTop, layout.view.width, height);
+      const previousHeight = layer.cssHeight;
+      const st = layer.el.style;
+      st.top = `${r.top}px`;
+      st.height = `${r.height}px`;
+      if (this._skyMaskReady) {
+        // Mask coordinates are relative to the strip's own box.
+        const size = `${mask.width}px ${mask.height}px`;
+        const position = `${mask.left - r.left}px ${mask.top - r.top}px`;
+        st.webkitMaskSize = size;
+        st.maskSize = size;
+        st.webkitMaskPosition = position;
+        st.maskPosition = position;
+      }
+      // The tile is sized by the strip's height, so a resize rescales the
+      // pattern: rescale the scroll offset with it to avoid a visible jump.
+      if (previousHeight > 0) layer.pos *= r.height / previousHeight;
+      layer.cssHeight = r.height;
+      layer.cssSpeed = layer.speed * layout.scale * (height / layer.height);
+    }
   }
 
   _removeDomClouds() {
@@ -1173,14 +1268,12 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildHudIcon({ key, slot, onTap }) {
-    // Spacing constants -- tunable in one place.
-    const ICON_SIZE   = 110;
-    const ICON_MARGIN = 14;
-    const ICON_X      = GAME_WIDTH - ICON_MARGIN - ICON_SIZE / 2;
-    const ICON_Y0     = ICON_MARGIN + ICON_SIZE / 2;
-    const ICON_STEP   = ICON_SIZE + ICON_MARGIN;
+    // Sizes live in the HUD_ICON_* constants. The position is assigned by
+    // _layoutHud(), which pins the stack to the real top-right corner of
+    // the screen.
+    const ICON_SIZE = HUD_ICON_SIZE;
 
-    const c = this.add.container(ICON_X, ICON_Y0 + slot * ICON_STEP);
+    const c = this.add.container(0, 0);
     c.setDepth(50);
     c.setSize(ICON_SIZE, ICON_SIZE);
     c.setInteractive({ useHandCursor: true });
@@ -1199,7 +1292,48 @@ export class FishingScene extends Phaser.Scene {
       onTap();
     });
 
-    return { container: c, overlay, sizePx: ICON_SIZE };
+    return { container: c, overlay, sizePx: ICON_SIZE, slot };
+  }
+
+  /**
+   * Pin the HUD stack to the top-right corner of the visible screen,
+   * inside the device's safe area (notch / status bar). On very short
+   * screens the whole stack shrinks so it always fits.
+   */
+  _layoutHud(layout) {
+    if (!this.hudIcons || !layout) return;
+    const safe = layout.safe;
+    const stackHeight = HUD_ICON_COUNT * HUD_ICON_STEP + HUD_ICON_MARGIN;
+    const k = Math.min(1, safe.height / stackHeight);
+    const x = safe.right - (HUD_ICON_MARGIN + HUD_ICON_SIZE / 2) * k;
+    const y0 = safe.top + (HUD_ICON_MARGIN + HUD_ICON_SIZE / 2) * k;
+    for (const icon of Object.values(this.hudIcons)) {
+      icon.container.setScale(k);
+      icon.container.setPosition(x, y0 + icon.slot * HUD_ICON_STEP * k);
+    }
+    this._hudRect = new Phaser.Geom.Rectangle(
+      safe.right - (HUD_ICON_MARGIN + HUD_ICON_SIZE) * k,
+      safe.top,
+      (HUD_ICON_MARGIN + HUD_ICON_SIZE) * k,
+      stackHeight * k,
+    );
+  }
+
+  /**
+   * Where the reel widget goes: the bottom-right corner of the visible
+   * screen. On short screens (phones) that corner sits right under the
+   * HUD stack, so the reel slides left until its glow clears the icons --
+   * a stray tap on the bait icon mid-reel would abort the catch.
+   */
+  _reelPosition() {
+    const safe = this.layout.safe;
+    let x = safe.right - REEL_OFFSET_X;
+    const y = safe.bottom - REEL_OFFSET_Y;
+    const hud = this._hudRect;
+    if (hud && y - REEL_GLOW_RADIUS < hud.bottom + 10) {
+      x = Math.min(x, hud.left - 20 - REEL_GLOW_RADIUS);
+    }
+    return { x, y };
   }
 
   /**
@@ -1320,12 +1454,12 @@ export class FishingScene extends Phaser.Scene {
     g.lineStyle(2, 0x00ffff, 0.9);
     const SAMPLES = 64;
     g.beginPath();
-    g.moveTo(0, GAME_HEIGHT);
+    g.moveTo(WORLD_LEFT, WORLD_BOTTOM);
     for (let i = 0; i <= SAMPLES; i++) {
-      const x = (GAME_WIDTH * i) / SAMPLES;
+      const x = WORLD_LEFT + (WORLD_WIDTH * i) / SAMPLES;
       g.lineTo(x, waterTopAt(x));
     }
-    g.lineTo(GAME_WIDTH, GAME_HEIGHT);
+    g.lineTo(WORLD_RIGHT, WORLD_BOTTOM);
     g.closePath();
     g.fillPath();
     g.strokePath();
@@ -1341,8 +1475,9 @@ export class FishingScene extends Phaser.Scene {
 
     const topLeftX = this.julianSprite.x;
     const topLeftY = this.julianSprite.y - this.julianSprite.displayHeight;
-    const offsetX = Math.round(pointer.x - topLeftX);
-    const offsetY = Math.round(pointer.y - topLeftY);
+    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    const offsetX = Math.round(world.x - topLeftX);
+    const offsetY = Math.round(world.y - topLeftY);
 
     this._rodTipOffsetX = offsetX;
     this._rodTipOffsetY = offsetY;
@@ -1362,7 +1497,9 @@ export class FishingScene extends Phaser.Scene {
     // Calibration takes precedence -- Shift+Click never casts.
     if (this._maybeHandleCalibrationClick(pointer)) return;
 
-    const { x, y } = pointer;
+    // pointer.x/y are canvas pixels; the camera decides which part of the
+    // world those pixels show, so translate to design coordinates first.
+    const { x, y } = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
 
     switch (this.state) {
       case STATE.READY:
@@ -1398,8 +1535,8 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _isInsideWater(x, y) {
-    if (x < 0 || x >= GAME_WIDTH) return false;
-    if (y > GAME_HEIGHT) return false;
+    if (x < WORLD_LEFT || x >= WORLD_RIGHT) return false;
+    if (y > WORLD_BOTTOM) return false;
     return y >= waterTopAt(x);
   }
 
@@ -1749,15 +1886,13 @@ export class FishingScene extends Phaser.Scene {
     }
 
     const turns = reelTurnsFor(pick);
-    // Position: bottom-right, clear of the 3-icon HUD stack (which lives at
-    // x ~ GAME_WIDTH - 14 - 55 in canvas coords). 200px in from the right
-    // edge, 130px up from the bottom, leaves plenty of margin.
-    const reelX = GAME_WIDTH - 200;
-    const reelY = GAME_HEIGHT - 130;
+    // Position: bottom-right corner of the visible screen, clear of the
+    // 3-icon HUD stack. Follows the screen on rotation via _applyLayout.
+    const reelPos = this._reelPosition();
 
     this.reelOverlay = new ReelOverlay(this, {
-      x: reelX,
-      y: reelY,
+      x: reelPos.x,
+      y: reelPos.y,
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;

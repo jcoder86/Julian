@@ -47,6 +47,40 @@ scripts/
 served at the dev-server root. Phaser's loader paths reflect that:
 `raw/backdrop.png`, `clean/julian_dirk_fishing.png`, `audio/sfx/cast.mp3`.
 
+## Screen sizes & layout
+
+Every painting in the game (backdrop, start, catch) is **4:3**. The Phaser
+canvas is that same 4:3 "world" (1280x960) and uses `Scale.ENVELOP`: it
+always **covers** the screen and crops what doesn't fit -- no letterbox
+bars on any device.
+
+* 4:3 iPad -- the whole painting is visible.
+* Wider screens (phones in landscape, desktop) -- top and bottom are
+  cropped. Each scene says which part must survive (the dock in the fishing
+  scene, the logo on the title screen, Julian's head on the catch screen).
+* Narrower screens -- the sides are cropped instead.
+* A phone or tablet held upright gets a wordless "rotate" hint
+  (`#rotate-hint` in `index.html`).
+
+Scenes are written in **design coordinates**: the original 1280x720 frame,
+which sits in the vertical middle of the world (the painting runs from
+design y -120 to 840). `src/systems/Layout.js` positions each scene's
+camera and reports the visible rectangle (`layout.view`) and the same
+rectangle minus notch / status bar (`layout.safe`):
+
+* things that belong to the painting (Julian, Dirk, the waterline, the
+  bobber) use fixed design coordinates and therefore sit on the same spot
+  of the painting on every device;
+* things that belong to the screen (HUD icons, reel, buttons) are placed
+  relative to `layout.safe` in the scene's `_applyLayout()`, which re-runs
+  on every resize / rotation;
+* DOM layers behind the canvas (backdrop video, clouds, title image) are
+  positioned from the same layout via `layout.cssRect()`, so they cannot
+  drift apart from what the canvas draws.
+
+Menus (collection, bait / float pickers) use the layout's `frame` mode,
+which zooms the camera out just enough to keep their content on screen.
+
 ## Asset pipeline
 
 Drop your green-screen PNGs into `assets/raw/` and run:
@@ -98,7 +132,14 @@ the video when present and loops it silently. Constraints:
 * **H.264 MP4** for broad browser compatibility. WEBM/VP9 also fine if
   you swap the loader URL.
 * **No audio track** (we mute anyway).
-* Aim for 16:9 aspect ratio and < 20 MB so HMR stays snappy.
+* The scene itself must be **4:3**, framed exactly like `backdrop.png`.
+  The current file is 1280x720 with the 4:3 painting in the middle and
+  black bars left and right; the game shows it in a 4:3 box with
+  `object-fit: cover`, which crops those bars away. A true 4:3 file works
+  just as well.
+* Keep it < 20 MB so HMR stays snappy.
+* After replacing the video, regenerate the sky mask (see the cloud layer
+  section below).
 
 The python pipeline ignores `backdrop*` files, so MP4s in `raw/` are
 served untouched. If both `backdrop.mp4` and `backdrop.png` exist, the
@@ -135,10 +176,27 @@ animated foreground (e.g. an alpha-channel WebM that already moves).
 
 ### Decoupled cloud layer (parallax)
 
-Clouds are a **separate layer** that scrolls horizontally and infinitely
-via Phaser's `TileSprite`. The backdrop video itself should have a clean
-**cloud-free sky** -- the cloud layer on top does the drifting, scoped to
-the sky band **above** the mountains so the silhouettes never get covered.
+Clouds are **separate layers** that scroll horizontally and infinitely:
+two DOM strips (`clean/clouds-back.png`, `clean/clouds-front.png`) behind
+the transparent canvas and in front of the backdrop video. The backdrop
+video itself should have a clean **cloud-free sky** -- the cloud layers do
+the drifting.
+
+The strips are masked with `assets/clean/sky-mask.png`, an alpha image of
+where the painting is sky, so clouds pass **behind** the tree tops and
+mountain ridges on every screen shape. The mask is generated from
+`backdrop.mp4`; re-run this whenever the backdrop changes:
+
+```bash
+python scripts/make_sky_mask.py
+```
+
+(needs `ffmpeg` on the PATH, plus Pillow / numpy / scipy). If the mask is
+missing the clouds simply render unmasked.
+
+The notes below describe the original single-strip setup and are kept for
+the asset requirements; the tunables that actually exist today are the
+`CLOUD_*` constants at the top of `FishingScene.js`.
 
 Drop a transparent-background cloud strip at `assets/raw/clouds.png`:
 

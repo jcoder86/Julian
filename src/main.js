@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
+import { WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { FishingScene } from './scenes/FishingScene.js';
@@ -16,10 +16,15 @@ const config = {
   // nothing is drawn on top. The PNG-backdrop fallback is still rendered as
   // a sprite at depth 0 so it visibly fills the canvas when no video exists.
   transparent: true,
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
+  // The canvas is world-sized (4:3, like every painting in the game) and
+  // ENVELOPs its container: it always covers the whole screen and crops
+  // whatever doesn't fit, instead of letterboxing. Each scene's camera
+  // decides which slice of the world survives the crop -- see
+  // systems/Layout.js.
+  width: WORLD_WIDTH,
+  height: WORLD_HEIGHT,
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   // Pixel snapping keeps placeholder shapes crisp at integer scales.

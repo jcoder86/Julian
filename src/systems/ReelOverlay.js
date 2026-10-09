@@ -103,12 +103,42 @@ export class ReelOverlay {
     this._redrawProgress();
   }
 
+  /**
+   * Angle from the crank pivot to the pointer. pointer.x/y are canvas
+   * pixels; the pivot lives in the scene's (camera-scrolled) coordinates,
+   * so go through the camera first.
+   */
+  _pointerAngle(pointer) {
+    const p = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    return Math.atan2(p.y - this.pivotY, p.x - this.pivotX);
+  }
+
+  /**
+   * Move the whole widget (used when the screen rotates / resizes while
+   * the player is reeling).
+   */
+  setPosition(x, y) {
+    if (this._destroyed) return;
+    const dx = x - this.x;
+    const dy = y - this.y;
+    if (dx === 0 && dy === 0) return;
+    this.x = x;
+    this.y = y;
+    this.pivotX += dx;
+    this.pivotY += dy;
+    for (const obj of [this.glowOuter, this.glowInner, this.reel, this.handle, this.hitZone]) {
+      obj.x += dx;
+      obj.y += dy;
+    }
+    this._redrawProgress();
+  }
+
   _attachInputs() {
     // Capture handlers as bound fns so we can detach them on destroy.
     this._onHandleDown = (pointer) => {
       if (this._destroyed) return;
       this.isDragging = true;
-      this._lastPointerAngle = Math.atan2(pointer.y - this.pivotY, pointer.x - this.pivotX);
+      this._lastPointerAngle = this._pointerAngle(pointer);
       // Snap handle to current pointer angle so it feels responsive.
       this.handle.rotation = this._lastPointerAngle;
       // Begin the looping reel-click sound while the player cranks.
@@ -121,7 +151,7 @@ export class ReelOverlay {
     };
     this._onPointerMove = (pointer) => {
       if (this._destroyed || !this.isDragging) return;
-      const ang = Math.atan2(pointer.y - this.pivotY, pointer.x - this.pivotX);
+      const ang = this._pointerAngle(pointer);
       if (this._lastPointerAngle !== null) {
         let delta = ang - this._lastPointerAngle;
         // Wrap into [-PI, PI] so a wrap-around at the angle seam doesn't

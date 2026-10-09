@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 // Phaser is bundled via vite; ensure side-effect import for BlendModes etc.
 import { FISH_SPECIES, FISH_SIZES, fishTextureKey, speciesNlName } from '../data/fish.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
 
 /**
@@ -30,17 +31,27 @@ const CARD_H = 190;
 const CARD_GAP = 14;
 const TITLE_BAR_H = 92;
 
+// Back button (top-left).
+const BACK_DISPLAY = 75;
+const BACK_MARGIN  = 18;
+
+// The background is drawn far larger than the design frame: on screens
+// that aren't 16:9 the camera shows more than the frame, and it should
+// all be "trophy hall", never a gap.
+const BG_OVERSIZE = 6000;
+
 export class FishingCollectionScene extends Phaser.Scene {
   constructor() {
     super('FishingCollectionScene');
   }
 
   create() {
-    // Hide the FishingScene's DOM video backdrop so it doesn't leak through
-    // the canvas letterbox bars. Same trick as CatchDisplayScene.
+    // This scene's background covers the whole screen, so the
+    // FishingScene's DOM video behind the canvas is invisible -- hide it
+    // rather than let the browser keep compositing it. Same as
+    // CatchDisplayScene.
     this._hiddenVideoEl = document.querySelector('video');
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = 'none';
-    document.body.style.backgroundColor = '#0d1f33';
 
     // Background: vertical gradient via two stacked rectangles.
     this._buildBackground();
@@ -61,9 +72,10 @@ export class FishingCollectionScene extends Phaser.Scene {
 
     // Back button -- top-left. Same green play.png sprite + same pulsing
     // rounded-rect halo behind it as the catch-screen continue button.
-    const BACK_DISPLAY = 75;
-    const backX = BACK_DISPLAY / 2 + 18;
-    const backY = BACK_DISPLAY / 2 + 18;
+    // Halo + button share a container that _applyLayout pins to the
+    // screen's left edge.
+    const backGroup = this.add.container(0, 0);
+    backGroup.setDepth(10);
 
     const halo = this.add.graphics();
     const HALO_PAD    = 4;     // tight against the button edge
@@ -73,8 +85,7 @@ export class FishingCollectionScene extends Phaser.Scene {
     halo.fillStyle(0x4ecd5a, 1);
     halo.fillRoundedRect(-haloW / 2, -haloH / 2, haloW, haloH, HALO_RADIUS);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    halo.setPosition(backX, backY);
-    halo.setDepth(9);
+    backGroup.add(halo);
     this.tweens.add({
       targets: halo,
       alpha: { from: 0.15, to: 0.55 },
@@ -82,31 +93,54 @@ export class FishingCollectionScene extends Phaser.Scene {
       duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    const back = this.add.image(backX, backY, TEX.PLAY);
+    const back = this.add.image(0, 0, TEX.PLAY);
     back.setScale(BACK_DISPLAY / Math.max(back.width, back.height));
-    back.setDepth(10);
     back.setInteractive({ useHandCursor: true });
     back.on('pointerdown', () => this._close());
+    backGroup.add(back);
+    this._backGroup = backGroup;
 
     this._buildCards();
+
+    // Camera: zoom out just enough that the whole design frame (title +
+    // 4x3 card grid) is on screen, whatever the aspect ratio. On a 4:3
+    // iPad that is zoom 1 -- unchanged.
+    bindLayout(this, { mode: 'frame' }, (layout) => this._applyLayout(layout));
 
     // ESC to close (desktop debugging).
     this.input.keyboard?.on('keydown-ESC', () => this._close());
   }
 
+  /**
+   * Called on create and on every resize / rotation.
+   */
+  _applyLayout(layout) {
+    if (!layout || !this._backGroup) return;
+    // Back button: on the title row, hugging the left edge of the screen
+    // (inside the safe area -- phones have a notch there in landscape).
+    // If the safe area starts below the title row, the button follows it.
+    const half = BACK_DISPLAY / 2;
+    this._backGroup.setPosition(
+      layout.safe.left + BACK_MARGIN + half,
+      Math.max(BACK_MARGIN + half, layout.safe.top + BACK_MARGIN + half),
+    );
+  }
+
   _close() {
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = '';
-    document.body.style.backgroundColor = '';
     this.scene.stop();
     this.scene.wake('FishingScene');
   }
 
   _buildBackground() {
     // Solid bottom half then a lighter top half evokes "trophy hall".
+    // Both extend far beyond the design frame so they fill any screen.
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2,
-                       GAME_WIDTH, GAME_HEIGHT, BG_BOTTOM_COLOR).setDepth(0);
-    const topBand = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.25,
-                                       GAME_WIDTH, GAME_HEIGHT * 0.5, BG_TOP_COLOR);
+                       BG_OVERSIZE, BG_OVERSIZE, BG_BOTTOM_COLOR).setDepth(0);
+    // Lighter band: from far above the frame down to its vertical middle.
+    const bandBottom = GAME_HEIGHT * 0.5;
+    const topBand = this.add.rectangle(GAME_WIDTH / 2, bandBottom - BG_OVERSIZE / 2,
+                                       BG_OVERSIZE, BG_OVERSIZE, BG_TOP_COLOR);
     topBand.setDepth(0);
     topBand.setAlpha(0.6);
   }

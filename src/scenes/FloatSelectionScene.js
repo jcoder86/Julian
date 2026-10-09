@@ -1,7 +1,12 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { bindLayout } from '../systems/Layout.js';
 import { FLOATS, floatFullTextureKey, DEFAULT_FLOAT_ID } from '../data/floats.js';
+
+// The scrim is drawn far larger than the design frame so it dims the whole
+// screen on any aspect ratio.
+const SCRIM_OVERSIZE = 6000;
 
 /**
  * Modal-style scene for picking which bobber to use. Same architecture as
@@ -13,7 +18,7 @@ export class FloatSelectionScene extends Phaser.Scene {
   create() {
     const scrim = this.add.rectangle(
       GAME_WIDTH / 2, GAME_HEIGHT / 2,
-      GAME_WIDTH, GAME_HEIGHT,
+      SCRIM_OVERSIZE, SCRIM_OVERSIZE,
       0x000000, 0.55
     );
     scrim.setInteractive();
@@ -21,6 +26,10 @@ export class FloatSelectionScene extends Phaser.Scene {
 
     const panelW = Math.round(GAME_WIDTH * 0.78);
     const panelH = Math.round(GAME_HEIGHT * 0.60);
+
+    // Camera: keep the panel (plus a margin) fully on screen and centred,
+    // zooming out only if the screen is too small for it.
+    bindLayout(this, { mode: 'frame', fitWidth: panelW + 40, fitHeight: panelH + 40 });
     const panel = this.add.rectangle(
       GAME_WIDTH / 2, GAME_HEIGHT / 2,
       panelW, panelH,
