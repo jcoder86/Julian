@@ -122,6 +122,27 @@ The two knobs live at the top of `process_assets.py`:
 If you see a green halo, lower `CHROMA_LOW`. If the subject is being eaten
 into, raise `CHROMA_HIGH`.
 
+### Adding a fish species
+
+A new species arrives as its own green-screen image: the three sizes side
+by side (small, medium, large), each inside a white box -- see
+`assets/raw/fish-catfish.webp`.
+
+1. Save the image in `assets/raw/` and add a `(file, species id)` pair to
+   `FISH_STRIPS` in `scripts/split_atlas.py`.
+2. Run `python scripts/split_atlas.py`. That re-cuts every atlas; the new
+   sprites come out as `assets/clean/fish_<id>_<size>.png`.
+3. Add the species to `FISH_SPECIES` in `src/data/fish.js` (Dutch name,
+   baits, rarity weight, cm range per size). Preloading, the catch screen
+   and the collection card all follow from that list.
+4. Optional voice clips: add `small_<id>` / `medium_<id>` / `large_<id>`
+   phrases to `assets/audio/sfx/vissen.json` + `vissen.mp3`, or drop
+   separate `assets/audio/voice/<size>-<id>.wav` files. Without them a
+   catch is simply announced without a voice.
+
+The collection screen is a 4 x 3 grid and currently holds exactly 12
+species; a 13th needs a layout change in `FishingCollectionScene.js`.
+
 ## Animated backdrop
 
 Drop `assets/raw/backdrop.mp4` next to the static PNG. The scene prefers

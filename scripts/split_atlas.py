@@ -41,15 +41,17 @@ CHROMA_HIGH = 80
 ALPHA_BLUR_RADIUS = 0.6
 
 
-def chromakey_remove(img: Image.Image, remove_white: bool = False) -> Image.Image:
+def chromakey_remove(img: Image.Image, remove_white: bool = False,
+                     chroma_low: float = CHROMA_LOW,
+                     chroma_high: float = CHROMA_HIGH) -> Image.Image:
     rgba = np.asarray(img.convert("RGBA"), dtype=np.float32)
     r = rgba[..., 0]
     g = rgba[..., 1]
     b = rgba[..., 2]
     max_rb = np.maximum(r, b)
     green_excess = g - max_rb
-    denom = max(CHROMA_HIGH - CHROMA_LOW, 1)
-    alpha_mask = 1.0 - np.clip((green_excess - CHROMA_LOW) / denom, 0.0, 1.0)
+    denom = max(chroma_high - chroma_low, 1)
+    alpha_mask = 1.0 - np.clip((green_excess - chroma_low) / denom, 0.0, 1.0)
     despilled_g = np.where(green_excess > 0, max_rb, g)
     # Optionally transparentise near-white pixels (e.g. gridlines drawn on
     # the source atlas). Threshold 220 catches anti-aliased line edges too.
@@ -284,6 +286,101 @@ def process_fish(atlas_path: Path) -> int:
     return saved
 
 
+# ----------------------------------------------------------------------------
+# Single-species strips
+# ----------------------------------------------------------------------------
+#
+# Species added after the main atlas was drawn arrive as their own image:
+# ONE species, three sizes side by side (small, medium, large), each inside
+# a white box on the green chromakey. Add a (file, species id) pair here
+# and the three sprites come out as clean/fish_<species>_<size>.png.
+FISH_STRIPS = [
+    ("fish-catfish.webp", "catfish"),   # meerval
+]
+
+# Pixels this bright on all channels count as "box line white"...
+BOX_LINE_MIN = 200
+# ...and a row / column is a box line when at least this share of it is.
+BOX_ROW_FRACTION = 0.5
+BOX_COL_FRACTION = 0.3
+# Stay this far inside the lines so their anti-aliased edge is cut off too.
+BOX_INSET = 3
+# A much softer key than the atlas default (CHROMA_HIGH = 80). Hair-thin
+# details -- a catfish's whiskers are 1-2 px wide -- are mostly green
+# screen by the time they reach a pixel; the default key erases them,
+# this one keeps them as thin, semi-transparent strokes.
+STRIP_CHROMA_HIGH = 190
+
+
+def _line_runs(is_line: np.ndarray) -> list[tuple[int, int]]:
+    """Collapse a boolean array into (first, last) index runs of True."""
+    runs = []
+    start = None
+    for i, on in enumerate(is_line):
+        if on and start is None:
+            start = i
+        elif not on and start is not None:
+            runs.append((start, i - 1))
+            start = None
+    if start is not None:
+        runs.append((start, len(is_line) - 1))
+    return runs
+
+
+def _keep_main_sprite(img: Image.Image, reach: int = 8) -> Image.Image:
+    """
+    Keep the largest sprite in `img` plus any loose bits within `reach` px
+    of it (thin whiskers break into fragments after chromakeying), and
+    drop everything else -- stray specks elsewhere in the cell.
+    """
+    from scipy import ndimage
+    arr = np.asarray(img.convert("RGBA")).copy()
+    mask = arr[..., 3] > 32
+    if not mask.any():
+        return img
+    labels, n = ndimage.label(ndimage.binary_dilation(mask, iterations=reach))
+    areas = ndimage.sum(mask, labels, index=range(1, n + 1))
+    main = int(np.argmax(areas)) + 1
+    arr[labels != main, 3] = 0
+    return Image.fromarray(arr, mode="RGBA")
+
+
+def process_fish_strip(atlas_path: Path, species: str) -> int:
+    """
+    Cut a three-box species strip into small / medium / large sprites.
+
+    The boxes are found from the white lines themselves, and each fish is
+    cropped from INSIDE its box. The lines are never removed by colour:
+    a fish with a pale belly has plenty of near-white pixels of its own,
+    and keying those out would punch holes in it.
+    """
+    img = Image.open(atlas_path).convert("RGB")
+    rgb = np.asarray(img)
+    white = (rgb[..., 0] > BOX_LINE_MIN) & (rgb[..., 1] > BOX_LINE_MIN) & (rgb[..., 2] > BOX_LINE_MIN)
+    h_lines = _line_runs(white.mean(axis=1) > BOX_ROW_FRACTION)
+    v_lines = _line_runs(white.mean(axis=0) > BOX_COL_FRACTION)
+    if len(h_lines) != 2 or len(v_lines) != len(FISH_SIZES) + 1:
+        print(f"[warn] {atlas_path.name}: expected 2 horizontal and "
+              f"{len(FISH_SIZES) + 1} vertical box lines, found "
+              f"{len(h_lines)} and {len(v_lines)}. Skipping.")
+        return 0
+
+    y0 = h_lines[0][1] + 1 + BOX_INSET
+    y1 = h_lines[1][0] - BOX_INSET
+    saved = 0
+    for i, size in enumerate(FISH_SIZES):
+        x0 = v_lines[i][1] + 1 + BOX_INSET
+        x1 = v_lines[i + 1][0] - BOX_INSET
+        cell = chromakey_remove(img.crop((x0, y0, x1, y1)),
+                                chroma_high=STRIP_CHROMA_HIGH)
+        cell = auto_crop(_keep_main_sprite(cell))
+        out = CLEAN_DIR / f"fish_{species}_{size}.png"
+        cell.save(out, "PNG")
+        print(f"[info] {atlas_path.name} -> {out.name} ({cell.width}x{cell.height})")
+        saved += 1
+    return saved
+
+
 # Bait atlas: 5 columns (bait types) x 2 rows (top=full-on-hook, bottom=simple).
 BAIT_NAMES = ["brood", "mais", "maden", "wormen", "vis"]
 BAIT_ROW_LABELS = ["full", "simple"]  # row 0 = full, row 1 = simple
@@ -485,6 +582,15 @@ def main():
             print(f"[skip] {fname} not found in raw/")
             continue
         count = handler(path)
+        print(f"[ok]   {fname} -> {count} cells")
+        total += count
+
+    for fname, species in FISH_STRIPS:
+        path = RAW_DIR / fname
+        if not path.exists():
+            print(f"[skip] {fname} not found in raw/")
+            continue
+        count = process_fish_strip(path, species)
         print(f"[ok]   {fname} -> {count} cells")
         total += count
 

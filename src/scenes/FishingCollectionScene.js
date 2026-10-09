@@ -13,7 +13,7 @@ import { TEX } from './BootScene.js';
  * the most recent catch gets a yellow halo so the player can see "what
  * I just caught" at a glance.
  *
- * The layout is fixed at 11 cards (one per species), so the screen never
+ * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
  */
 
@@ -23,7 +23,7 @@ const CARD_BG_COLOR   = 0x182a40;
 const CARD_BORDER     = 0x3a557a;
 const HIGHLIGHT_COLOR = 0xffd24a;   // last-catch halo
 
-// 4 columns x 3 rows = 12 cells (11 used). Cells are 280×190 with 14px gap.
+// 4 columns x 3 rows = 12 cells, one per species. Cells are 280×190 with 14px gap.
 const COLS = 4;
 const ROWS = 3;
 const CARD_W = 280;

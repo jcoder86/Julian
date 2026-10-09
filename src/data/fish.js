@@ -1,4 +1,4 @@
-// Fish definitions: 11 species x 3 sizes (small/medium/large).
+// Fish definitions: 12 species x 3 sizes (small/medium/large).
 // Each entry encodes its texture key, display name, bait compatibility,
 // and rarity weight. Catch logic in FishingScene uses weightedPick(bait)
 // which filters to species that accept the selected bait then rolls
@@ -14,7 +14,8 @@ export const FISH_SIZES = ["small", "medium", "large"];
  * range in centimetres for each size bucket, sourced from a Dutch field
  * guide table -- small = "jong/klein", medium = "gemiddeld vangbaar",
  * large = "max NL". Each catch rolls a random integer cm in the bucket's
- * range. Adjust to taste.
+ * range. Adjust to taste. An optional `maxReelTurns` raises the cap on
+ * how many reel turns a catch of this species can take (default 9).
  */
 export const FISH_SPECIES = [
   // Vredevissen (peaceful fish) -- common, NO fish-bait
@@ -47,6 +48,17 @@ export const FISH_SPECIES = [
   // Trout still takes any bait.
   { id: "trout",  nlName: "Forel",       baits: ["brood", "mais", "maden", "wormen", "vis"],  speciesWeight:   6, sizeWeights: [45, 35, 20],
     lengthCm: { small: [20, 25], medium: [25, 45], large: [ 50,  60] } },
+
+  // Wels catfish: the rarest fish in the lake, and by far the biggest. A
+  // bottom-dwelling predator -- it takes a bunch of worms or a bait fish,
+  // never bread, corn or maggots. speciesWeight 3 is half of the trout's
+  // (the next rarest): about 1 bite in 150 on worms, 1 in 37 on fish bait.
+  // A full-grown one is over two metres, twice Julian's height -- so it
+  // alone may take up to 12 turns of the reel (maxReelTurns; every other
+  // species stops at the default cap of 9, see reelTurnsFor in
+  // FishingScene.js).
+  { id: "catfish", nlName: "Meerval",    baits: ["wormen", "vis"],                            speciesWeight:   3, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [30, 50], medium: [80, 130], large: [170, 220] }, maxReelTurns: 12 },
 ];
 
 /** Convenience helper returning the Dutch display name for a species id. */
@@ -123,6 +135,7 @@ const LEGACY_SPECIES_COLOR = {
   roach: 0xfff05a, rudd: 0xff9a3c, perch: 0xe53935, bream: 0x9aa0a6,
   tench: 0x556b2f, carp:  0xc89b3c, pike:  0x4a6b3a, zander: 0x6b7280,
   chub:  0xbcccdc, bass:  0x607d8b, trout: 0xb87333,
+  catfish: 0x5c4a32,
 };
 export function legacyShape({ species, size }) {
   return {

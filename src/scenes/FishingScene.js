@@ -370,20 +370,30 @@ function requiresReel(_pick) { return true; }
 // a small carp (speciesWeight 35) takes more turns than a small bream
 // (speciesWeight 75) at the same length.
 //
-// Formula: ceil(0.5 + cm/25 + (100 - speciesWeight)/30), clamped to [1, 9].
+// Formula: ceil(0.5 + cm/25 + (100 - speciesWeight)/30), clamped to
+// [1, cap]. The cap is DEFAULT_MAX_REEL_TURNS unless the species sets its
+// own `maxReelTurns` in data/fish.js -- only the catfish does (12), so the
+// lake's one true monster is a longer fight than anything else.
 // Sample turns:
 //   roach  small   9cm  (w100) -> 1   (very fast flick)
 //   bream  small  12cm  (w 75) -> 2
 //   carp   small  20cm  (w 35) -> 4   <-- > bream small, as requested
 //   carp   medium 55cm  (w 35) -> 6
-//   pike   large 125cm  (w 20) -> 9   (cap, hardest fish)
+//   pike   large 125cm  (w 20) -> 9   (default cap)
 //   trout  large  55cm  (w  6) -> 6
+//   catfish small   40cm (w 3) -> 6   (rarest fish: never a quick flick)
+//   catfish medium 100cm (w 3) -> 8
+//   catfish large  175cm (w 3) -> 11
+//   catfish large  200cm (w 3) -> 12  (its own cap)
+const DEFAULT_MAX_REEL_TURNS = 9;
 function reelTurnsFor(pick) {
+  const species = FISH_BY_ID[pick.species];
   const cm = pick.lengthCm ?? 30;
-  const weight = FISH_BY_ID[pick.species]?.speciesWeight ?? 50;
+  const weight = species?.speciesWeight ?? 50;
+  const cap = species?.maxReelTurns ?? DEFAULT_MAX_REEL_TURNS;
   const cmTurns     = cm / 25;
   const rarityTurns = (100 - weight) / 30;
-  return Math.max(1, Math.min(9, Math.ceil(0.5 + cmTurns + rarityTurns)));
+  return Math.max(1, Math.min(cap, Math.ceil(0.5 + cmTurns + rarityTurns)));
 }
 
 export class FishingScene extends Phaser.Scene {

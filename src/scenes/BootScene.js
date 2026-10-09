@@ -147,7 +147,7 @@ export class BootScene extends Phaser.Scene {
     // The companion JSON gives us seek + duration per (species, size).
     this.load.audio(VOICE_ATLAS_KEY, voiceAtlasPath());
     this.load.json(VOICE_ATLAS_META_KEY, voiceAtlasMetaPath());
-    // Per-clip voice fallback: 11 species × 3 sizes = 33 short clips.
+    // Per-clip voice fallback: one short clip per species × size.
     // Loaded only if individual files exist; the atlas takes precedence.
     for (const species of FISH_SPECIES) {
       for (const size of FISH_SIZES) {
