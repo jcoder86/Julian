@@ -10,3 +10,6 @@ __pycache__/
 *.pyc
 # API keys for the art / video / voice scripts -- never commit these
 .env*
+# Working files of scripts/make_water.py: Veo's raw clips (30 MB each) and
+# the motion masks. Kept out of assets/, which is published as it is.
+work/

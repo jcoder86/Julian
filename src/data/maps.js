@@ -64,10 +64,10 @@ function makeWaterTopAt(samples) {
 //   id              save-data key and scene parameter
 //   backdropKey     Phaser texture key of the painting (still image)
 //   backdropImage   its file (made by scripts/make_paintings.py)
-//   backdropVideo   optional: a looping video of the same painting, 4:3 or
-//                   with black bars at the sides. Neither map has one now;
-//                   add e.g. backdropVideo: 'raw/backdrop-naarden.mp4' (and
-//                   the file name to RAW_KEEP in scripts/prune-dist.js)
+//   backdropVideo   optional: a looping video of the same painting in
+//                   which the water moves (made by scripts/make_water.py).
+//                   The still is shown at once, the video takes over as
+//                   soon as it has loaded.
 //   skyMask         alpha image of the painting's sky, for the clouds
 //   skyMaskFraction how much of the painting's height that image covers
 //   clouds          the layers of clouds drifting across the sky, far one
@@ -100,6 +100,7 @@ const MAP_DEFS = [
     // The id stays 'lake' for good: it is in every player's save data.
     backdropKey: 'backdrop',
     backdropImage: 'clean/backdrop-naarden.jpg',
+    backdropVideo: 'clean/backdrop-naarden.mp4',
     skyMask: 'clean/sky-mask-naarden.png',
     skyMaskFraction: 320 / 720,
     clouds: [
@@ -118,6 +119,7 @@ const MAP_DEFS = [
     id: 'sea',
     backdropKey: 'backdrop-sea',
     backdropImage: 'clean/backdrop-sea.jpg',
+    backdropVideo: 'clean/backdrop-sea.mp4',
     skyMask: 'clean/sky-mask-sea.png',
     skyMaskFraction: 320 / 720,
     // Made by scripts/make_clouds.py: each picture spans the whole sky down

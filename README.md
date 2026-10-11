@@ -212,31 +212,48 @@ The collection screen is a 4 x 3 grid per map and each map currently has
 exactly 12 species; a 13th on one map needs a layout change in
 `FishingCollectionScene.js`.
 
-## Animated backdrop
+## Moving water
 
-A map can have a looping video of its painting (gently moving water). At
-the moment neither map has one -- the original lake video belonged to the
-painting that Naarden-Vesting replaced -- so both show their still
-painting. To add one, save it as e.g. `assets/raw/backdrop-naarden.mp4`,
-set `backdropVideo: 'raw/backdrop-naarden.mp4'` on the map in
-`src/data/maps.js` and add the file name to `RAW_KEEP` in
-`scripts/prune-dist.js`. The scene then prefers the video and loops it
-silently. Constraints:
+Each map's water moves: the backdrop is a short looping video of the
+painting in which only the water is alive. `scripts/make_water.py` makes
+it:
 
-* **Seamlessly loopable** (first and last frame match) -- otherwise you
-  see a hard cut every loop.
-* **H.264 MP4** for broad browser compatibility.
-* **No audio track** (we mute anyway).
-* The scene itself must be **4:3**, framed exactly like the still
-  painting. A 16:9 file with the 4:3 painting in the middle and black
-  bars left and right also works: the game shows it in a 4:3 box with
-  `object-fit: cover`, which crops those bars away.
-* Only the water may move: Julian, the jetty and the far bank must stay
-  exactly where they are in the still.
-* Keep it < 20 MB.
-* Afterwards regenerate the sky mask from the video
-  (`python scripts/make_sky_mask.py --video ... --out ...`, needs
-  `ffmpeg`), so nothing that moves ends up inside the mask.
+```bash
+python scripts/make_water.py sea             # generate (paid) + compose
+python scripts/make_water.py lake
+python scripts/make_water.py sea --compose   # only redo the composing
+```
+
+1. The lower three quarters of the 4:3 painting are almost exactly 16:9.
+   That frame goes to Google's **Veo** video model as the first *and* the
+   last frame of an 8-second clip, with a prompt that locks the camera
+   and lets only the water move (`scripts/gen_video.py`).
+2. The script measures where the clip actually moves and lays just that
+   -- the water -- back over the original painting. Jetty or pier, walls,
+   trees and sky stay the still painting: sharp, and rock solid under
+   Julian. (Veo redraws stone and wood with a grain that shimmers.)
+3. The end of the clip is dissolved into its beginning, so the loop has
+   no jolt, and the result is encoded to `assets/clean/backdrop-<x>.mp4`
+   (1440x1080, 4-5 MB, no sound).
+
+In the game (`backdropVideo` in `src/data/maps.js`) the still painting is
+shown at once and the video fades in over it when it has loaded. On an
+iPhone or iPad in Low Power Mode videos do not autoplay; the water then
+simply stays still.
+
+**It costs money.** Veo has no free tier: a clip with the default "fast"
+model is about one US dollar (`python scripts/gen_video.py --prices`).
+The API key is read from `GEMINI_API_KEY` in the environment or in a
+`.env` / `.env.txt` file in the project root (git-ignored). Veo's raw
+clips, `work/veo-<map>.mp4`, are 30 MB each: `work/` is not in git and not
+part of the published game. As long as they are on disk `--compose`
+re-uses them for free. They also carry a sound track Veo made up (waves,
+birds) that is not used yet.
+
+Want different water (wilder, calmer)? Change the map's prompt in
+`WATER` at the top of `scripts/make_water.py`. Ask for calm and even
+motion: the first sea clip had one big wave crash over the pier, right
+where Julian sits, every eight seconds.
 
 ### Foreground layer
 

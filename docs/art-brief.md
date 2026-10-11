@@ -102,16 +102,37 @@ De **steiger of pier moet linksonder blijven**, op ongeveer dezelfde plek
 en even groot. De opdrachten in `art_prompts.py` vragen daar uitdrukkelijk
 om; controleer het na het genereren altijd even in het spel.
 
+## Bewegend water
+
+Op beide kaarten beweegt het water. Dat is een korte video van het
+schilderij, gemaakt met **Veo** van Google via de Gemini-sleutel in
+`.env.txt` (in de Julian-map; dat bestand komt niet in git).
+
+In een terminal in de Julian-map:
+
+```bash
+python scripts/make_water.py sea
+```
+
+(of `lake` voor Naarden). Dat **kost geld**: ongeveer 1 dollar per keer.
+Het script stuurt het onderste deel van het schilderij naar Veo, krijgt
+8 seconden film terug en zet daarvan alleen het bewegende water terug in
+het originele schilderij. Pier, steiger, muren en lucht blijven dus het
+scherpe origineel. Het resultaat is `assets/clean/backdrop-<naam>.mp4`.
+
+Wil je ander water (wilder of juist rustiger), pas dan de tekst bij de
+kaart aan bovenin `scripts/make_water.py` en draai het opnieuw. Vraag om
+rustige, gelijkmatige beweging: bij de eerste poging sloeg er elke 8
+seconden een grote golf over de pier, precies waar Julian zit. Die versie
+staat nog als `work/veo-sea-bigwave.mp4`.
+
+De ruwe films van Veo (`work/veo-<kaart>.mp4`, 30 MB per stuk) blijven
+alleen op deze computer staan: de map `work` komt niet in git. Zolang ze er zijn, kun je met
+`python scripts/make_water.py sea --compose` gratis opnieuw samenstellen.
+Er zit ook geluid in (golven, vogels) dat nog niet gebruikt wordt.
+
 ## Wat er nog niet is
 
-- **Bewegend water.** Het oude meer had een video (`backdrop.mp4`); die
-  hoort bij het oude schilderij en wordt niet meer gebruikt. Naarden en de
-  zee zijn nu stilstaande schilderijen (de wolken drijven wel). Maak je
-  met een videomodel een lus van het nieuwe schilderij (alleen het water
-  beweegt, camera doodstil, ongeveer 6 seconden, naadloos herhaalbaar,
-  zonder geluid), zet die dan neer als bijvoorbeeld
-  `assets/raw/backdrop-naarden.mp4`; hoe je hem aansluit staat in de
-  README onder "Animated backdrop".
 - **Zee-geluid.** `assets/audio/music/sea.mp3` (golven, meeuwen, in een
   lus). Zolang dat bestand ontbreekt klinkt op zee het geluid van het meer.
 - **Stemmen voor de zeevissen.** Fragmenten `small_<id>`, `medium_<id>`,
