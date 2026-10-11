@@ -194,14 +194,45 @@ alleen op deze computer staan: de map `work` komt niet in git. Zolang ze er zijn
 `python scripts/make_water.py sea --compose` gratis opnieuw samenstellen.
 Er zit ook geluid in (golven, vogels) dat nog niet gebruikt wordt.
 
+## De stem bij een vangst
+
+Bij elke vangst roept een stem wat het is: "een kleine haai!", "een haai!"
+of "een grote haai!!". Alle zinnen van een opname staan achter elkaar in
+een geluidsbestand, met een lijstje erbij waar elke zin begint:
+
+| Bestand | Vissen |
+|---|---|
+| `assets/audio/sfx/vissen.mp3` + `.json` | de eerste elf vissen van het meer |
+| `assets/audio/sfx/vissen-zee.mp3` + `.json` | de twaalf zeevissen en de meerval |
+
+De stem komt van ElevenLabs (elevenlabs.io, Text to Speech): stem
+**Hugo V - Enthusiastic and Professional**, model **Eleven Multilingual
+v2**, snelheid 1,00, stability 50 %, similarity 75 %, style 0 %, speaker
+boost aan. Een hele opname gaat in een keer, zodat alle zinnen hetzelfde
+klinken. Voor nieuwe vissen maak je een nieuwe opname erbij:
+
+1. In `scripts/make_voice_atlas.py`: zet de nieuwe opname met haar vissen
+   in `ATLASES` en de uitgesproken naam in `SPOKEN`.
+2. In een terminal in de Julian-map: `python scripts/make_voice_atlas.py
+   <naam> --text` geeft de tekst (een zin per regel, met telkens een regel
+   met alleen een punt ertussen: dat wordt de pauze waarop geknipt wordt).
+3. In ElevenLabs: tekst plakken, instellingen als hierboven, genereren,
+   mp3 downloaden en in `work/voice/` zetten.
+4. In de terminal: `python scripts/make_voice_atlas.py <naam> <download.mp3>`
+   knipt de zinnen los, maakt ze even hard als de eerste opname en schrijft
+   het geluidsbestand en het lijstje.
+5. In de terminal: `python scripts/make_voice_atlas.py <naam> --check` laat
+   Gemini naar elke zin luisteren en vergelijkt dat met de tekst. Luister
+   daarna zelf ook: een computer hoort geen raar accent.
+6. In `src/systems/AudioManager.js`: zet de naam in `VOICE_ATLASES`.
+
+De opname van de zeevissen (11 oktober 2026, 727 tekens) staat in
+`work/voice/` en in de geschiedenis van ElevenLabs.
+
 ## Wat er nog niet is
 
 - **Zee-geluid.** `assets/audio/music/sea.mp3` (golven, meeuwen, in een
   lus). Zolang dat bestand ontbreekt klinkt op zee het geluid van het meer.
-- **Stemmen voor de zeevissen.** Fragmenten `small_<id>`, `medium_<id>`,
-  `large_<id>` in `assets/audio/sfx/vissen.json` + `vissen.mp3`, of losse
-  bestanden `assets/audio/voice/<size>-<id>.wav`. Zonder stem klinkt bij
-  een vangst alleen het applaus.
 
 ## De zeevissen
 

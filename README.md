@@ -77,11 +77,11 @@ names the map it belongs to. The collection has one page of 12 per map.
 
 A lure has no float. Cast, and the reel appears at once: cranking swims
 the lure back to the jetty. Somewhere on the way a fish may grab it -- the
-"fish on" sign pops up -- and a tap anywhere on the screen sets the hook;
-from there it is the normal reel fight. No bite, or a tap that comes too
-late, and the lure arrives empty: cast again. Rings of ripples spread
-from the lure while it swims, so it is easy to follow on a choppy sea. The
-tunables are the `LURE_*` constants in `FishingScene.js`.
+"fish on" sign pops up -- and it is hooked there and then: no tap, just
+keep cranking, and the same reel is now the normal reel fight. No bite,
+and the lure arrives empty: cast again. Rings of ripples spread from the
+lure while it swims, so it is easy to follow on a choppy sea. The tunables
+are the `LURE_*` constants in `FishingScene.js`.
 
 ### The line
 
@@ -302,10 +302,37 @@ paints it.
 3. Add the species to `FISH_SPECIES` in `src/data/fish.js` (map, Dutch
    name, baits, rarity weight, cm range per size). Preloading, the catch
    screen and the collection card all follow from that list.
-4. Optional voice clips: add `small_<id>` / `medium_<id>` / `large_<id>`
-   phrases to `assets/audio/sfx/vissen.json` + `vissen.mp3`, or drop
-   separate `assets/audio/voice/<size>-<id>.wav` files. Without them a
-   catch is simply announced without a voice.
+4. Its spoken name ("een kleine haai!", "een haai!", "een grote
+   haai!!"): see "The voice" below. Without it a catch is announced by
+   applause only.
+
+### The voice
+
+On the catch screen a voice calls out what was caught. The phrases live in
+voice atlases: an mp3 with all of them in a row and a JSON that says where
+each one starts (`assets/audio/sfx/vissen.mp3` for the first eleven lake
+fish, `vissen-zee.mp3` for the sea fish and the catfish; the list is
+`VOICE_ATLASES` in `src/systems/AudioManager.js`).
+
+They are spoken by ElevenLabs, a whole atlas in one go so every phrase
+has the same tone. To add fish, add an atlas rather than redoing one:
+
+1. Give it a name and its species in `ATLASES` in
+   `scripts/make_voice_atlas.py` (and the spoken name in `SPOKEN`), then
+   `python scripts/make_voice_atlas.py <name> --text` prints the text.
+2. Paste that into ElevenLabs' Text to Speech with the voice and settings
+   listed at the top of the script, generate, download the mp3 and keep it
+   in `work/voice/`.
+3. `python scripts/make_voice_atlas.py <name> <download.mp3>` cuts it at
+   the pauses, matches the loudness of the first atlas and writes the mp3
+   and JSON. It stops if it does not find exactly the phrases asked for.
+4. `python scripts/make_voice_atlas.py <name> --check` lets Gemini listen
+   to every phrase as the game will play it and compares it with the text.
+   Then listen yourself: a machine does not hear an odd accent.
+5. Add the name to `VOICE_ATLASES`.
+
+A single phrase can also be a loose file,
+`assets/audio/voice/<size>-<id>.wav`; an atlas goes first.
 
 How rare a catch is follows from `speciesWeight`, `sizeWeights` and
 `lengthCm` in `src/data/fish.js`; `node scripts/fish-odds.js` prints the
@@ -443,6 +470,10 @@ Everything one taps outside the fishing itself is carved wood and rope,
 after the title sign; `src/systems/Ui.js` holds the shared pieces (the
 lettering, the breathing glow, the press-dip, the menu of choices).
 
+The map screen has a third, small framed picture in its top-left corner:
+the title painting, with "Startmenu" on a plate under it. It leads back to
+the title screen, where the other team can take over.
+
 * **START** (`ui-start`): one generated wooden sign, plain on the left
   and with the word on the right. Each team's two faces, in rope frames,
   sit on the plain part.
@@ -484,6 +515,17 @@ James & Boaz under `julians_game_guest_*`. There is no server copy, so:
   when the icon is removed. To pick up an update: open the game, leave it
   open for a minute, close it completely, open it again.
 
+One thing is put into a save from outside. James caught his 176 lake fish
+on the guest button of one tablet; the team James & Boaz uses that same
+profile but began empty everywhere else. So at start-up, once per device,
+`SaveSystem.adoptJamesCatches()` gives James & Boaz his collection
+(`src/data/jamesCatches.js`) if they have no lake fish there yet, and --
+until 14 October 2026 only -- empties their sea book at that same moment
+(on request: a stray fish from trying the team out). Julian's save is not
+opened, a device where James & Boaz already have lake fish is left as it
+is, and what was taken out is kept under `julians_game_guest_jamesCatchesAdopted`.
+The test covers each of these.
+
 To start from an empty collection **on a test machine** (this deletes
 every catch stored in that browser):
 
@@ -496,7 +538,6 @@ Object.keys(localStorage)
 
 ## Not there yet
 
-* Sea ambience (`assets/audio/music/sea.mp3`) and spoken names for the
-  sea fish; on the sea the lake's ambience plays and a catch is announced
-  by applause only.
+* Sea ambience (`assets/audio/music/sea.mp3`); on the sea the lake's
+  ambience plays.
 * The children are posed, not filmed (see "Teams and characters").

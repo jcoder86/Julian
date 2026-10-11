@@ -1,0 +1,162 @@
+{
+  "file": "vissen-zee.mp3",
+  "totalDuration": 63.57,
+  "phrases": {
+    "small_herring": {
+      "start": 0.5,
+      "duration": 1.15
+    },
+    "small_whiting": {
+      "start": 2.15,
+      "duration": 1.15
+    },
+    "small_mackerel": {
+      "start": 3.8,
+      "duration": 1.24
+    },
+    "small_flounder": {
+      "start": 5.54,
+      "duration": 1.06
+    },
+    "small_plaice": {
+      "start": 7.1,
+      "duration": 1.07
+    },
+    "small_garfish": {
+      "start": 8.67,
+      "duration": 1.14
+    },
+    "small_seabass": {
+      "start": 10.31,
+      "duration": 1.36
+    },
+    "small_cod": {
+      "start": 12.17,
+      "duration": 1.37
+    },
+    "small_ray": {
+      "start": 14.04,
+      "duration": 1.04
+    },
+    "small_conger": {
+      "start": 15.58,
+      "duration": 1.26
+    },
+    "small_tuna": {
+      "start": 17.34,
+      "duration": 1.2
+    },
+    "small_shark": {
+      "start": 19.04,
+      "duration": 1.09
+    },
+    "small_catfish": {
+      "start": 20.63,
+      "duration": 1.23
+    },
+    "medium_herring": {
+      "start": 22.36,
+      "duration": 0.87
+    },
+    "medium_whiting": {
+      "start": 23.73,
+      "duration": 0.88
+    },
+    "medium_mackerel": {
+      "start": 25.11,
+      "duration": 0.94
+    },
+    "medium_flounder": {
+      "start": 26.55,
+      "duration": 0.71
+    },
+    "medium_plaice": {
+      "start": 27.76,
+      "duration": 0.82
+    },
+    "medium_garfish": {
+      "start": 29.08,
+      "duration": 0.79
+    },
+    "medium_seabass": {
+      "start": 30.37,
+      "duration": 1.06
+    },
+    "medium_cod": {
+      "start": 31.93,
+      "duration": 1.05
+    },
+    "medium_ray": {
+      "start": 33.48,
+      "duration": 0.75
+    },
+    "medium_conger": {
+      "start": 34.73,
+      "duration": 1.12
+    },
+    "medium_tuna": {
+      "start": 36.35,
+      "duration": 0.95
+    },
+    "medium_shark": {
+      "start": 37.8,
+      "duration": 0.77
+    },
+    "medium_catfish": {
+      "start": 39.07,
+      "duration": 0.98
+    },
+    "large_herring": {
+      "start": 40.55,
+      "duration": 1.27
+    },
+    "large_whiting": {
+      "start": 42.32,
+      "duration": 1.25
+    },
+    "large_mackerel": {
+      "start": 44.07,
+      "duration": 1.35
+    },
+    "large_flounder": {
+      "start": 45.92,
+      "duration": 1.15
+    },
+    "large_plaice": {
+      "start": 47.57,
+      "duration": 1.17
+    },
+    "large_garfish": {
+      "start": 49.24,
+      "duration": 1.2
+    },
+    "large_seabass": {
+      "start": 50.94,
+      "duration": 1.4
+    },
+    "large_cod": {
+      "start": 52.84,
+      "duration": 1.43
+    },
+    "large_ray": {
+      "start": 54.77,
+      "duration": 1.15
+    },
+    "large_conger": {
+      "start": 56.42,
+      "duration": 1.44
+    },
+    "large_tuna": {
+      "start": 58.36,
+      "duration": 1.29
+    },
+    "large_shark": {
+      "start": 60.15,
+      "duration": 1.15
+    },
+    "large_catfish": {
+      "start": 61.8,
+      "duration": 1.27
+    }
+  }
+}

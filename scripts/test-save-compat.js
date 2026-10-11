@@ -80,6 +80,10 @@ function releasedStorage({ wipeAlreadyRan }) {
 
 // ---------------------------------------------------------------------------
 
+// The day James's collection was asked for; the sea book of James & Boaz is
+// emptied (once) on devices that start this version within days of it.
+const REQUEST_DAY = Date.UTC(2026, 9, 11, 18, 0, 0);
+
 let failures = 0;
 function check(condition, message) {
   if (condition) return;
@@ -109,6 +113,10 @@ async function runScenario(label, options) {
   const { FLOATS_BY_ID } = await import('../src/data/floats.js');
 
   // --- 1. Start the game as Julian, the way START does -------------------
+  // (Start-up first offers James & Boaz James's collection. This guest
+  // profile has lake fish of its own, so nothing may come of it.)
+  SaveSystem.adoptJamesCatches(REQUEST_DAY);
+  check(SaveSystem.getProfile() === 'julian', 'start-up left another profile active');
   SaveSystem.setProfile('julian');
   check(same(SaveSystem.getFishCounts(), JULIAN.fishCounts), 'fishCounts changed on load');
   check(same(SaveSystem.getCatchCountsBySize(), JULIAN.catchCountsBySize), 'catchCountsBySize changed on load');
@@ -165,6 +173,8 @@ async function runScenario(label, options) {
   check(SaveSystem.getFishCounts().roach === JULIAN.fishCounts.roach, "a guest's play changed Julian's catches");
 
   // --- 5. Nothing was ever deleted ----------------------------------------
+  check(same(JSON.parse(store.get('julians_game_guest_jamesCatchesAdopted') || 'null')?.loaded, false),
+        "James's collection was loaded over a guest profile that has lake fish of its own");
   check(removals === 0, `the save system deleted from storage ${removals} time(s)`);
   for (const key of before.keys()) {
     check(store.has(key), `key "${key}" disappeared`);
@@ -242,6 +252,7 @@ async function runReleasedWriterScenario() {
   const { SaveSystem } = await import('../src/systems/SaveSystem.js?scenario=released-writer');
   const { speciesForMap } = await import('../src/data/fish.js');
   const lakePage = speciesForMap('lake').map((s) => s.id);
+  SaveSystem.adoptJamesCatches(REQUEST_DAY);   // start-up; this guest has lake fish
 
   for (const [profile, before] of [['julian', julianBefore], ['guest', guestBefore]]) {
     SaveSystem.setProfile(profile);
@@ -266,9 +277,156 @@ async function runReleasedWriterScenario() {
   check(same(snapshot(SaveSystem), julianBefore), "Julian's save changed when the guest caught a fish");
 }
 
+// ---------------------------------------------------------------------------
+// James's collection for James & Boaz (SaveSystem.adoptJamesCatches).
+//
+// The one place where the game writes into a save by itself, and -- for a
+// few days -- takes something out of one. Every fence around it is checked
+// here; see the comment in SaveSystem.js for why each one is there.
+// ---------------------------------------------------------------------------
+
+function fakeStorage(store, counters) {
+  globalThis.window = {
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => { store.set(k, String(v)); },
+      removeItem: (k) => { counters.removals++; store.delete(k); },
+      clear: () => { counters.removals++; store.clear(); },
+    },
+  };
+}
+
+const GUEST_PREFIX = 'julians_game_guest_';
+const notGuest = (store) => [...store].filter(([key]) => !key.startsWith(GUEST_PREFIX));
+
+async function runJamesScenarios() {
+  const { JAMES_CATCHES } = await import('../src/data/jamesCatches.js');
+  const { speciesForMap } = await import('../src/data/fish.js');
+  const lake = speciesForMap('lake').map((s) => s.id);
+  const sea = speciesForMap('sea').map((s) => s.id);
+  let scenario = 0;
+  const fresh = async () =>
+    (await import(`../src/systems/SaveSystem.js?scenario=james-${scenario++}`)).SaveSystem;
+
+  console.log("- James's collection itself");
+  let total = 0;
+  for (const [id, count] of Object.entries(JAMES_CATCHES.fishCounts)) {
+    total += count;
+    check(lake.includes(id), `James's collection holds "${id}", which is not a fish of the first map`);
+    const bySize = JAMES_CATCHES.catchCountsBySize[id] || {};
+    check(Object.values(bySize).reduce((a, b) => a + b, 0) === count, `James: sizes of "${id}" do not add up to ${count}`);
+    check(same(Object.keys(bySize), Object.keys(JAMES_CATCHES.bestCatches[id] || {})),
+          `James: "${id}" has a best catch for a size he never caught, or the other way round`);
+  }
+  check(total === 176, `James's collection is ${total} fish, the photo shows 176`);
+
+  // --- the device the request came from ------------------------------------
+  console.log('- James & Boaz with an empty lake book and a stray sea fish: lake filled, sea emptied');
+  {
+    const store = releasedStorage({ wipeAlreadyRan: true });
+    for (const key of [...store.keys()]) if (key.startsWith(GUEST_PREFIX)) store.delete(key);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+
+    SaveSystem.setProfile('guest');
+    SaveSystem.setCurrentMap('sea');
+    SaveSystem.setSelectedBait('veren', 'sea');
+    SaveSystem.recordCatch({ species: 'herring', size: 'small', lengthCm: 14 });
+    SaveSystem.setProfile('julian');
+    SaveSystem.recordCatch({ species: 'mackerel', size: 'medium', lengthCm: 33 });   // Julian's own sea fish
+    const othersBefore = notGuest(store);
+
+    SaveSystem.adoptJamesCatches(REQUEST_DAY);
+    check(SaveSystem.getProfile() === 'julian', 'adopting left the guest profile active');
+    check(same(notGuest(store), othersBefore), "Julian's save (or another app's data) was touched");
+
+    SaveSystem.setProfile('guest');
+    check(same(SaveSystem.getFishCounts(), JAMES_CATCHES.fishCounts), "James & Boaz did not get exactly James's counts");
+    check(same(SaveSystem.getCatchCountsBySize(), JAMES_CATCHES.catchCountsBySize), "James & Boaz did not get exactly James's size counts");
+    check(same(SaveSystem.getBestCatches(), JAMES_CATCHES.bestCatches), "James & Boaz did not get exactly James's best catches");
+    check(same(SaveSystem.getLastCatch(), JAMES_CATCHES.lastCatch), 'the last catch still points at a fish that is gone');
+    check(sea.every((id) => !(id in SaveSystem.getFishCounts())), 'a sea fish is still in the book of James & Boaz');
+    check(SaveSystem.getSelectedBait('sea') === 'veren' && SaveSystem.getCurrentMap() === 'sea',
+          'their chosen lure or map was changed');
+    const note = SaveSystem.load('jamesCatchesAdopted');
+    check(note?.loaded === true, 'the note does not say the collection was loaded');
+    check(note?.removedSea?.fishCounts?.herring === 1 && note?.removedSea?.bestCatches?.herring?.small === 14
+          && note?.removedSea?.lastCatch?.species === 'herring',
+          'the sea fish that was taken out was not kept in the note');
+
+    // Once means once: starting again changes nothing, and what they catch
+    // at sea from now on stays.
+    const afterFirst = new Map(store);
+    SaveSystem.adoptJamesCatches(REQUEST_DAY + 60_000);
+    check(same([...store], [...afterFirst]), 'a second start changed the save again');
+    SaveSystem.recordCatch({ species: 'shark', size: 'small', lengthCm: 101 });
+    SaveSystem.recordCatch({ species: 'pike', size: 'small', lengthCm: 27 });
+    SaveSystem.adoptJamesCatches(REQUEST_DAY + 120_000);
+    check(SaveSystem.getFishCounts().shark === 1, 'a sea fish caught after the change was taken away');
+    check(SaveSystem.getFishCounts().pike === JAMES_CATCHES.fishCounts.pike + 1, 'a new lake catch was not added to James\'s count');
+    check(counters.removals === 0, 'something was deleted from storage outright');
+  }
+
+  // --- the same device, but the update only arrives days later -------------
+  console.log('- the same, first run after the cut-off date: lake filled, sea catches kept');
+  {
+    const store = new Map();
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+    SaveSystem.setProfile('guest');
+    SaveSystem.recordCatch({ species: 'cod', size: 'large', lengthCm: 104 });
+    SaveSystem.setProfile('julian');
+
+    SaveSystem.adoptJamesCatches(Date.UTC(2026, 9, 15, 0, 0, 1));
+    SaveSystem.setProfile('guest');
+    const counts = SaveSystem.getFishCounts();
+    check(counts.cod === 1 && SaveSystem.getBestCatches().cod?.large === 104, 'a sea catch was taken away after the cut-off date');
+    check(SaveSystem.getLastCatch()?.species === 'cod', 'the last catch was replaced although its fish is still there');
+    check(lake.every((id) => counts[id] === JAMES_CATCHES.fishCounts[id]), "the lake book was not filled with James's fish");
+    check(SaveSystem.load('jamesCatchesAdopted')?.removedSea === undefined, 'the note claims something was taken out');
+  }
+
+  // --- a brand-new device ----------------------------------------------------
+  console.log('- a device that never ran the game: James & Boaz start with his collection, Julian with nothing');
+  {
+    const store = new Map([['some_other_app_setting', 'untouched']]);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+    SaveSystem.adoptJamesCatches(REQUEST_DAY);
+    check(same(notGuest(store), [['some_other_app_setting', 'untouched']]), 'something was written outside the guest profile');
+    SaveSystem.setProfile('guest');
+    check(same(SaveSystem.getFishCounts(), JAMES_CATCHES.fishCounts), "a new device did not get James's collection");
+    SaveSystem.setProfile('julian');
+    check(same(SaveSystem.getFishCounts(), {}), 'Julian got fish he did not catch');
+  }
+
+  // --- a save that cannot be read is not an empty save ------------------------
+  console.log('- a damaged or unreadable guest save: left alone');
+  for (const [what, breakIt] of [
+    ['damaged', (store) => store.set(`${GUEST_PREFIX}fishCounts`, '{"roach": 12, "pik')],
+    ['unreadable', () => { globalThis.window.localStorage.getItem = () => { throw new Error('storage is off'); }; }],
+  ]) {
+    const store = new Map([[`${GUEST_PREFIX}bestCatches`, JSON.stringify({ roach: { small: 9 } })]]);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    breakIt(store);
+    const before = new Map(store);
+    const SaveSystem = await fresh();
+    const warn = console.warn;
+    console.warn = () => {};
+    SaveSystem.adoptJamesCatches(REQUEST_DAY);
+    console.warn = warn;
+    check(same([...store], [...before]), `a ${what} guest save was written to`);
+  }
+}
+
 await runScenario('device where the old pike-only wipe already ran', { wipeAlreadyRan: true });
 await runScenario('device where that wipe never ran', { wipeAlreadyRan: false });
 await runReleasedWriterScenario();
+await runJamesScenarios();
 
 // Both released saves must still be reachable from the title screen: each
 // START button there is a team, and a team plays on the save profile of

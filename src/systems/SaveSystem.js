@@ -1,6 +1,9 @@
 // Thin localStorage wrapper. Keys are namespaced under julians_game_ so we can
 // coexist with other apps on the same origin.
 
+import { speciesForMap } from '../data/fish.js';
+import { JAMES_CATCHES } from '../data/jamesCatches.js';
+
 const KEY_PREFIX = 'julians_game_';
 
 // Active profile. Defaults to 'julian' (his keys keep their original
@@ -68,11 +71,96 @@ function safeSet(key, value) {
 //     removeItem here, and no start-up "migration" that rewrites old data.
 //     (One existed once: it wiped every catch except pike, on request, and
 //     stayed armed on every device that had not run it yet. It is gone.)
+//     The single exception is adoptJamesCatches() below -- read how it is
+//     fenced in before ever writing a second one.
 //
 // scripts/test-save-compat.js loads saves written by the released game
 // (Julian's and the guest profile's) and checks every one of these
 // promises; `npm run build` runs it first, so a change that would lose
 // player data cannot be built or deployed.
+
+// ---------------------------------------------------------------------------
+// James's collection for James & Boaz (requested 2026-10-11)
+// ---------------------------------------------------------------------------
+// James caught 176 fish on the 'guest' profile of one tablet. The team
+// James & Boaz plays on that profile, but everywhere else it started with
+// an empty collection -- plus, on the device the request came from, a
+// stray sea fish from trying the team out. So, once per device, at start-up:
+//
+//   * if James & Boaz have NO fish of the first map there, they get James's
+//     collection of 11 October 2026 (data/jamesCatches.js);
+//   * and, at that same moment only, their sea catches are taken out, so
+//     the team starts the sea with an empty book.
+//
+// Fenced in on every side, because taking catches away is exactly what
+// went wrong before:
+//   * only the 'guest' profile is read or written. Julian's is not opened;
+//   * a device where James & Boaz already have lake fish (James's own) is
+//     left exactly as it is, sea catches included;
+//   * the sea is only emptied until SEA_CLEAR_UNTIL. A device that first
+//     runs this later still gets James's fish, but keeps its sea catches:
+//     by then they are somebody's real ones;
+//   * what is taken out is not thrown away: it is kept in the note this
+//     leaves behind (key jamesCatchesAdopted), from which it can be put back;
+//   * if storage cannot be read cleanly, nothing happens at all (and it
+//     tries again at the next start) -- an unreadable save must never be
+//     mistaken for an empty one.
+const JAMES_PROFILE = 'guest';
+const JAMES_ADOPTED_KEY = 'jamesCatchesAdopted';
+const SEA_CLEAR_UNTIL = Date.UTC(2026, 9, 15);   // through 14 October 2026
+
+/** What is stored under `key`, or undefined. Throws if it cannot be read. */
+function readStrict(key) {
+  const raw = window.localStorage.getItem(namespaced(key));
+  return raw == null ? undefined : JSON.parse(raw);
+}
+
+/** Runs with the James & Boaz profile active. */
+function adoptJamesCatches(now) {
+  if (readStrict(JAMES_ADOPTED_KEY) !== undefined) return;
+
+  const tables = {
+    [FISH_COUNTS_KEY]: readStrict(FISH_COUNTS_KEY) || {},
+    [CATCH_COUNTS_BY_SIZE_KEY]: readStrict(CATCH_COUNTS_BY_SIZE_KEY) || {},
+    [BEST_CATCHES_KEY]: readStrict(BEST_CATCHES_KEY) || {},
+  };
+  const lastCatch = readStrict(LAST_CATCH_KEY);
+  const note = { at: new Date(now).toISOString(), loaded: false };
+
+  const lake = speciesForMap('lake').map((species) => species.id);
+  if (lake.some((id) => tables[FISH_COUNTS_KEY][id] > 0)) {
+    // They have their own lake fish here: nothing to add, nothing to touch.
+    SaveSystem.save(JAMES_ADOPTED_KEY, note);
+    return;
+  }
+
+  let keepLastCatch = !!lastCatch;
+  if (now < SEA_CLEAR_UNTIL) {
+    const removed = {};
+    for (const id of speciesForMap('sea').map((species) => species.id)) {
+      for (const [key, table] of Object.entries(tables)) {
+        if (!(id in table)) continue;
+        removed[key] = removed[key] || {};
+        removed[key][id] = table[id];
+        delete table[id];
+      }
+      if (lastCatch && lastCatch.species === id) {
+        removed[LAST_CATCH_KEY] = lastCatch;
+        keepLastCatch = false;
+      }
+    }
+    if (Object.keys(removed).length) note.removedSea = removed;
+  }
+
+  note.loaded = true;
+  // The note first: it holds what was taken out.
+  SaveSystem.save(JAMES_ADOPTED_KEY, note);
+  SaveSystem.save(FISH_COUNTS_KEY, { ...tables[FISH_COUNTS_KEY], ...JAMES_CATCHES.fishCounts });
+  SaveSystem.save(CATCH_COUNTS_BY_SIZE_KEY,
+                  { ...tables[CATCH_COUNTS_BY_SIZE_KEY], ...JAMES_CATCHES.catchCountsBySize });
+  SaveSystem.save(BEST_CATCHES_KEY, { ...tables[BEST_CATCHES_KEY], ...JAMES_CATCHES.bestCatches });
+  if (!keepLastCatch) SaveSystem.save(LAST_CATCH_KEY, JAMES_CATCHES.lastCatch);
+}
 
 export const SaveSystem = {
   /**
@@ -87,6 +175,22 @@ export const SaveSystem = {
   /** Returns the currently active profile name. */
   getProfile() {
     return _activeProfile;
+  },
+
+  /**
+   * Give James & Boaz James's collection, once per device -- see the long
+   * comment above. Call at start-up, before a profile is chosen.
+   */
+  adoptJamesCatches(now = Date.now()) {
+    const active = _activeProfile;
+    _activeProfile = JAMES_PROFILE;
+    try {
+      adoptJamesCatches(now);
+    } catch (e) {
+      console.warn('[SaveSystem] the save could not be read: not adding James\u2019s catches now', e);
+    } finally {
+      _activeProfile = active;
+    }
   },
 
   save(key, value) {

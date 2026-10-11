@@ -143,7 +143,7 @@ const LINE_TIGHTEN_RATE = 14;
 const LINE_SLACKEN_RATE = 1.7;
 // How much a line under strain shivers (design px): a fish on, a fish
 // running, the bite on a lure, the float pulled under.
-const LINE_TREMBLE = Object.freeze({ FISH: 0.6, RUN: 1.7, LURE_BITE: 1.2, DIVE: 0.5 });
+const LINE_TREMBLE = Object.freeze({ FISH: 0.6, RUN: 1.7, DIVE: 0.5 });
 
 // The rig as it hangs from the rod before the cast: the whole float (in
 // the water only its tip shows), a bit of line under it and the bait.
@@ -192,14 +192,15 @@ const STATE = Object.freeze({
   CATCHING: 'catching',
   // Lure fishing (no float). The player reels the lure back in:
   RETRIEVE: 'retrieve',     // lure in the water, reel widget brings it home
-  LURE_BITE: 'lure-bite',   // a fish grabbed it: tap NOW to set the hook
 });
 
 // ---------------------------------------------------------------------------
 // Lure fishing
 // ---------------------------------------------------------------------------
 // Cast -> reel the lure back -> somewhere on the way a fish may grab it ->
-// tap the screen to strike -> reel the fish in (the normal REELING phase).
+// it is hooked at once: keep cranking, now against the fish (the normal
+// REELING phase). There is no strike to time: the player's hand is on the
+// reel, and a bite on a moving lure hooks itself.
 
 // Reel turns to bring an untouched lure all the way home: one turn per
 // this many design px of cast distance, within [min, max]. (Was 170 px a
@@ -214,14 +215,9 @@ const LURE_BITE_CHANCE  = 0.8;
 // landed, 1 = back at the jetty).
 const LURE_BITE_FROM    = 0.2;
 const LURE_BITE_TO      = 0.8;
-// After a missed strike the fish may have one more go, if there is this
-// much of the retrieve left.
-const LURE_SECOND_CHANCE     = 0.5;
-const LURE_SECOND_MIN_LEFT   = 0.3;
-// How long the fish hangs on before letting go (ms). A little longer than
-// the float's dive window: the player is busy cranking when it happens.
-const LURE_STRIKE_MIN_MS = 1400;
-const LURE_STRIKE_MAX_MS = 2200;
+// How long the "fish on" sign stays up when a fish takes the lure (ms). It
+// only tells the news: nothing has to be tapped.
+const LURE_FISH_ON_MS = 1300;
 // Lure sprite on the line: display length (design px at full scale) and
 // how see-through it is while under water.
 const LURE_DISPLAY_LENGTH = 82;
@@ -426,8 +422,7 @@ export class FishingScene extends Phaser.Scene {
       this.fight.update(delta);
       this.bobber.x = this.fight.x;
       this.bobber.y = this.fight.y;
-    } else if ((this.state === STATE.RETRIEVE || this.state === STATE.LURE_BITE)
-               && this.reelOverlay && this.reelEnd) {
+    } else if (this.state === STATE.RETRIEVE && this.reelOverlay && this.reelEnd) {
       // A lure swims straight home, as far as the reel has been cranked.
       const p = this.reelOverlay.progress;
       const home = this._reelHome();
@@ -437,9 +432,8 @@ export class FishingScene extends Phaser.Scene {
       // its nose (the line eye) at the rod it is being pulled to.
       this.bobber.setScale(this._bobberDepthScale(this.bobber.y));
       this._pointLureAtRod();
-      if (this.state === STATE.RETRIEVE && this.lure && this.lure.biteAt != null
-          && p >= this.lure.biteAt) {
-        this._enterLureBite();
+      if (this.lure && this.lure.biteAt != null && p >= this.lure.biteAt) {
+        this._hookOnLure();
       }
     }
 
@@ -479,7 +473,6 @@ export class FishingScene extends Phaser.Scene {
       case STATE.NIBBLE: slack = LINE_SLACK.NIBBLE; break;
       case STATE.DIVE: slack = LINE_SLACK.DIVE; tremble = LINE_TREMBLE.DIVE; break;
       case STATE.RETRIEVE: slack = cranking ? LINE_SLACK.LURE_CRANKING : LINE_SLACK.LURE_RESTING; break;
-      case STATE.LURE_BITE: slack = 0; tremble = LINE_TREMBLE.LURE_BITE; break;
       case STATE.REELING: {
         const running = !!(this.fight && this.fight.running);
         slack = running ? 0 : (cranking ? LINE_SLACK.FISH_CRANKING : LINE_SLACK.FISH_RESTING);
@@ -1288,11 +1281,6 @@ export class FishingScene extends Phaser.Scene {
         // The reel brings the lure in; a tap on the water means nothing.
         break;
 
-      case STATE.LURE_BITE:
-        // A fish has the lure: any tap on the screen sets the hook.
-        this._strikeLure();
-        break;
-
       case STATE.CATCHING:
         // Animation in progress -- ignore.
         break;
@@ -1618,11 +1606,10 @@ export class FishingScene extends Phaser.Scene {
   // Lure fishing
   //
   //   cast -> RETRIEVE (crank the reel, the lure swims home)
-  //        -> LURE_BITE (a fish grabs it: tap the screen in time)
-  //        -> REELING (the normal fight) -> catch
+  //        -> a fish grabs it and is on: REELING (the normal fight) -> catch
   //
-  // Nothing takes the lure, or the tap comes too late: it arrives back at
-  // the jetty empty and the player casts again.
+  // Nothing takes the lure: it arrives back at the jetty empty and the
+  // player casts again.
   // ---------------------------------------------------------------------------
 
   /** The lure has landed: hand the player the reel. */
@@ -1650,7 +1637,6 @@ export class FishingScene extends Phaser.Scene {
       biteAt: Math.random() < LURE_BITE_CHANCE
         ? Phaser.Math.FloatBetween(LURE_BITE_FROM, LURE_BITE_TO)
         : null,
-      secondChanceUsed: false,
     };
 
     const reelPos = this._reelPosition();
@@ -1668,58 +1654,21 @@ export class FishingScene extends Phaser.Scene {
     });
   }
 
-  /** A fish grabs the lure. Reeling freezes until the player strikes. */
-  _enterLureBite() {
+  /**
+   * A fish grabs the lure and is hooked: straight on to the fight. The
+   * player was cranking and simply keeps cranking, now with a fish on.
+   */
+  _hookOnLure() {
     if (this.state !== STATE.RETRIEVE) return;
-    this.state = STATE.LURE_BITE;
-    this.lure.biteAt = null;
-    if (this.reelOverlay) this.reelOverlay.setPaused(true);
-
     // Same cues as the float going under -- thump, "fish on!" sign and
-    // ping -- but at once: the player is mid-crank and needs to notice now.
+    // ping -- but only as news: there is nothing to tap.
     this.audio.playSfx(SFX.DIVE);
-    this._showFishOn();
     this.audio.playSfx(SFX.FISHON);
-    this.crew.mood('bite');
-    if (this.lureSprite) {
-      this.tweens.add({
-        targets: this.lureSprite,
-        x: { from: 0, to: 7 },
-        duration: 70,
-        yoyo: true,
-        repeat: 5,
-        onComplete: () => { if (this.lureSprite) this.lureSprite.x = 0; },
-      });
-    }
-
-    const window = Phaser.Math.Between(LURE_STRIKE_MIN_MS, LURE_STRIKE_MAX_MS);
-    this.phaseTimer = this.time.delayedCall(window, () => {
-      if (this.state !== STATE.LURE_BITE) return;
-      this._lureBiteMissed();
+    this._showFishOn();
+    this.time.delayedCall(LURE_FISH_ON_MS, () => {
+      // (Unless a float has gone under meanwhile: then the sign is its.)
+      if (this.state !== STATE.DIVE) this._hideFishOn();
     });
-  }
-
-  /** Too slow: the fish lets go. Keep reeling; it may come back once. */
-  _lureBiteMissed() {
-    this._hideFishOn();
-    this.crew.mood('wait');
-    this.state = STATE.RETRIEVE;
-    if (!this.reelOverlay || !this.lure) return;
-    this.reelOverlay.setPaused(false);
-
-    const p = this.reelOverlay.progress;
-    const left = 1 - p;
-    if (!this.lure.secondChanceUsed && left > LURE_SECOND_MIN_LEFT
-        && Math.random() < LURE_SECOND_CHANCE) {
-      this.lure.secondChanceUsed = true;
-      this.lure.biteAt = p + Phaser.Math.FloatBetween(0.12, left - 0.1);
-    }
-  }
-
-  /** The tap came in time: hook set, the fight begins. */
-  _strikeLure() {
-    this._hideFishOn();
-    this._stopPhaseTimer();
     this._enterReeling(this._pickFish());
   }
 
@@ -1752,7 +1701,10 @@ export class FishingScene extends Phaser.Scene {
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
     // Coming from a lure retrieve the reel widget is already on screen,
-    // counting turns for the empty lure. The fight needs its own count.
+    // counting turns for the empty lure. The fight needs its own count --
+    // but the player is cranking at this very moment, so the new reel is
+    // put into the same hand (see below).
+    const cranking = this.reelOverlay ? this.reelOverlay.heldBy : null;
     if (this.reelOverlay) {
       this.reelOverlay.destroy();
       this.reelOverlay = null;
@@ -1805,6 +1757,7 @@ export class FishingScene extends Phaser.Scene {
         this.reelEnd = null;
       },
     });
+    if (cranking) this.reelOverlay.grab(cranking);
 
     // The fish's side of it: swimming about, and for a big one, runs.
     this.fight = new FishFight(this, {

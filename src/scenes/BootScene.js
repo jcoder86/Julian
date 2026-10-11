@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import {
   SFX, MUSIC, sfxPath, musicPath, voiceKey, voicePath,
-  VOICE_ATLAS_KEY, VOICE_ATLAS_META_KEY, voiceAtlasPath, voiceAtlasMetaPath,
+  VOICE_ATLASES, voiceAtlasMetaKey, voiceAtlasPath, voiceAtlasMetaPath,
 } from '../systems/AudioManager.js';
 import { FISH_SPECIES, FISH_SIZES, fishTextureKey } from '../data/fish.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
 import { BAITS, baitFullTextureKey, baitSimpleTextureKey } from '../data/baits.js';
 import { FLOATS, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
 import { MAPS, catchBgKey, catchBgImage } from '../data/maps.js';
@@ -150,12 +151,14 @@ export class BootScene extends Phaser.Scene {
     for (const key of Object.values(MUSIC)) {
       this.load.audio(key, musicPath(key));
     }
-    // Voice atlas (preferred): a single vissen.mp3 with all 33 phrases.
+    // Voice atlases (preferred): a few mp3s that each hold many phrases.
     // The companion JSON gives us seek + duration per (species, size).
-    this.load.audio(VOICE_ATLAS_KEY, voiceAtlasPath());
-    this.load.json(VOICE_ATLAS_META_KEY, voiceAtlasMetaPath());
+    for (const atlas of VOICE_ATLASES) {
+      this.load.audio(atlas, voiceAtlasPath(atlas));
+      this.load.json(voiceAtlasMetaKey(atlas), voiceAtlasMetaPath(atlas));
+    }
     // Per-clip voice fallback: one short clip per species × size.
-    // Loaded only if individual files exist; the atlas takes precedence.
+    // Loaded only if individual files exist; an atlas takes precedence.
     for (const species of FISH_SPECIES) {
       for (const size of FISH_SIZES) {
         this.load.audio(voiceKey(species.id, size), voicePath(species.id, size));
@@ -168,6 +171,8 @@ export class BootScene extends Phaser.Scene {
     for (const who of Object.values(characters)) {
       for (const clip of Object.values(who.clips || {})) buildClipTexture(this, clip);
     }
+    // Once per device: James's collection for James & Boaz (SaveSystem.js).
+    SaveSystem.adoptJamesCatches();
     this.scene.start('TitleScene');
   }
 }

@@ -36,9 +36,6 @@ export class ReelOverlay {
     this.requiredTurns = requiredTurns;
     this.onComplete = onComplete;
     this.decay = decay;
-    // While paused, cranking moves the handle but reels nothing in (and
-    // nothing drains). Used for the moment a fish grabs the lure.
-    this.paused = false;
     // What a turn of the handle is worth: 1 normally, less while a fish runs.
     this.resistance = 1;
     this._strained = false;
@@ -151,9 +148,18 @@ export class ReelOverlay {
     this._redrawProgress();
   }
 
-  /** Freeze / unfreeze reeling progress (the handle keeps following the finger). */
-  setPaused(paused) {
-    this.paused = !!paused;
+  /** The finger (pointer) that is cranking right now, or null. */
+  get heldBy() {
+    return this.isDragging ? this._dragPointer : null;
+  }
+
+  /**
+   * Take over a crank that is already going: `pointer` is the finger that
+   * was turning another reel a moment ago (the lure's reel hands over to
+   * the fight's reel when a fish bites). Nothing happens if it has let go.
+   */
+  grab(pointer) {
+    if (pointer && pointer.isDown) this._onHandleDown(pointer);
   }
 
   /**
@@ -179,11 +185,12 @@ export class ReelOverlay {
   _attachInputs() {
     // Capture handlers as bound fns so we can detach them on destroy.
     // Only the finger that grabbed the reel cranks it. With a second
-    // finger on the screen (the other hand tapping to strike) its movement
+    // finger on the screen (the other hand, a helping brother) its movement
     // must not be read as a wild spin of the handle.
     this._onHandleDown = (pointer) => {
       if (this._destroyed) return;
       this.isDragging = true;
+      this._dragPointer = pointer;
       this._dragPointerId = pointer.id;
       this._lastPointerAngle = this._pointerAngle(pointer);
       // Snap handle to current pointer angle so it feels responsive.
@@ -207,12 +214,12 @@ export class ReelOverlay {
         // count as a huge spin.
         if (delta > Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
-        if (!this.paused) this.accumulatedRadians += Math.abs(delta) * this.resistance;
+        this.accumulatedRadians += Math.abs(delta) * this.resistance;
       }
       this._lastPointerAngle = ang;
       this.handle.rotation = ang;
       this._redrawProgress();
-      if (!this.paused && this.accumulatedRadians >= this.requiredRadians) this._complete();
+      if (this.accumulatedRadians >= this.requiredRadians) this._complete();
     };
 
     // Pointerdown on the wide hit zone -- starts dragging anywhere on/near
@@ -227,7 +234,7 @@ export class ReelOverlay {
       delay: 100,
       loop: true,
       callback: () => {
-        if (this._destroyed || this.isDragging || !this.decay || this.paused) return;
+        if (this._destroyed || this.isDragging || !this.decay) return;
         const drainPerTick = this.requiredRadians * 0.012;
         if (this.accumulatedRadians > 0) {
           this.accumulatedRadians = Math.max(0, this.accumulatedRadians - drainPerTick);

@@ -45,9 +45,11 @@ export function teamBadgeKey(teamId) {
 export class TitleScene extends Phaser.Scene {
   constructor() { super('TitleScene'); }
 
-  create() {
+  /** @param {{ showButtons?: boolean }} data  set when coming back from the game */
+  create(data) {
     this._startUi = null;
     this._entering = false;
+    this._tapZone = null;
 
     // Background as a DOM <img> behind the (transparent) Phaser canvas.
     // The painting is 4:3; object-fit: cover makes it fill any screen, and
@@ -88,6 +90,13 @@ export class TitleScene extends Phaser.Scene {
     // always a slice of the world) so we don't need an extra DOM listener;
     // pointerdown on a Phaser Zone has the same gesture-credibility for
     // iOS' audio unlock as any other tap.
+    //
+    // Back from the map screen there is nothing left to unlock: the buttons
+    // are simply there.
+    if (data && data.showButtons) {
+      this._revealStartUI();
+      return;
+    }
     this._tapZone = this.add.zone(WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT)
       .setOrigin(0, 0)
       .setInteractive()
