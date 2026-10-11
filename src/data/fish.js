@@ -19,8 +19,9 @@ export const FISH_SIZES = ["small", "medium", "large"];
  * range in centimetres for each size bucket, sourced from a Dutch field
  * guide table -- small = "jong/klein", medium = "gemiddeld vangbaar",
  * large = "max NL". Each catch rolls a random integer cm in the bucket's
- * range. Adjust to taste. An optional `maxReelTurns` raises the cap on
- * how many reel turns a catch of this species can take (default 9).
+ * range. Adjust to taste, then run `node scripts/fish-odds.js` to see what
+ * it does to the odds. An optional `maxReelTurns` raises the cap on how
+ * many reel turns a catch of this species can take (default 9).
  */
 export const FISH_SPECIES = [
   // Vredevissen (peaceful fish) -- common, NO fish-bait
@@ -95,20 +96,30 @@ export const FISH_SPECIES = [
   { id: "cod",      map: "sea", nlName: "Kabeljauw", baits: ["zeepier", "aasvisje", "veren", "pilker"],    speciesWeight:  40, sizeWeights: [45, 35, 20],
     lengthCm: { small: [25, 40], medium: [50, 80], large: [100, 130] } },
 
-  // Big and rare: bottom dwellers that want real bait...
+  // A big one that does live in the North Sea: a bottom dweller that wants
+  // real bait.
   { id: "ray",      map: "sea", nlName: "Rog",       baits: ["zeepier", "aasvisje"],                       speciesWeight:  18, sizeWeights: [45, 35, 20],
     lengthCm: { small: [30, 45], medium: [55, 80], large: [ 95, 120] } },
-  { id: "conger",   map: "sea", nlName: "Zeepaling", baits: ["zeepier", "aasvisje"],                       speciesWeight:  10, sizeWeights: [45, 35, 20],
+
+  // Fish an angler does NOT normally bring home from the North Sea: rare as
+  // a species, and their biggest sizes rarer still. Three rules of thumb,
+  // which `node scripts/fish-odds.js` prints for every bait:
+  //   * one of these at all: about 1 bite in 50-100 with the right gear;
+  //   * ANY fish longer than 150 cm: about 1 in 170 at best;
+  //   * a tuna or shark of over two metres: about 1 in 400 on the pilker,
+  //     1 in 650 or rarer on anything else -- the catch you ring a friend
+  //     about. (Both are "large" from 220 cm; no "medium" exceeds 200.)
+  { id: "conger",   map: "sea", nlName: "Zeepaling", baits: ["zeepier", "aasvisje"],                       speciesWeight:   5, sizeWeights: [55, 35, 10],
     lengthCm: { small: [50, 80], medium: [100, 150], large: [180, 230] }, maxReelTurns: 12 },
-  // ...and open-water giants that chase a bait fish or a fast lure.
-  { id: "tuna",     map: "sea", nlName: "Tonijn",    baits: ["aasvisje", "blinker", "pilker"],             speciesWeight:   5, sizeWeights: [45, 35, 20],
+  // Open-water giants that chase a bait fish or a fast lure.
+  { id: "tuna",     map: "sea", nlName: "Tonijn",    baits: ["aasvisje", "blinker", "pilker"],             speciesWeight: 2.2, sizeWeights: [60, 27, 13],
     lengthCm: { small: [60, 90], medium: [120, 180], large: [220, 300] }, maxReelTurns: 12 },
 
   // The shark: the rarest fish in the whole game (lowest weight of all),
-  // and the longest fight. About 1 bite in 175 on a bait fish, 1 in 90 on
-  // the pilker.
-  { id: "shark",    map: "sea", nlName: "Haai",      baits: ["aasvisje", "pilker"],                        speciesWeight:   2, sizeWeights: [50, 35, 15],
-    lengthCm: { small: [80, 120], medium: [150, 210], large: [260, 350] }, maxReelTurns: 14 },
+  // and the longest fight. About 1 bite in 310 on a bait fish, 1 in 160 on
+  // the pilker -- and then mostly a small one.
+  { id: "shark",    map: "sea", nlName: "Haai",      baits: ["aasvisje", "pilker"],                        speciesWeight: 1.1, sizeWeights: [58, 29, 13],
+    lengthCm: { small: [80, 120], medium: [140, 200], large: [220, 350] }, maxReelTurns: 14 },
 ];
 
 /** Which map a species lives in. */

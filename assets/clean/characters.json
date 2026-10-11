@@ -1,0 +1,259 @@
+{
+ "dirk": {
+  "bodyHeight": 170,
+  "clips": {
+   "idle": {
+    "rgb": "dirk_idle.jpg",
+    "alpha": "dirk_idle_alpha.png",
+    "fw": 131,
+    "fh": 175,
+    "cols": 11,
+    "count": 81,
+    "fps": 10,
+    "ox": -60,
+    "oy": -174
+   }
+  }
+ },
+ "julian": {
+  "bodyHeight": 334,
+  "poses": {
+   "ready": {
+    "file": "char_julian_ready.png",
+    "w": 482,
+    "h": 399,
+    "ox": -2,
+    "oy": -374,
+    "tip": [
+     478,
+     -370
+    ]
+   },
+   "castback": {
+    "file": "char_julian_castback.png",
+    "w": 482,
+    "h": 384,
+    "ox": -210,
+    "oy": -358,
+    "tip": [
+     -209,
+     -353
+    ]
+   },
+   "castfwd": {
+    "file": "char_julian_castfwd.png",
+    "w": 540,
+    "h": 332,
+    "ox": -1,
+    "oy": -306,
+    "tip": [
+     538,
+     -230
+    ]
+   },
+   "wait": {
+    "file": "char_julian_wait.png",
+    "w": 485,
+    "h": 399,
+    "ox": -3,
+    "oy": -374,
+    "tip": [
+     479,
+     -371
+    ]
+   },
+   "wait2": {
+    "file": "char_julian_wait2.png",
+    "w": 481,
+    "h": 398,
+    "ox": -2,
+    "oy": -374,
+    "tip": [
+     476,
+     -372
+    ]
+   },
+   "bite": {
+    "file": "char_julian_bite.png",
+    "w": 471,
+    "h": 400,
+    "ox": -9,
+    "oy": -383,
+    "tip": [
+     461,
+     -346
+    ]
+   },
+   "reel": {
+    "file": "char_julian_reel.png",
+    "w": 486,
+    "h": 381,
+    "ox": -19,
+    "oy": -359,
+    "tip": [
+     466,
+     -337
+    ]
+   },
+   "reel2": {
+    "file": "char_julian_reel2.png",
+    "w": 495,
+    "h": 334,
+    "ox": -1,
+    "oy": -306,
+    "tip": [
+     493,
+     -151
+    ]
+   },
+   "cheer": {
+    "file": "char_julian_cheer.png",
+    "w": 319,
+    "h": 426,
+    "ox": 0,
+    "oy": -401,
+    "tip": [
+     316,
+     -399
+    ]
+   }
+  }
+ },
+ "james": {
+  "bodyHeight": 346,
+  "poses": {
+   "ready": {
+    "file": "char_james_ready.png",
+    "w": 476,
+    "h": 395,
+    "ox": -2,
+    "oy": -366,
+    "tip": [
+     473,
+     -365
+    ]
+   },
+   "castback": {
+    "file": "char_james_castback.png",
+    "w": 479,
+    "h": 408,
+    "ox": -194,
+    "oy": -379,
+    "tip": [
+     -194,
+     -376
+    ]
+   },
+   "castfwd": {
+    "file": "char_james_castfwd.png",
+    "w": 548,
+    "h": 354,
+    "ox": 1,
+    "oy": -322,
+    "tip": [
+     548,
+     -307
+    ]
+   },
+   "wait": {
+    "file": "char_james_wait.png",
+    "w": 504,
+    "h": 386,
+    "ox": 0,
+    "oy": -355,
+    "tip": [
+     503,
+     -355
+    ]
+   },
+   "wait2": {
+    "file": "char_james_wait2.png",
+    "w": 475,
+    "h": 395,
+    "ox": -2,
+    "oy": -366,
+    "tip": [
+     472,
+     -365
+    ]
+   },
+   "bite": {
+    "file": "char_james_bite.png",
+    "w": 479,
+    "h": 396,
+    "ox": -21,
+    "oy": -369,
+    "tip": [
+     456,
+     -336
+    ]
+   },
+   "reel": {
+    "file": "char_james_reel.png",
+    "w": 499,
+    "h": 390,
+    "ox": -11,
+    "oy": -360,
+    "tip": [
+     487,
+     -320
+    ]
+   },
+   "reel2": {
+    "file": "char_james_reel2.png",
+    "w": 511,
+    "h": 343,
+    "ox": 0,
+    "oy": -313,
+    "tip": [
+     510,
+     -202
+    ]
+   },
+   "cheer": {
+    "file": "char_james_cheer.png",
+    "w": 314,
+    "h": 438,
+    "ox": -1,
+    "oy": -404,
+    "tip": [
+     311,
+     -403
+    ]
+   }
+  }
+ },
+ "boaz": {
+  "bodyHeight": 408,
+  "poses": {
+   "watch": {
+    "file": "char_boaz_watch.png",
+    "w": 193,
+    "h": 408,
+    "ox": -108,
+    "oy": -401
+   },
+   "look": {
+    "file": "char_boaz_look.png",
+    "w": 167,
+    "h": 496,
+    "ox": -75,
+    "oy": -488
+   },
+   "point": {
+    "file": "char_boaz_point.png",
+    "w": 279,
+    "h": 479,
+    "ox": -86,
+    "oy": -472
+   },
+   "cheer": {
+    "file": "char_boaz_cheer.png",
+    "w": 339,
+    "h": 467,
+    "ox": -143,
+    "oy": -462
+   }
+  }
+ }
+}

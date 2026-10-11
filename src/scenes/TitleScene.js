@@ -6,6 +6,8 @@ import {
 import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { AudioManager, MUSIC } from '../systems/AudioManager.js';
+import { TEAMS } from '../data/teams.js';
+import { UI, COLOR, lettering, addGlow, pressable } from '../systems/Ui.js';
 
 // When a screen wider than 4:3 has to crop the painting top and bottom,
 // keep the top: that is where the logo and Julian's face are. 0 = keep the
@@ -13,29 +15,39 @@ import { AudioManager, MUSIC } from '../systems/AudioManager.js';
 // background's object-position so the two always show the same slice.
 const VIEW_ALIGN_Y = 0.1;
 
-// Button block (design px). START is the container origin; the guest link
-// hangs below it.
-const START_W = 280;
-const START_H = 90;
+// Button block (design px): one START sign per team, stacked. The first
+// sign's centre is the container origin.
+const START_W = 400;
+const START_H = 92;                // the sign's picture is 800 x 184
 const START_MARGIN_RIGHT = 36;
-const START_Y = Math.round(GAME_HEIGHT * 0.78);
-const GUEST_OFFSET_Y = Math.round(GAME_HEIGHT * 0.90) - START_Y;
-// Room the block needs between START's centre and the bottom of the screen.
-const START_MIN_BOTTOM_GAP = 150;
+const START_Y = Math.round(GAME_HEIGHT * 0.63);
+const START_STEP = 156;            // from one sign's centre to the next
+// The team's two faces sit on the plain left end of the sign and stick out
+// a little beyond it.
+const BADGE_HEIGHT = 108;
+const BADGE_CENTER_X = -START_W / 2 + 60;
+// Room the block needs between the first sign's centre and the bottom of
+// the screen.
+const START_MIN_BOTTOM_GAP = START_STEP * (TEAMS.length - 1) + 100;
+
+/** Texture key of a team's badge: its two faces (scripts/make_characters.py). */
+export function teamBadgeKey(teamId) {
+  return `team-${teamId}`;
+}
 
 /**
- * Title screen with start.png as the painted background.
+ * Title screen with the painted friends as its background.
  *
- * Two buttons:
- *   START          - launches the main game using Julian's save profile
- *   start as guest - launches with the 'guest' profile so trying out the
- *                    game doesn't pollute Julian's catch records
+ * One START button per team (data/teams.js), each showing the faces of
+ * the two who fish together -- a child taps his own face. A team is also
+ * a save profile: its catches are its own.
  */
 export class TitleScene extends Phaser.Scene {
   constructor() { super('TitleScene'); }
 
   create() {
     this._startUi = null;
+    this._entering = false;
 
     // Background as a DOM <img> behind the (transparent) Phaser canvas.
     // The painting is 4:3; object-fit: cover makes it fill any screen, and
@@ -65,8 +77,8 @@ export class TitleScene extends Phaser.Scene {
     bindLayout(this, { alignY: VIEW_ALIGN_Y }, (layout) => this._applyLayout(layout));
 
     // === Invisible tap-to-start overlay ===
-    // Show ONLY the painted scene at first. The START + guest buttons
-    // are deliberately hidden until any tap lands on the page. That tap
+    // Show ONLY the painted scene at first. The START buttons are
+    // deliberately hidden until any tap lands on the page. That tap
     // serves two purposes:
     //   1. It unlocks WebAudio on iOS Safari so the title theme starts.
     //   2. It reveals the buttons, so a child doesn't waste their first
@@ -91,8 +103,7 @@ export class TitleScene extends Phaser.Scene {
     // only has to move a single object.
     const ui = this.add.container(0, 0);
     ui.setDepth(10);
-    this._buildPrimaryButton(ui);
-    this._buildGuestButton(ui);
+    TEAMS.forEach((team, i) => this._buildTeamButton(ui, team, i * START_STEP));
     this._startUi = ui;
     this._applyLayout(this.layout);
   }
@@ -126,65 +137,42 @@ export class TitleScene extends Phaser.Scene {
     }
   }
 
-  _buildPrimaryButton(ui) {
-    // START sits at the container origin. Children draw in the order they
-    // are added: shadow, halo, pill, label.
-    const W = START_W, H = START_H;
+  _buildTeamButton(ui, team, y) {
+    // The glow is not part of the button: it breathes, the button only
+    // dips when pressed.
+    ui.add(addGlow(this, 0, y, { w: START_W - 10, h: START_H - 10, radius: 34 }));
 
-    // Drop shadow.
-    for (let i = 0; i < 5; i++) {
-      ui.add(this.add.rectangle(4, 6, W + i * 4, H + i * 3, 0x000000, 0.07));
+    const button = this.add.container(0, y);
+    ui.add(button);
+
+    if (this.textures.exists(UI.START)) {
+      const sign = this.add.image(0, 0, UI.START);
+      sign.setScale(START_W / sign.width);
+      button.add(sign);
+    } else {
+      // No picture: a plain board with the word on it.
+      button.add(this.add.rectangle(0, 0, START_W, START_H, 0x8a4f1d).setStrokeStyle(4, 0x3a1d06));
+      button.add(this.add.text(START_W * 0.2, 0, 'START', lettering(46, COLOR.GOLD)).setOrigin(0.5));
     }
 
-    // Pulsing halo behind for "tap me" cue (vector-only, no PNG jitter).
-    const halo = this.add.rectangle(0, 0, W + 30, H + 30, 0x4ecd5a, 0.30);
-    halo.setBlendMode(Phaser.BlendModes.ADD);
-    ui.add(halo);
-    this.tweens.add({
-      targets: halo,
-      alpha: { from: 0.12, to: 0.50 },
-      scale: { from: 1.0, to: 1.05 },
-      duration: 1100,
-      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
+    // The two who fish together: a child taps his own face.
+    if (this.textures.exists(teamBadgeKey(team.id))) {
+      const badge = this.add.image(BADGE_CENTER_X, 0, teamBadgeKey(team.id));
+      badge.setScale(BADGE_HEIGHT / badge.height);
+      button.add(badge);
+    }
 
-    // Main pill -- olive-green to match the painted style of start.png.
-    const pill = this.add.rectangle(0, 0, W, H, 0x35b94a, 1);
-    pill.setStrokeStyle(4, 0xffffff, 1);
-    pill.setInteractive({ useHandCursor: true });
-    ui.add(pill);
+    // Their names, for whoever can read.
+    button.add(this.add.text(0, START_H / 2 + 22, team.label, lettering(25)).setOrigin(0.5));
 
-    ui.add(this.add.text(0, 0, 'START', {
-      fontFamily: 'sans-serif',
-      fontSize: '52px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#0a3914',
-      strokeThickness: 4,
-    }).setOrigin(0.5));
-
-    pill.on('pointerdown', () => this._enterGame('julian'));
-  }
-
-  _buildGuestButton(ui) {
-    // Directly under the primary button, same right alignment.
-    // Just a small text link with a hit-area.
-    const label = this.add.text(0, GUEST_OFFSET_Y, 'start as guest', {
-      fontFamily: 'sans-serif',
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
-    label.setInteractive({ useHandCursor: true });
-    label.on('pointerover', () => label.setColor('#ffd24a'));
-    label.on('pointerout',  () => label.setColor('#ffffff'));
-    label.on('pointerdown', () => this._enterGame('guest'));
-    ui.add(label);
+    // One tap target for the whole of it, faces and names included.
+    button.setSize(START_W + 100, START_H + 56);
+    pressable(this, button, () => this._enterGame(team.id));
   }
 
   _enterGame(profile) {
+    if (this._entering) return;
+    this._entering = true;
     SaveSystem.setProfile(profile);
     this._teardownDomBackground();
     // Stop the title theme so it doesn't overlap with FishingScene ambient.
@@ -200,7 +188,7 @@ export class TitleScene extends Phaser.Scene {
     // versions; <img> is uniformly supported.
     const img = document.createElement('img');
     img.className = 'title-bg';
-    img.src = '/clean/start.png';
+    img.src = '/clean/start-friends.jpg';
     img.alt = '';
     img.style.position = 'fixed';
     // Box = the game container; kept in sync by _applyLayout.

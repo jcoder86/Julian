@@ -6,33 +6,22 @@ import {
 import { FISH_SPECIES, FISH_SIZES, fishTextureKey } from '../data/fish.js';
 import { BAITS, baitFullTextureKey, baitSimpleTextureKey } from '../data/baits.js';
 import { FLOATS, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
-import { MAPS } from '../data/maps.js';
+import { MAPS, catchBgKey, catchBgImage } from '../data/maps.js';
+import { TEAMS } from '../data/teams.js';
+import { CHARACTERS_KEY, crewTextureKey, buildClipTexture } from '../systems/Crew.js';
+import { UI, continueKey } from '../systems/Ui.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
 export const TEX = Object.freeze({
   BACKDROP: 'backdrop',                          // the moat painting; every map has its own key in data/maps.js
-  CLOUDS: 'clouds',                              // single-layer legacy strip (kept for fallback)
   FOREGROUND: 'foreground',                      // near-camera elements (e.g. overhanging tree branch) on transparent bg
-  JULIAN_IDLE_1: 'julian-idle1',                 // Julian animation frame 1
-  JULIAN_IDLE_2: 'julian-idle2',                 // Julian animation frame 2
-  JULIAN_IDLE_3: 'julian-idle3',                 // Julian animation frame 3
-  JULIAN_FISHING_LIVE: 'julian-fishing-live',    // Julian head-turned-right pose (line is out)
-  DIRK_IDLE: 'dirk-idle',                        // Dirk static idle pose
-  DIRK_IDLE_2: 'dirk-idle2',                     // Dirk alt idle pose (middle of rotation)
-  DIRK_IDLE_SLEEP: 'dirk-idle-sleep',             // Dirk sleeping pose (cycles every 30s)
-  ROD_LONG: 'rod-long',                          // Separable rod for cast/strike animation
-  JULIAN_FISHING: 'julian_fishing',              // legacy: Julian alone, single frame
-  DIRK_SITTING: 'dirk_sitting',                  // legacy: Dirk alone
-  JULIAN_DIRK_FISHING: 'julian_dirk_fishing',    // legacy: combined fallback
   // HUD icons (top-right stack)
   ICON_FISH:  'icon-fish',
   ICON_FLOAT: 'icon-float',
   ICON_BAIT:  'icon-bait',
   ICON_MAP:   'icon-map',                        // back to the map-select screen
   MAPSELECT_BG: 'mapselect-bg',                  // cabin wall behind the map-select cards
-  // Catch-screen background (the lake's; per-map keys live in data/maps.js)
-  CATCH_BG:   'catch-bg',
   // Title-screen background
   START_BG:   'start-bg',
   // Reel mechanic (Phase 7) -- the fishing reel ("molen") and its loose
@@ -45,9 +34,6 @@ export const TEX = Object.freeze({
   // "Fish on!" indicator that pops above Julian's head during the DIVE
   // window so the player knows it's now-or-never to strike.
   FISHON:      'fishon',
-  // NOTE: julian_dirk_general is processed by the asset pipeline but
-  // intentionally NOT preloaded here -- it's parked for the future
-  // overworld scene per spec.
 });
 
 // Video keys. When the video file is present it takes precedence over
@@ -77,44 +63,53 @@ export class BootScene extends Phaser.Scene {
     // straight from assets/raw/. We load all candidates -- any missing file
     // simply doesn't end up in the texture cache and the scene falls back.
     //
-    // One painting per map, plus that map's catch-screen painting. A map
-    // without its own catch painting quietly uses the lake's.
+    // One painting per map, plus the catch-screen painting of every team
+    // on that map (the children are in it).
     for (const map of MAPS) {
       this.load.image(map.backdropKey, map.backdropImage);
-      this.load.image(map.catchBgKey, map.catchBgImage);
+      for (const team of TEAMS) {
+        this.load.image(catchBgKey(team.id, map.id), catchBgImage(team.id, map.id));
+      }
     }
-    // Clouds run through the chromakey pipeline (AI image tools usually
-    // output green-screen). Foreground is hand-authored transparent so
-    // the pipeline skips it.
-    this.load.image(TEX.CLOUDS, 'clean/clouds.png');
     // Each map's cloud layers are shown by the browser itself (DOM strips
     // behind the canvas); loading them here only makes sure they are
     // already in the browser's cache when the map opens.
     for (const map of MAPS) {
       for (const layer of map.clouds) this.load.image(`clouds:${layer.src}`, layer.src);
     }
+    // Optional near-camera layer (an overhanging branch); no map has one now.
     this.load.image(TEX.FOREGROUND, 'raw/foreground.png');
-    // Preferred new animation frames (Julian sprite anim + Dirk static)
-    this.load.image(TEX.JULIAN_IDLE_1, 'clean/julian-idle1.png');
-    this.load.image(TEX.JULIAN_IDLE_2, 'clean/julian-idle2.png');
-    this.load.image(TEX.JULIAN_IDLE_3, 'clean/julian-idle3.png');
-    this.load.image(TEX.JULIAN_FISHING_LIVE, 'clean/julian-fishing.png');
-    this.load.image(TEX.DIRK_IDLE, 'clean/dirk-idle.png');
-    this.load.image(TEX.DIRK_IDLE_2, 'clean/dirk-idle2.png');
-    this.load.image(TEX.DIRK_IDLE_SLEEP, 'clean/dirk-idle-sleep.png');
-    this.load.image(TEX.ROD_LONG, 'clean/rod-long.png');
-    // Legacy textures (kept loaded for backward compat but not actively used)
-    this.load.image(TEX.JULIAN_FISHING, 'clean/julian_fishing.png');
-    this.load.image(TEX.DIRK_SITTING, 'clean/dirk_sitting.png');
-    this.load.image(TEX.JULIAN_DIRK_FISHING, 'clean/julian_dirk_fishing.png');
+    // The figures on the jetty: characters.json lists every pose picture
+    // and film strip (scripts/make_characters.py); queue them as soon as
+    // it is in. A film strip comes as two files, put together in create().
+    this.load.json(CHARACTERS_KEY, 'clean/characters.json');
+    this.load.once(`filecomplete-json-${CHARACTERS_KEY}`, (_key, _type, characters) => {
+      for (const who of Object.values(characters)) {
+        for (const pose of Object.values(who.poses || {})) {
+          this.load.image(crewTextureKey(pose.file), `clean/${pose.file}`);
+        }
+        for (const clip of Object.values(who.clips || {})) {
+          this.load.image(`${crewTextureKey(clip.rgb)}:rgb`, `clean/${clip.rgb}`);
+          this.load.image(`${crewTextureKey(clip.rgb)}:alpha`, `clean/${clip.alpha}`);
+        }
+      }
+    });
 
     // HUD icons + title-screen background.
     this.load.image(TEX.ICON_FISH,  'clean/icon-fish.png');
     this.load.image(TEX.ICON_FLOAT, 'clean/icon-float.png');
     this.load.image(TEX.ICON_BAIT,  'clean/icon-bait.png');
     this.load.image(TEX.ICON_MAP,   'clean/icon-map.png');
-    this.load.image(TEX.START_BG,   'clean/start.png');
+    this.load.image(TEX.START_BG,   'clean/start-friends.jpg');
     this.load.image(TEX.MAPSELECT_BG, 'clean/mapselect.jpg');
+    // Menus: the START sign and the blank boards...
+    for (const key of Object.values(UI)) this.load.image(key, `clean/${key}.png`);
+    // ...and per team its two faces (for its START button; same key as
+    // teamBadgeKey() in TitleScene) and its "go on fishing" button.
+    for (const team of TEAMS) {
+      this.load.image(`team-${team.id}`, `clean/team_${team.id}.png`);
+      this.load.image(continueKey(team.id), `clean/${continueKey(team.id)}.png`);
+    }
 
     // Reel + handle for the Phase 7 reeling-in mechanic.
     this.load.image(TEX.REEL,        'clean/reel.png');
@@ -169,6 +164,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    const characters = this.cache.json.get(CHARACTERS_KEY) || {};
+    for (const who of Object.values(characters)) {
+      for (const clip of Object.values(who.clips || {})) buildClipTexture(this, clip);
+    }
     this.scene.start('TitleScene');
   }
 }

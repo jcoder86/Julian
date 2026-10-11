@@ -185,59 +185,299 @@ detailed digital painting. No text, no letters, no people, no animals.
 """
 
 # ---------------------------------------------------------------------------
-# Clouds: loose strips that drift across a map's sky (scripts/make_clouds.py
-# joins three strips into one long layer, so no cloud is on screen twice)
+# Clouds: painted into an empty copy of a map's own sky (the "plate" that
+# `python scripts/make_clouds.py plates` writes), then lifted off it again
+# by scripts/make_clouds.py. Two strips per layer.
 # ---------------------------------------------------------------------------
 
-CLOUD_STRIP = """Photorealistic fair-weather cumulus clouds for a sky layer in a game, cut
-out against a solid flat pure green chroma-key background (#00FF00).
+SKY_CLOUDS = """\
+The FIRST image is an EMPTY SKY: nothing but a smooth blue gradient, deep
+blue at the top and pale at the bottom edge, where the horizon is. Paint
+clouds into it.
 
 {what}
 
-Real clouds, as in a sharp photograph of a summer sky over the sea: every
-cloud has its own irregular shape and size, with a flat, slightly grey
-base and bright billowing tops, soft wispy edges and a few torn-off
-fragments drifting beside it. No two clouds look alike; nothing is
-repeated, mirrored or evenly spaced. Sunlight from high above, slightly
-from the right.
+Paint them the way a master of realistic landscape painting would, in the
+style and the light of the SECOND reference image: {light}. They must look
+soft and airy and belong in this sky -- softly feathered edges that melt
+into the blue, gentle shading, a few wisps. Never a hard outline, never a
+cut-out or sticker look.
 
-Layout: wide landscape image, about 3:1. Everything that is not cloud is
-plain flat green. NO cloud touches the left or right edge of the image:
-keep a clear strip of plain green at both sides. No horizon, no sea, no
-land, no sun, no birds, no aircraft, no text.
+Keep the sky itself exactly as it is everywhere between the clouds: the
+same colours, the same smooth gradient. No cloud touches the left or the
+right edge of the image; leave clear sky there. Nothing else in the
+picture: no land, no sea, no horizon line, no sun, no birds, no aircraft,
+no text. The same wide format as the first image.
 """
 
-# The near layer: a few big clouds high in the sky.
-CLOUDS_NEAR = [
-    "Three clouds in the upper two thirds of the image: one large, tall, "
-    "towering cloud left of the centre, one medium-sized flatter cloud at "
-    "the right and one small cloud between them, higher up. The lower third "
-    "of the image is empty green.",
-    "Two clouds in the upper two thirds of the image: a long, low, stretched "
-    "cloud bank that fills most of the left half, and a compact, puffy, "
-    "medium-sized cloud at the right, a little higher. A few small wisps "
-    "trail behind them. The lower third of the image is empty green.",
-    "Four clouds of clearly different sizes scattered loosely across the "
-    "upper two thirds of the image: one big and broad, two small, and one "
-    "thin ragged cloud that is breaking up. Wide gaps of empty green between "
-    "them. The lower third of the image is empty green.",
-]
+SKY_LIGHT = {
+    "lake": ("a warm late afternoon in summer, low golden sun from the left -- cream "
+             "and gold on the clouds' sunny side, soft lilac-grey in their shade"),
+    "sea": ("a bright, clear summer day at noon -- clean white tops, soft blue-grey "
+            "undersides"),
+}
+SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png"}
 
-# The far layer: many small clouds lined up low, just above the horizon.
-CLOUDS_FAR = [
-    "A loose row of about ten SMALL distant clouds in the lower third of the "
-    "image, as cumulus looks far away above the horizon: their flat bases "
-    "lie at almost the same height, their sizes vary and some have merged "
-    "into short banks. The upper two thirds of the image are empty green.",
-    "Distant clouds in the lower third of the image: at the left a denser "
-    "bank of small cumulus that have grown together, thinning out to a few "
-    "scattered tiny clouds at the right. Flat bases at almost the same "
-    "height. The upper two thirds of the image are empty green.",
-    "About seven small, well separated distant clouds in the lower third of "
-    "the image, with irregular gaps between them -- one clearly bigger than "
-    "the others, two very small. Flat bases at almost the same height. The "
-    "upper two thirds of the image are empty green.",
-]
+# The near layer: a few big clouds, high up.  The far layer: small ones, low.
+SKY_LAYERS = {
+    "front": [
+        "Three large cumulus clouds of clearly different sizes and shapes, loosely "
+        "scattered across the upper two thirds of the sky, with wide stretches of open "
+        "blue between them. One towers; one is long and low. The bottom third stays "
+        "clear.",
+        "Two large, majestic cumulus clouds and one small torn-off cloud, in the upper "
+        "two thirds of the sky, with wide open blue around them. The bottom third stays "
+        "clear.",
+    ],
+    "back": [
+        "Distant clouds low in the sky: a loose band of small clouds across the bottom "
+        "third, their flat bases at about the same height, smaller and paler toward the "
+        "bottom edge. The upper two thirds stay clear.",
+        "A few small, scattered, distant clouds in the bottom third, irregularly spaced, "
+        "some merged into a low bank at one side, pale and hazy near the bottom edge. "
+        "The upper two thirds stay clear.",
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# The children and the dog: one painting per pose (scripts/make_characters.py
+# cuts them out, lines the poses of one child up on his seat and finds the
+# rod tip). A boy's own photos are reference material that lives only on
+# the owner's computer (work/photos/, not in git).
+# ---------------------------------------------------------------------------
+
+STYLE_REF = "assets/raw/char-style.png"      # the look every character follows
+
+CHAR_STYLE = """\
+A character painting for a children's fishing game, in exactly the same
+rich, realistic, warm storybook-painting style and the same light as the
+FIRST reference image.
+"""
+
+GREEN = """\
+BACKGROUND: solid flat pure green chroma-key (#00FF00) everywhere; no
+shadow on it, no ground, no water, no fishing line, no text.
+"""
+
+BOYS = {
+    "julian": dict(
+        look=("a 4-year-old boy with very blond, straight hair with a long "
+              "fringe, grey-blue eyes and a cheeky grin, wearing an "
+              "olive-green hooded outdoor jacket with a round leaf badge on "
+              "the sleeve, khaki cargo shorts, thick cream socks and brown "
+              "lace-up hiking boots"),
+        seat="the green tackle box with the fish and leaf stickers, exactly as in the first reference image",
+        photos=["work/photos/kind-foto-5.jpg", "work/photos/kind-foto-6.jpg"]),
+    "james": dict(
+        look=("a 7-year-old boy -- clearly a schoolboy, taller and older "
+              "than a toddler -- with thick, dark brown, wavy hair, blue "
+              "eyes and an open, friendly face, wearing a grey-blue quilted "
+              "zip-up jacket, light blue jeans and dark green rubber boots"),
+        seat="a sturdy blue tackle box with a grey lid and a fish sticker on its side",
+        photos=["work/photos/kind-foto-3.jpg", "work/photos/kind-foto-4.jpg"]),
+}
+
+BOY = CHAR_STYLE + """
+WHO: {look}. The PHOTOS show the real boy: give the character HIS face,
+HIS hair and HIS expression, so that his parents recognise him at once.
+{same}
+POSE: {pose}
+
+He holds a slim fishing rod with a cork handle and a small spinning reel.
+
+FRAMING: landscape image. He sits on {seat}, in the lower-left part of the
+image, seen from the side-front (three-quarter view), his body turned to
+the right. The ENTIRE fishing rod, from the butt of its handle to its very
+tip, lies inside the image with clear green space around it. Full body,
+complete from head to boots; nothing is cropped. He is alone: no dog, no
+other people.
+""" + GREEN
+
+SAME = ("The LAST reference image is this same boy in the game: keep him "
+        "exactly the same -- face, hair, clothes, the seat, the rod, his size "
+        "in the image -- and change only the pose.")
+
+BOY_POSES = {
+    "ready": "He sits relaxed, the rod resting in both hands and pointing up and to the "
+             "right at about 45 degrees, and looks straight at the viewer with a big, "
+             "happy grin.",
+    "castback": "The wind-up of a cast: he has swung the rod back over his shoulder, so "
+                "that it points up and BACKWARDS, to the left, behind his head; both arms "
+                "are raised and his body twists back a little. He looks ahead to the "
+                "right, at the water, eager and concentrated.",
+    "castfwd": "The end of a cast: he has just whipped the rod forward. Both arms are "
+               "stretched out in front of him and the rod points forward to the right, "
+               "almost level, slightly bent. He leans forward and looks where the bait "
+               "will land, mouth open with excitement.",
+    "wait": "He is fishing patiently: he holds the rod still in both hands, pointing up "
+            "and to the right at about 30 degrees, and watches the water to the right "
+            "with calm concentration and a little smile.",
+    "wait2": "He is fishing: he holds the rod still in both hands, pointing up and to "
+             "the right at about 30 degrees, and has turned his head to glance at the "
+             "viewer with a mischievous smile and raised eyebrows.",
+    "bite": "A fish bites! He jerks the rod upwards with both hands, so that it points "
+            "steeply up and bends in an arc; he leans back, eyes wide open, mouth open "
+            "in a surprised, delighted 'oh!'.",
+    "reel": "He is fighting a fish: he leans back, the rod pointing up and to the right, "
+            "bent in a strong arc; one hand grips the handle, the other turns the reel. "
+            "He grins with clenched teeth from the effort.",
+    "reel2": "He is fighting a fish: he leans forward, the rod lowered, pointing to the "
+             "right and bent; one hand grips the handle, the other turns the reel fast. "
+             "He looks along the rod at the water, laughing.",
+    "cheer": "He cheers: one fist punched high in the air, the other hand holding the "
+             "rod upright beside him; his head is thrown back a little and he laughs "
+             "out loud with joy.",
+}
+
+BOAZ = CHAR_STYLE + """
+WHO: a 4-year-old boy with light brown, tousled, slightly wavy hair, blue
+eyes, rosy cheeks and a huge laugh, wearing a blue sweatshirt with a small
+colourful print, grey-blue jeans and red rubber boots. The PHOTOS show the
+real boy: give the character HIS face, HIS hair and HIS laugh, so that his
+parents recognise him at once.
+{same}
+POSE: {pose}
+
+FRAMING: he STANDS, seen from the side-front (three-quarter view), his body
+turned to the right. Full body, complete from head to boots, filling most
+of the image's height; nothing is cropped. He holds nothing. He is alone:
+no dog, no other people.
+""" + GREEN
+
+BOAZ_PHOTOS = ["work/photos/kind-foto-1.jpg", "work/photos/kind-foto-2.jpg"]
+BOAZ_POSES = {
+    "watch": "He stands bent forward a little, hands on his knees, and peers "
+             "curiously at something low down to the right, smiling.",
+    "look": "He stands upright, hands behind his back, rocking on his heels, and "
+            "looks at the viewer with a broad, happy grin.",
+    "point": "He points excitedly with an outstretched arm at something to the "
+             "right, eyes wide, mouth open, the other hand on his cheek.",
+    "cheer": "He jumps for joy: both arms thrown up in the air, both feet off the "
+             "ground, laughing out loud.",
+}
+
+DIRK = CHAR_STYLE + """
+A brindle French bulldog with a white chest and a white stripe between
+his eyes -- the dog from the first reference image, exactly the same dog.
+He sits, seen from the side-front (three-quarter view), turned to the
+right, looking ahead to the right with bright eyes, mouth a little open.
+He is alone. Full body, complete from the tips of his ears to his paws,
+in the middle of a wide landscape image with plenty of green on all
+sides; nothing is cropped.
+""" + GREEN
+
+# ---------------------------------------------------------------------------
+# Paintings with the children in them: the title screen and, per team and
+# per map, the "look what we caught" screen. The character paintings are
+# passed along so the boys and the dog look the same as in the game.
+# ---------------------------------------------------------------------------
+
+CAST = {
+    "julian": "JULIAN: 4 years old, very blond straight hair with a long fringe, "
+              "olive-green hooded jacket, khaki shorts, cream socks, brown boots.",
+    "james": "JAMES: 7 years old, the tallest -- a head taller than a 4-year-old; dark "
+             "brown wavy hair, grey-blue quilted jacket, jeans, dark green rubber boots.",
+    "boaz": "BOAZ: 4 years old, small; light brown tousled hair, blue sweatshirt with a "
+            "colourful print, jeans, red rubber boots.",
+    "dirk": "DIRK: a brindle French bulldog with a white chest.",
+}
+
+
+def who_is_who(*names):
+    """The cast of one painting -- and nobody else may appear in it."""
+    lines = "\n".join(f"- {CAST[n]}" for n in names)
+    return ("WHO IS IN THE PICTURE (each is shown in his own reference image; keep "
+            "faces, hair and clothes exactly as there) -- these and NOBODY else:\n" + lines + "\n")
+
+START_SCREEN = """\
+Repaint the title screen of the children's fishing game "Julian's
+Visavontuur". The FIRST reference image is the current title screen: keep
+its place (a sunny forest stream with a waterfall), its rich, warm,
+realistic storybook-painting style, and above all its wooden title sign
+with the words "Julian's Visavontuur" -- same lettering, same colours,
+same spot in the upper right. The words must read exactly:
+Julian's Visavontuur
+
+New: instead of one boy there are now THREE friends and the dog, standing
+together on the path at the left, all looking at the viewer and laughing:
+Julian in front, holding a fishing rod upright; James behind him, a head
+taller, one hand on Julian's shoulder; Boaz next to Julian, waving; Dirk
+sitting at their feet. The three boys fill the left half of the picture,
+from the bottom edge up to about three quarters of its height.
+
+""" + who_is_who("julian", "james", "boaz", "dirk") + """
+The lower right quarter of the picture stays calm and uncluttered --
+just the stream -- because two buttons are placed there later.
+
+No other people. No text other than the title sign. 4:3 landscape.
+"""
+
+CATCH_SCREEN = """\
+Repaint the attached top-down scene (the FIRST reference image) with new
+children in it. Keep everything else exactly as it is: the camera looking
+straight down, the {ground}, the water along the top, the landing net at
+the right, the light and the painting style.
+
+Instead of the boy in the reference, {who} in the UPPER-LEFT corner,
+looking up at the viewer and laughing -- small, the same size as the boy
+in the reference, and no further right than a third of the picture's
+width.
+
+{cast}
+The whole middle and the lower half of the picture stay empty and
+uncluttered: a caught fish is laid there later. No fish in the painting.
+No text. 4:3 landscape.
+"""
+
+CATCH_WHO = {
+    "julian": ("Julian sits cross-legged with Dirk the dog lying beside him -- just the two of them",
+               ["julian", "dirk"], ["char-julian-ready", "char-dirk"]),
+    "guest": ("James and Boaz sit side by side, James clearly the taller, Boaz leaning against him",
+              ["james", "boaz"], ["char-james-ready", "char-boaz-watch"]),
+}
+CATCH_GROUND = {
+    "lake": ("wooden planks of the jetty", "assets/raw/catch.png"),
+    "sea": ("stone slabs of the harbour quay", "assets/raw/catch-sea.png"),
+}
+
+# ---------------------------------------------------------------------------
+# Buttons and frames (scripts/make_ui.py cuts them out, and makes the blank
+# boards of the menus from the START sign). Carved wood and rope, like the
+# title sign.
+# ---------------------------------------------------------------------------
+
+WOOD_STYLE = """\
+Style: exactly the chunky, friendly, hand-painted game art of the wooden
+title sign in the reference image -- thick weathered planks with a darker
+carved rim, warm brown wood grain, iron nails, a bit of rope.
+"""
+
+UI_START = """\
+A START button for a children's fishing game, as one wide wooden sign.
+
+""" + WOOD_STYLE + """
+A single thick plank, about three times as wide as it is high, with
+rounded corners. On its RIGHT two thirds stands the one word START in the
+same fat, glossy, three-dimensional lettering as the word "Julian's" on
+the reference sign (orange-yellow, dark outline, white shine). The LEFT
+third of the plank is plain, empty wood: two round portraits are put
+there later. The only text is: START
+
+Seen straight from the front. Solid flat pure green chroma-key background
+(#00FF00), no shadow on it, nothing else in the picture. Wide image.
+"""
+
+UI_RING = """\
+A round picture frame for a portrait in a children's fishing game: a thick
+ring of twisted ship's rope around a narrow rim of carved wood, seen
+straight from the front, perfectly circular.
+
+""" + WOOD_STYLE + """
+The INSIDE of the ring is empty: pure flat green, like the background (a
+portrait is put there later). The ring fills the square image almost to
+its edges. Solid flat pure green chroma-key background (#00FF00), no
+shadow, no text.
+"""
 
 # ---------------------------------------------------------------------------
 # Tackle and icons
@@ -303,12 +543,46 @@ JOBS = {
     "icon-map":     dict(out="assets/raw/icon-map.png",
                          refs=["assets/clean/icon-float.png"], brief=MAP_ICON),
 }
-for _layer, _variants in (("front", CLOUDS_NEAR), ("back", CLOUDS_FAR)):
-    for _n, _what in enumerate(_variants, start=1):
-        JOBS[f"clouds-sea-{_layer}-{_n}"] = dict(
-            out=f"assets/raw/clouds-sea-{_layer}-{_n}.png",
-            refs=[], brief=CLOUD_STRIP.format(what=_what),
+for _boy, _spec in BOYS.items():
+    _master = f"assets/raw/char-{_boy}-ready.png"
+    for _pose, _text in BOY_POSES.items():
+        _first = _pose == "ready"
+        JOBS[f"char-{_boy}-{_pose}"] = dict(
+            out=f"assets/raw/char-{_boy}-{_pose}.png",
+            refs=[STYLE_REF] + _spec["photos"] + ([] if _first else [_master]),
+            brief=BOY.format(look=_spec["look"], seat=_spec["seat"], pose=_text,
+                             same="" if _first else SAME),
         )
+for _pose, _text in BOAZ_POSES.items():
+    _first = _pose == "watch"
+    JOBS[f"char-boaz-{_pose}"] = dict(
+        out=f"assets/raw/char-boaz-{_pose}.png",
+        refs=[STYLE_REF] + BOAZ_PHOTOS + ([] if _first else ["assets/raw/char-boaz-watch.png"]),
+        brief=BOAZ.format(pose=_text, same="" if _first else SAME.replace("the seat, the rod, ", "")),
+    )
+JOBS["char-dirk"] = dict(out="assets/raw/char-dirk.png", refs=[STYLE_REF], brief=DIRK)
+JOBS["start"] = dict(
+    out="assets/raw/start-friends.png",
+    refs=["assets/raw/start.png", "assets/raw/char-julian-ready.png", "assets/raw/char-james-ready.png",
+          "assets/raw/char-boaz-watch.png", "assets/raw/char-dirk.png"],
+    brief=START_SCREEN)
+for _team, (_who, _cast, _chars) in CATCH_WHO.items():
+    for _map, (_ground, _layout) in CATCH_GROUND.items():
+        JOBS[f"catch-{_team}-{_map}"] = dict(
+            out=f"assets/raw/catch-{_team}-{_map}.png",
+            refs=[_layout] + [f"assets/raw/{c}.png" for c in _chars],
+            brief=CATCH_SCREEN.format(ground=_ground, who=_who, cast=who_is_who(*_cast)))
+_SIGN = "assets/raw/start-friends.png"
+JOBS["ui-start"] = dict(out="assets/raw/ui-start.png", refs=[_SIGN], brief=UI_START)
+JOBS["ui-ring"] = dict(out="assets/raw/ui-ring.png", refs=[_SIGN], brief=UI_RING)
+for _map, _light in SKY_LIGHT.items():
+    for _layer, _variants in SKY_LAYERS.items():
+        for _n, _what in enumerate(_variants, start=1):
+            JOBS[f"clouds-{_map}-{_layer}-{_n}"] = dict(
+                out=f"assets/raw/clouds-{_map}-{_layer}-{_n}.png",
+                refs=[f"assets/raw/sky-plate-{_map}.png", SKY_PAINTING[_map]],
+                brief=SKY_CLOUDS.format(what=_what, light=_light),
+            )
 for _id, (_subject, _view, _extra) in FISH.items():
     JOBS[f"fish-{_id}"] = dict(
         out=f"assets/raw/fish-{_id}.png",

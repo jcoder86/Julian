@@ -4,16 +4,12 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
 import { BAITS_BY_ID, baitsForMap, baitFullTextureKey } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
-
-// The scrim is drawn far larger than the design frame so it dims the whole
-// screen on any aspect ratio.
-const SCRIM_OVERSIZE = 6000;
+import { addChoiceMenu, MENU_W, MENU_H } from '../systems/Ui.js';
 
 /**
  * Modal-style scene that overlays the running FishingScene. Shows the
- * current map's baits and lures as large cards, with the current selection
- * highlighted. Tap a card to set the new selection and return; tap outside
- * (the scrim) to cancel.
+ * current map's baits and lures on a wooden board, the current one lit up.
+ * Tap one to choose it and return; tap beside the board to cancel.
  *
  * Launched with { mapId }; the choice is remembered per map.
  */
@@ -25,81 +21,32 @@ export class BaitSelectionScene extends Phaser.Scene {
   }
 
   create() {
-    // Dim the underlying scene -- semi-transparent black scrim.
-    const scrim = this.add.rectangle(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2,
-      SCRIM_OVERSIZE, SCRIM_OVERSIZE,
-      0x000000, 0.55
-    );
-    scrim.setInteractive();
-    scrim.on('pointerdown', () => this._close());
+    // Phaser keeps this scene object between openings: start afresh.
+    this._closed = false;
 
-    // Panel behind the cards.
-    const panelW = Math.round(GAME_WIDTH * 0.78);
-    const panelH = Math.round(GAME_HEIGHT * 0.55);
-
-    // Camera: keep the panel (plus a margin) fully on screen and centred,
+    // Camera: keep the board (plus a margin) fully on screen and centred,
     // zooming out only if the screen is too small for it.
-    bindLayout(this, { mode: 'frame', fitWidth: panelW + 40, fitHeight: panelH + 40 });
-    const panel = this.add.rectangle(
-      GAME_WIDTH / 2, GAME_HEIGHT / 2,
-      panelW, panelH,
-      0x1c2530, 0.95
-    );
-    panel.setStrokeStyle(3, 0xffffff, 0.4);
-    panel.setInteractive();   // swallow taps so they don't bubble to scrim
+    bindLayout(this, { mode: 'frame', fitWidth: MENU_W + 40, fitHeight: MENU_H + 40 });
 
-    const baits = baitsForMap(this.map.id);
     const saved = SaveSystem.getSelectedBait(this.map.id);
     const selectedId = BAITS_BY_ID[saved]?.map === this.map.id ? saved : this.map.defaultBait;
 
-    // Layout: single row of N cards, evenly spaced.
-    const cardW = Math.floor((panelW - 60) / baits.length);
-    const cardH = Math.round(panelH * 0.85);
-    const startX = GAME_WIDTH / 2 - panelW / 2 + 30 + cardW / 2;
-    const cardY = GAME_HEIGHT / 2;
-
-    baits.forEach((bait, i) => {
-      const x = startX + i * cardW;
-      this._buildCard(bait, x, cardY, cardW - 12, cardH, bait.id === selectedId);
-    });
-  }
-
-  _buildCard(bait, x, y, w, h, isSelected) {
-    const c = this.add.container(x, y);
-    c.setSize(w, h);
-    c.setInteractive({ useHandCursor: true });
-
-    // Card background. Highlight if selected.
-    const cardBg = this.add.rectangle(0, 0, w, h, isSelected ? 0x2c5e2c : 0x2b3540);
-    cardBg.setStrokeStyle(isSelected ? 4 : 2, isSelected ? 0xffd24a : 0xffffff, isSelected ? 1 : 0.4);
-
-    // Bait sprite scaled to fit the card.
-    const key = baitFullTextureKey(bait.id);
-    const sprite = this.add.image(0, -8, key);
-    const longest = Math.max(sprite.width, sprite.height);
-    if (longest > 0) sprite.setScale((h * 0.78) / longest);
-
-    // Name label at bottom.
-    const label = this.add.text(0, h / 2 - 18, bait.nlName, {
-      fontFamily: 'sans-serif',
-      fontSize: '20px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    });
-    label.setOrigin(0.5);
-
-    c.add([cardBg, sprite, label]);
-    c.on('pointerdown', (_pointer, _x, _y, event) => {
-      if (event && event.stopPropagation) event.stopPropagation();
-      SaveSystem.setSelectedBait(bait.id, this.map.id);
-      this._close();
-    });
-
-    return c;
+    addChoiceMenu(this, GAME_WIDTH / 2, GAME_HEIGHT / 2,
+      baitsForMap(this.map.id).map((bait) => ({
+        texture: baitFullTextureKey(bait.id),
+        label: bait.nlName,
+        selected: bait.id === selectedId,
+        onPick: () => {
+          SaveSystem.setSelectedBait(bait.id, this.map.id);
+          this._close();
+        },
+      })),
+      () => this._close());
   }
 
   _close() {
+    if (this._closed) return;
+    this._closed = true;
     this.scene.stop();
     this.scene.wake('FishingScene');
   }

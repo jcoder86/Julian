@@ -4,6 +4,7 @@ import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { MAPS } from '../data/maps.js';
 import { TEX } from './BootScene.js';
+import { addGlow, pressable } from '../systems/Ui.js';
 
 /**
  * "Where shall we fish?" -- one big picture per map, tap to go there.
@@ -61,19 +62,8 @@ export class MapSelectScene extends Phaser.Scene {
   }
 
   _buildCard(map, x, y, isLast) {
-    // Glow behind the card of the map visited last.
-    if (isLast) {
-      const glow = this.add.rectangle(x, y, CARD_W + 44, CARD_H + 44, GLOW_COLOR, 0.6);
-      this.tweens.add({
-        targets: glow,
-        // Strong: it has to read against the warm wood of the wall.
-        alpha: { from: 0.3, to: 0.95 },
-        duration: 1000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
-    }
+    // A glow behind the painting of the map visited last.
+    if (isLast) addGlow(this, x, y, { w: CARD_W + 8, h: CARD_H + 8, radius: 14 });
 
     // Soft drop shadow, then the frame (golden on the map visited last).
     for (let i = 0; i < 4; i++) {
@@ -81,7 +71,8 @@ export class MapSelectScene extends Phaser.Scene {
                          0x000000, 0.08);
     }
     this.add.rectangle(x, y, CARD_W + BORDER * 2, CARD_H + BORDER * 2,
-                       isLast ? GLOW_COLOR : BORDER_COLOR);
+                       isLast ? GLOW_COLOR : BORDER_COLOR)
+      .setStrokeStyle(4, 0x3a1d06);
 
     // The painting itself. Every map painting is 4:3, like the card.
     let picture;
@@ -92,8 +83,7 @@ export class MapSelectScene extends Phaser.Scene {
       picture = this.add.rectangle(x, y, CARD_W, CARD_H, 0x205070);
     }
 
-    picture.setInteractive({ useHandCursor: true });
-    picture.on('pointerdown', () => this._enter(map));
+    pressable(this, picture, () => this._enter(map));
   }
 
   _enter(map) {

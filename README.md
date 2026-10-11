@@ -20,32 +20,41 @@ you straight into the fishing scene (no title screen during dev).
 ```
 src/
   main.js                     # Phaser config, scene registration
-  constants.js                # GAME_WIDTH / GAME_HEIGHT (no other imports!)
-  placeholders.js             # All placeholder shapes -- one file to swap later
+  constants.js                # the design frame and the 4:3 world (no other imports!)
   scenes/
-    BootScene.js              # Asset preloading + transition to FishingScene
-    FishingScene.js
-    FishingCollectionScene.js
+    BootScene.js              # loads everything, then the title
+    TitleScene.js             # one START sign per team
+    MapSelectScene.js         # where shall we fish?
+    FishingScene.js           # the game itself
+    CatchDisplayScene.js      # "look what we caught"
+    FishingCollectionScene.js # the book of catches, one page per map
+    BaitSelectionScene.js, FloatSelectionScene.js
   systems/
-    SaveSystem.js             # localStorage wrapper
-    AudioManager.js           # Sound wrapper, console fallback if files missing
+    Layout.js                 # one camera transform for every screen shape
+    Crew.js                   # the figures on the jetty: poses, rod tip, the dog
+    FishingLine.js            # the line, in every phase of fishing
+    FishFight.js              # a hooked fish: swimming about, runs
+    Ui.js                     # lettering, glow, buttons, menus
+    ReelOverlay.js            # the reel you crank
+    SaveSystem.js             # localStorage wrapper (see "Save data")
+    AudioManager.js           # sound wrapper, console fallback if files missing
   data/
-    fish.js                   # 5 fish + weighted-random picker
+    maps.js, teams.js, fish.js, baits.js, floats.js
 assets/
-  raw/                        # Source images (green-screen sprites + backdrops)
-  clean/                      # Output of process_assets.py -- transparent PNGs
-  sprites/                    # Reserved for future hand-authored sprites
+  raw/                        # generated source pictures -- not shipped
+  clean/                      # what the game loads, made by the scripts
   audio/
-    sfx/                      # cast.mp3, splash.mp3, nibble.mp3, dive.mp3, ...
-    music/
 scripts/
-  process_assets.py           # raw -> clean asset pipeline
-  requirements.txt
+  gen_art.py, art_prompts.py  # generate pictures (Codex); gen_video.py: film (Veo)
+  make_*.py, split_atlas.py   # turn raw pictures into what the game loads
+  shipping.js, prune-dist.js  # what of assets/ does not go to the players
+  test-save-compat.js         # run by `npm run build`: no update may lose catches
+work/                         # not in git: reference photos, Veo's raw clips
 ```
 
 `vite.config.js` sets `publicDir: 'assets'`, so anything under `assets/` is
 served at the dev-server root. Phaser's loader paths reflect that:
-`clean/backdrop-sea.jpg`, `clean/julian-idle1.png`, `audio/sfx/plop.wav`.
+`clean/backdrop-sea.jpg`, `clean/char_julian_ready.png`, `audio/sfx/plop.wav`.
 
 ## Maps
 
@@ -74,6 +83,94 @@ late, and the lure arrives empty: cast again. Rings of ripples spread
 from the lure while it swims, so it is easy to follow on a choppy sea. The
 tunables are the `LURE_*` constants in `FishingScene.js`.
 
+### The line
+
+`src/systems/FishingLine.js` draws the line from the rod tip to whatever
+is on its end, and it looks different in every phase:
+
+* **Before the cast** the rig hangs from the rod tip -- the whole float
+  with the bait under it, or the lure -- and swings as the rod moves (a
+  small pendulum).
+* **The cast.** The rig swings back with the rod, is let go as the rod
+  whips forward and flies out; the line trails it in a bow that rises as
+  the float comes down.
+* **Waiting.** The bow falls onto the water and the line goes slack: it
+  droops from the rod, lands on the water a little before the float and
+  lies on the surface from there. A nibble or a dive pulls it tighter.
+* **Reeling in.** Pulled tight, straight from the tip into the water, with
+  a fine shiver. Let go of the reel and it sags a little.
+
+Between shapes the line never jumps: every point of it trails slightly
+behind where it should be, the middle more than the ends -- which is what
+makes it whip and settle. How slack the line is in which state is the
+`LINE_SLACK` table in `FishingScene.js`.
+
+A fish (or lure) is not reeled to the rod tip but to the map's `landing`
+spot: on the water, right at the jetty or the foot of the pier. From there
+the catch is lifted out. Each map also outlines its jetty or pier (`dry`):
+a float cannot land on it. Press **W** in the game to see the castable
+water, the jetty cut out of it and the landing spot.
+
+### The fight
+
+While a fish is being reeled in (`src/systems/FishFight.js`) it has a
+will of its own, and more of it the bigger it is:
+
+* it **swims from side to side** -- a small fish hardly, a big one in wide
+  sweeps (5 px at 25 cm up to 115 px from 180 cm, less in the distance);
+* a fish of 45 cm or more now and then makes a **run**: for about a second
+  it tears off and takes back some of the line. One run per 45 cm of
+  fish, four at most; each takes back 5-9 % of the fight, all together
+  never more than 30 %. Cranking through a run is worth a quarter.
+
+During a run the angler holds on with the rod bent double, the reel's
+progress ring turns from green to orange, the line shivers and rings
+spread faster from where it cuts the water. The fish itself stays out of
+sight: what was caught is a surprise until the catch screen.
+
+Runs are planned at the start of the fight, at set points along the way,
+so a big fish makes the fight longer (about one and a half times for the
+largest) but never endless.
+
+## Teams and characters
+
+The title screen has one START button per **team** (`src/data/teams.js`):
+*Julian & Dirk* and *James & Boaz*. A team is a save profile -- its
+catches are its own -- plus the two figures on the jetty: the boy with the
+rod and his buddy. (The second team's profile id is `guest`: that is what
+the button was called when James started saving his catches under it.)
+
+The boys are not animated film but **poses**: nine paintings each of the
+boy with the rod (ready, wind-up, cast, two ways of waiting, bite, two of
+reeling, cheering) and four of Boaz. `src/systems/Crew.js` picks the pose
+that fits what is happening, cross-fades, adds breathing and a hop of joy,
+and reports where the rod's tip is -- the fishing line is tied to it.
+Dirk the dog *is* film: a loop of frames.
+
+```bash
+python scripts/gen_art.py char-julian-bite       # (re)paint one pose
+python scripts/make_characters.py                # cut out, line up, write characters.json
+```
+
+`make_characters.py` finds the tackle box in every pose and scales and
+shifts the pose until the boxes coincide, so a change of pose reads as the
+boy moving rather than the picture jumping; it finds each pose's rod tip;
+and it writes `assets/clean/characters.json`, which is all the game needs
+to know. `work/check-<who>.jpg` shows the result at a glance.
+
+Why poses? Google's Veo refuses to animate pictures of lifelike children,
+and the boys are painted from photos to look like themselves. Dogs are
+fine: `work/veo-dirk-idle.mp4` is Dirk's master painting brought to life,
+which the script turns into a strip of frames (colours as JPEG, the
+transparency as a separate PNG -- together a fraction of a transparent
+PNG -- put back together when the game starts).
+
+The boys' photos are reference material for the image model only. They
+live in `work/photos/` on the owner's computer and are not in git.
+
+The "look what we caught" screen shows the team, so there is one painting
+per team and map (`catch-<team>-<map>`).
+
 ## Generating artwork
 
 The sea, the Naarden-Vesting painting, the sea fish, the sea tackle, the
@@ -97,8 +194,10 @@ makes of it:
 | `fish-<id>` | `python scripts/split_atlas.py fish-<id>` | `clean/fish_<id>_<size>.png` |
 | `sea-baits`, `icon-map` | `python scripts/split_atlas.py baits-sea icon-map` | `clean/bait_<id>_<full/simple>.png`, `clean/icon-map.png` |
 | `sea-backdrop`, `naarden` | `python scripts/make_paintings.py` and `python scripts/make_sky_mask.py --image assets/raw/<file>.png --out assets/clean/sky-mask-<map>.png` | `clean/backdrop-<map>.jpg`, `clean/sky-mask-<map>.png` |
-| `sea-catch`, `mapselect-bg` | `python scripts/make_paintings.py` | `clean/catch-sea.jpg`, `clean/mapselect.jpg` |
-| `clouds-sea-front-1..3`, `clouds-sea-back-1..3` | `python scripts/make_clouds.py` | `clean/clouds-sea-front.png`, `clean/clouds-sea-back.png` |
+| `mapselect-bg`, `start`, `catch-<team>-<map>` | `python scripts/make_paintings.py` | `clean/mapselect.jpg`, `clean/start-friends.jpg`, `clean/catch-<team>-<map>.jpg` |
+| `char-<who>-<pose>`, `char-dirk` | `python scripts/make_characters.py` | `clean/char_<who>_<pose>.png`, `clean/characters.json` |
+| `clouds-<map>-front-1..2`, `clouds-<map>-back-1..2` | `python scripts/make_clouds.py` | `clean/clouds-<map>-front.png`, `clean/clouds-<map>-back.png` |
+| `ui-start`, `ui-ring` | `python scripts/make_ui.py`, then `python scripts/make_characters.py` | `clean/ui-start.png`, the boards `clean/ui-board-*.png`, `clean/team_<team>.png`, `clean/ui-continue-<team>.png` |
 
 A new backdrop also needs its numbers checked in `src/data/maps.js`: the
 waterline (press `W` in the fishing scene to see it drawn over the
@@ -208,6 +307,11 @@ paints it.
    separate `assets/audio/voice/<size>-<id>.wav` files. Without them a
    catch is simply announced without a voice.
 
+How rare a catch is follows from `speciesWeight`, `sizeWeights` and
+`lengthCm` in `src/data/fish.js`; `node scripts/fish-odds.js` prints the
+exact odds per bait -- of every species, of a fish longer than 150 cm and
+of a tuna or shark of over two metres. Run it after changing a weight.
+
 The collection screen is a 4 x 3 grid per map and each map currently has
 exactly 12 species; a 13th on one map needs a layout change in
 `FishingCollectionScene.js`.
@@ -284,25 +388,46 @@ via `FOREGROUND_SWAY_AMPLITUDE` (degrees) and `FOREGROUND_SWAY_PERIOD_MS`
 in `FishingScene.js`. Set amplitude to 0 if you later upgrade to a true
 animated foreground (e.g. an alpha-channel WebM that already moves).
 
-### Decoupled cloud layer (parallax)
+### Clouds
 
-Clouds are **separate layers** that scroll horizontally and infinitely:
-DOM strips behind the transparent canvas and in front of the backdrop. The
-backdrop itself should have a clean **cloud-free sky** -- the cloud layers
-do the drifting. Which layers a map shows, how tall, how fast and how
-opaque, is its `clouds` list in `src/data/maps.js`.
+Clouds are **separate layers** that drift sideways for ever: DOM strips
+behind the transparent canvas and in front of the backdrop. The backdrop
+itself has a clean, **cloud-free sky**. Which layers a map shows, how
+tall, how fast and how opaque, is its `clouds` list in `src/data/maps.js`.
 
-The sea's two layers are built by `scripts/make_clouds.py` from six
-generated strips: three different strips end to end per layer, so a layer
-is wider than the screen and no cloud is on screen twice -- a short strip
-of look-alike clouds reads as wallpaper over an open sea. The far layer's
-clouds are lined up just above the horizon, the near layer's hang higher.
+To make the clouds belong in a painting they are painted **into that
+painting's own sky** and then lifted off it again:
+
+```bash
+python scripts/make_clouds.py plates          # an empty copy of each map's sky
+python scripts/gen_art.py clouds-lake-front-1 clouds-lake-front-2 clouds-lake-back-1 clouds-lake-back-2
+python scripts/make_clouds.py lake            # lift the clouds off, join the strips
+```
+
+1. `plates` reads how the sky of the map's painting runs from top to
+   bottom and writes it as an empty sky (`assets/raw/sky-plate-<map>.png`).
+2. The image model paints clouds into that plate, in the style and the
+   light of the map's painting -- golden in the late afternoon over
+   Naarden, clean white at noon over the sea. Two different strips per
+   layer: big clouds high up for the near layer, small ones low down for
+   the far layer.
+3. `make_clouds.py` treats the sky as a blue screen: how much less blue a
+   pixel is than the clear sky on its row tells how much cloud is in it,
+   and the cloud's own colour is what remains when the sky's share is
+   taken out. A wisp stays a wisp. The two strips of a layer are laid end
+   to end, which makes the layer wider than the screen: no cloud is ever
+   on screen twice.
+
+A sky only changes from top to bottom and clouds only drift sideways, so
+a lifted cloud always sits on the same blue it was painted on: in the
+game it looks exactly as it was painted.
 
 The strips are masked with the map's sky mask
 (`assets/clean/sky-mask-<map>.png`), an alpha image of where the painting
 is sky, so clouds pass **behind** the tree tops, the church tower and the
 sea's horizon on every screen shape. The mask is generated from the
-painting; re-run this whenever a backdrop changes:
+painting; re-run this whenever a backdrop changes (and then make the
+plates and the clouds again):
 
 ```bash
 python scripts/make_sky_mask.py --image assets/raw/backdrop-naarden.png --out assets/clean/sky-mask-naarden.png
@@ -312,91 +437,66 @@ python scripts/make_sky_mask.py --image assets/raw/backdrop-sea.png --out assets
 (needs Pillow / numpy / scipy; reading a video instead needs `ffmpeg` on
 the PATH). If the mask is missing the clouds simply render unmasked.
 
-The notes below describe the original single-strip setup and are kept for
-the asset requirements; the tunables that actually exist today are each
-map's `clouds` list in `src/data/maps.js`.
+## Menus and buttons
 
-Drop a transparent-background cloud strip at `assets/raw/clouds.png`:
+Everything one taps outside the fishing itself is carved wood and rope,
+after the title sign; `src/systems/Ui.js` holds the shared pieces (the
+lettering, the breathing glow, the press-dip, the menu of choices).
 
-* Horizontal strip, e.g. 2048x512 (whatever fits the band height).
-* **Native PNG transparency** -- not green-screen. The python pipeline
-  skips any filename prefixed `cloud` so the file is served as-is.
-* **Side-to-side tileable** -- the leftmost column of pixels must match
-  the rightmost so the seam is invisible while scrolling. Most AI image
-  tools have a "tileable" option, or you can prompt
-  *"seamlessly tileable horizontal cloud strip on transparent background"*.
+* **START** (`ui-start`): one generated wooden sign, plain on the left
+  and with the word on the right. Each team's two faces, in rope frames,
+  sit on the plain part.
+* **Go on fishing**: a round rope frame (`ui-ring`) with the team's own
+  angler in it, rod in hand. It closes the catch screen and the
+  collection.
+* **Boards**: the blank boards behind the collection's species, the bait
+  and float menus and a caught fish's name are all cut from the START
+  sign itself -- its plain left part plus its mirror image, as long as
+  the shape asks for -- so they are the same wood.
 
-If the file is missing the cloud layer just doesn't render -- the rest
-of the scene still works.
+`scripts/make_ui.py` cuts the sign and the ring out and makes the boards;
+`scripts/make_characters.py` then puts the faces in the ring.
 
-Tunables in `FishingScene.js`:
+Lettering uses "Arial Rounded MT Bold", which ships with iPadOS; on other
+systems the next rounded or plain font in `UI_FONT` is used.
 
-| constant                        | meaning |
-| ------------------------------- | ------- |
-| `CLOUD_BAND_HEIGHT_RATIO`       | top fraction of canvas devoted to clouds (default 0.50) |
-| `CLOUD_SCROLL_SPEED_PX_PER_SEC` | horizontal drift in displayed px/sec (default 6) |
-| `CLOUD_ALPHA`                   | layer opacity (default 0.95) |
+## Where things are on a painting
 
-The source PNG's natural vertical cloud distribution maps proportionally
-into the band, so scattering happens at asset-creation time, not in
-code. For real depth you can scale up later -- swap the single layer for
-multiple stacked `TileSprite`s with different scales/speeds/alphas
-(classic parallax stack).
-
-## Asset sprite architecture
-
-The scene prefers **separate** Julian and Dirk sprites so Julian can have
-his own cast animation later without Dirk moving along. Asset preference
-order in `FishingScene._buildCharacters`:
-
-1. `assets/clean/julian_fishing.png` + `assets/clean/dirk_sitting.png`
-   (preferred -- animation-ready)
-2. `assets/clean/julian_dirk_fishing.png` (transitional fallback, logs a
-   warning to the browser console)
-3. Plain grey placeholder rectangle (first-ever run)
-
-For a clean composition, `backdrop.png` must contain **only** the
-landscape -- no Julian, no Dirk. The sprite layers handle the characters.
-
-## Tunable visual constants (FishingScene)
-
-Exported from `src/scenes/FishingScene.js` so you can iterate without
-hunting through the file:
-
-| constant            | meaning |
-| ------------------- | ------- |
-| `SPRITE_SCALE`      | Julian sprite height as a fraction of canvas height |
-| `DIRK_SCALE`        | Dirk sprite height as a fraction of canvas height |
-| `JULIAN_ANCHOR_X/Y` | Julian's bottom-left anchor in canvas coords |
-| `DIRK_OFFSET_X/Y`   | Dirk position relative to Julian's anchor |
-| `WATER_BOUNDS`      | `{x, y, width, height}` rectangle for cast hit-testing |
-| `ROD_TIP_OFFSET_X`  | rod-tip X offset from Julian's top-left, in displayed pixels |
-| `ROD_TIP_OFFSET_Y`  | rod-tip Y offset from Julian's top-left, in displayed pixels |
-
-### Calibrating the rod tip
-
-In-game: press **C** to toggle calibration mode. A red dot appears at the
-current rod-tip position. **Shift+Click** anywhere on the sprite to set a
-new rod tip; the browser console logs the offset values to paste back
-into `ROD_TIP_OFFSET_X/Y`. Press **C** again to turn off.
+Each map says where its crew sits (`seat`: the bottom-left corner of the
+angler's tackle box) and where its water starts (`waterline`), both in
+design coordinates, in `src/data/maps.js`. Press **W** in the fishing
+scene to see the water drawn over the painting. How tall the figures
+stand, and where the buddy is relative to the seat, is per team in
+`src/data/teams.js`. A map's painting contains **only** the landscape --
+no children, no dog, no clouds.
 
 ## Save data
 
-Catches persist via `localStorage` under the prefix `julians_game_`. To
-reset the collection during testing:
+Catches are stored only in the player's own browser (`localStorage`,
+prefix `julians_game_`), per team: Julian & Dirk under the plain keys,
+James & Boaz under `julians_game_guest_*`. There is no server copy, so:
+
+* an update must never rename a key, a species, a bait or a map id, and
+  never clean up at start-up -- `SaveSystem.js` explains, and
+  `scripts/test-save-compat.js` (run first by `npm run build`) proves it
+  against saves written by the released game;
+* on an iPad the home-screen app has its own storage, which is deleted
+  when the icon is removed. To pick up an update: open the game, leave it
+  open for a minute, close it completely, open it again.
+
+To start from an empty collection **on a test machine** (this deletes
+every catch stored in that browser):
 
 ```js
-// in browser console
+// in the browser console
 Object.keys(localStorage)
   .filter(k => k.startsWith('julians_game_'))
   .forEach(k => localStorage.removeItem(k));
 ```
 
-## Out of scope for now
+## Not there yet
 
-* Title screen
-* Overworld scene (sprite `julian_dirk_general.png` is processed by the
-  pipeline so it's ready, but not loaded by any current scene)
-* Real sprites for the bobber and fish
-* Water-shimmer overlay
-* Idle animations for Julian / Dirk (Veo pipeline)
+* Sea ambience (`assets/audio/music/sea.mp3`) and spoken names for the
+  sea fish; on the sea the lake's ambience plays and a catch is announced
+  by applause only.
+* The children are posed, not filmed (see "Teams and characters").

@@ -32,15 +32,15 @@ import requests
 ROOT = Path(__file__).resolve().parent.parent
 API = "https://generativelanguage.googleapis.com/v1beta"
 
-# model -> US$ per second of 1080p video (ai.google.dev/gemini-api/docs/pricing,
-# October 2026). "fast" is the default: a tenth of the price of the full
-# model's top tier, and water does not need more.
+# model -> (id, US$ per second at 720p, at 1080p), from
+# ai.google.dev/gemini-api/docs/pricing, October 2026. "fast" is the
+# default: a fraction of the full model's price, and good enough here.
 MODELS = {
-    "lite": ("veo-3.1-lite-generate-preview", 0.08),
-    "fast": ("veo-3.1-fast-generate-preview", 0.12),
-    "full": ("veo-3.1-generate-preview", 0.40),
+    "lite": ("veo-3.1-lite-generate-preview", 0.05, 0.08),
+    "fast": ("veo-3.1-fast-generate-preview", 0.10, 0.12),
+    "full": ("veo-3.1-generate-preview", 0.40, 0.40),
 }
-DURATION_S = 8          # 1080p clips are always 8 seconds
+DURATIONS = (4, 6, 8)   # seconds; 1080p clips are always 8
 
 
 def load_key():
@@ -66,25 +66,29 @@ def as_image(path):
             "mimeType": mime}
 
 
-def generate(prompt, image, out, loop=False, model="fast", timeout=900):
+def generate(prompt, image, out, loop=False, model="fast", resolution="1080p",
+             seconds=8, timeout=900):
     """
     One clip: `image` is its first frame, and with `loop` also its last, so
     the clip ends where it began. Returns the path written.
     """
+    if resolution == "1080p" and seconds != 8:
+        sys.exit("a 1080p clip is always 8 seconds; use --resolution 720p for 4 or 6")
     key = load_key()
     headers = {"x-goog-api-key": key}
-    model_id, price = MODELS[model]
+    model_id, price_720, price_1080 = MODELS[model]
+    price = price_1080 if resolution == "1080p" else price_720
     instance = {"prompt": prompt.strip(), "image": as_image(image)}
     if loop:
         instance["lastFrame"] = as_image(image)
     body = {"instances": [instance],
-            "parameters": {"aspectRatio": "16:9", "resolution": "1080p",
-                           "durationSeconds": DURATION_S}}
+            "parameters": {"aspectRatio": "16:9", "resolution": resolution,
+                           "durationSeconds": seconds}}
 
     def explain(response):
         return response.text[:800].replace(key, "<key>")
 
-    print(f"[veo]  {model_id}: {DURATION_S} s at 1080p, about ${price * DURATION_S:.2f}")
+    print(f"[veo]  {model_id}: {seconds} s at {resolution}, about ${price * seconds:.2f}")
     started = time.time()
     r = requests.post(f"{API}/models/{model_id}:predictLongRunning",
                       headers=headers, json=body, timeout=120)
@@ -108,7 +112,8 @@ def generate(prompt, image, out, loop=False, model="fast", timeout=900):
     samples = answer.get("generatedSamples") or []
     if not samples:
         # e.g. the safety filter held the clip back
-        sys.exit(f"no video came back: {str(answer)[:600]}")
+        print(f"[fail] no video came back: {str(answer)[:600]}")
+        return None
 
     video = requests.get(samples[0]["video"]["uri"], headers=headers, timeout=300)
     if video.status_code != 200:
@@ -128,15 +133,20 @@ def main():
     ap.add_argument("--loop", action="store_true",
                     help="end on the first frame again, so the clip can repeat")
     ap.add_argument("--model", choices=MODELS, default="fast")
+    ap.add_argument("--resolution", choices=("720p", "1080p"), default="1080p")
+    ap.add_argument("--seconds", type=int, choices=DURATIONS, default=8)
     ap.add_argument("--prices", action="store_true", help="show what a clip costs and exit")
     args = ap.parse_args()
     if args.prices:
-        for name, (model_id, price) in MODELS.items():
-            print(f"{name:5s} {model_id:32s} ${price * DURATION_S:.2f} per {DURATION_S} s clip")
+        for name, (model_id, price_720, price_1080) in MODELS.items():
+            print(f"{name:5s} {model_id:32s} 720p ${price_720:.2f}/s   1080p ${price_1080:.2f}/s"
+                  f"   (8 s at 1080p: ${price_1080 * 8:.2f})")
         return
     if not (args.image and args.prompt and args.out):
         ap.error("--image, --prompt and --out are required")
-    generate(args.prompt, args.image, args.out, loop=args.loop, model=args.model)
+    ok = generate(args.prompt, args.image, args.out, loop=args.loop, model=args.model,
+                  resolution=args.resolution, seconds=args.seconds)
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":

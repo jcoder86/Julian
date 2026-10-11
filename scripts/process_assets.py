@@ -43,13 +43,18 @@ CLEAN_DIR = REPO_ROOT / "assets" / "clean"
 #   foreground  -- near-camera layer, transparent PNG (no chromakey needed)
 #   fish- / baits-  -- species strips and bait sheets that split_atlas.py
 #                      cuts into individual sprites (fish-catfish, baits-sea)
-#   catch-sea / mapselect -- full-screen paintings, see make_paintings.py
-#   clouds-sea-     -- strips that make_clouds.py joins into cloud layers
+#   catch- / mapselect / start-friends -- full-screen paintings, see
+#                      make_paintings.py
+#   char-           -- the children and the dog, see make_characters.py
+#   clouds-<map>- / sky-plate- -- clouds painted into a map's sky, and
+#                      the empty skies they are painted into (make_clouds.py)
+#   ui-             -- buttons and frames, see make_ui.py
 # Note: the lake's cloud strips DO run through chromakey -- AI image tools
 # typically output green-screen, and the script no-ops on already-transparent
 # inputs.
 SKIP_PREFIXES = ("backdrop", "foreground", "fish-", "baits-",
-                 "catch-sea", "mapselect", "clouds-sea-")
+                 "catch-", "mapselect", "start-friends", "char-",
+                 "clouds-sea-", "clouds-lake-", "sky-plate-", "ui-")
 
 # Chromakey tuning -- values are in [0, 255] image space.
 # These work well for a typical "Hollywood green" backdrop (#00ff00-ish).

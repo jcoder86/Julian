@@ -261,8 +261,10 @@ def main():
         WORK.mkdir(exist_ok=True)
         frame = WORK / f"veo-{args.map}-frame.jpg"
         film_frame(spec["painting"]).save(frame, "JPEG", quality=95)
-        generate(spec["prompt"], frame, WORK / f"veo-{args.map}.mp4", loop=True, model=args.model)
+        clip = generate(spec["prompt"], frame, WORK / f"veo-{args.map}.mp4", loop=True, model=args.model)
         frame.unlink()
+        if clip is None:
+            sys.exit(1)
     compose(args.map)
 
 

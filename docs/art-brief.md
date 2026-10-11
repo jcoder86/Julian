@@ -13,7 +13,12 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | Aas en lures voor de zee (5 x 2) | `baits-sea.png` | `sea-baits` |
 | Kaart-knop (kompas) | `icon-map.png` | `icon-map` |
 | De twaalf zeevissen, elk klein/middel/groot | `fish-<id>.png` | `fish-<id>` |
-| Wolken boven de zee, 3 stroken dichtbij + 3 ver weg | `clouds-sea-front-1..3.png`, `clouds-sea-back-1..3.png` | `clouds-sea-front-1` enz. |
+| Startscherm met de drie vrienden en Dirk | `start-friends.png` | `start` |
+| Vangstscherm per duo en per kaart | `catch-<duo>-<kaart>.png` | `catch-julian-lake` enz. |
+| De jongens, per houding | `char-<wie>-<houding>.png` | `char-julian-bite` enz. |
+| Dirk (basis voor zijn filmpje) | `char-dirk.png` | `char-dirk` |
+| Wolken, per kaart 2 stroken dichtbij + 2 ver weg | `clouds-<kaart>-front-1..2.png`, `clouds-<kaart>-back-1..2.png` | `clouds-lake-front-1` enz. |
+| START-bord en de ronde touwlijst | `ui-start.png`, `ui-ring.png` | `ui-start`, `ui-ring` |
 
 De opdracht per plaatje (wat er geschilderd moet worden, en welk bestaand
 plaatje het model als voorbeeld voor opzet en stijl meekrijgt) staat in
@@ -68,14 +73,35 @@ python scripts/make_paintings.py
 Dat maakt van de zware PNG een lichte JPEG in `assets/clean/` (ongeveer
 0,5 MB in plaats van 3 MB); die laadt het spel.
 
-**Een wolkenstrook** voor de zee:
+**Wolken.** Die worden in de lucht van het schilderij zelf geschilderd
+(een lege kopie daarvan) en er daarna weer af gehaald, zodat ze er echt
+in passen: goudgeel avondlicht boven Naarden, helder wit boven zee. Na
+het genereren van een strook:
 
 ```bash
-python scripts/make_clouds.py
+python scripts/make_clouds.py lake
 ```
 
-Dat plakt per laag drie verschillende stroken achter elkaar, zodat je
-nooit twee keer dezelfde wolk in beeld hebt.
+(of `sea`). Per laag worden twee verschillende stroken achter elkaar
+gelegd, zodat je nooit twee keer dezelfde wolk in beeld hebt. Heb je het
+schilderij van een kaart vervangen, maak dan eerst de lege lucht opnieuw
+met `python scripts/make_clouds.py plates` en laat de wolken opnieuw
+schilderen.
+
+**Het START-bord of de touwlijst:**
+
+```bash
+python scripts/make_ui.py
+```
+
+```bash
+python scripts/make_characters.py
+```
+
+Het eerste commando snijdt bord en lijst uit en maakt van het bord ook de
+lege houten borden voor het vissenboek en de menu's. Het tweede zet de
+gezichtjes in de lijst (voor de START-knoppen en de ronde knop "verder
+vissen").
 
 **Is het een nieuwe achtergrond van een kaart** (zee of Naarden), dan
 moeten er nog drie dingen kloppen:
@@ -101,6 +127,43 @@ moeten er nog drie dingen kloppen:
 De **steiger of pier moet linksonder blijven**, op ongeveer dezelfde plek
 en even groot. De opdrachten in `art_prompts.py` vragen daar uitdrukkelijk
 om; controleer het na het genereren altijd even in het spel.
+
+## De jongens en Dirk
+
+Er zijn twee duo's: **Julian & Dirk** en **James & Boaz**. Elk duo heeft
+een eigen startknop en een eigen vissenboek. (In de opslag heet het tweede
+duo nog `guest`; zo heette de knop toen James eronder begon te sparen.)
+
+De jongens zijn geschilderd naar hun foto's. Die foto's staan alleen op
+deze computer, in `work/photos`, en gaan als voorbeeld naar ChatGPT/Codex
+wanneer er een houding wordt getekend.
+
+Elke jongen met hengel heeft negen houdingen: `ready`, `castback`,
+`castfwd`, `wait`, `wait2`, `bite`, `reel`, `reel2` en `cheer`. Boaz
+heeft er vier: `watch`, `look`, `point` en `cheer`. Het spel wisselt
+ertussen, laat ze ademen en opspringen, en knoopt de vislijn aan de punt
+van de hengel.
+
+Een houding opnieuw laten tekenen en in het spel zetten, in een terminal
+in de Julian-map:
+
+```bash
+python scripts/gen_art.py char-julian-bite
+```
+
+```bash
+python scripts/make_characters.py
+```
+
+Het tweede commando snijdt alles uit en legt de houdingen van een jongen
+precies op elkaar (op zijn viskist). Kijk daarna in `work/check-julian.jpg`
+(of `-james`, `-boaz`): daar staan alle houdingen naast elkaar, met de
+hengelpunt gemarkeerd.
+
+**Waarom geen filmpjes van de jongens?** Veo (Google) weigert plaatjes van
+levensechte kinderen te animeren. Dirk mag wel: zijn filmpje staat in
+`work/veo-dirk-idle.mp4` en wordt door hetzelfde script omgezet in losse
+beeldjes.
 
 ## Bewegend water
 

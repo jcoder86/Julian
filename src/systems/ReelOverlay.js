@@ -20,6 +20,11 @@ import { TEX } from '../scenes/BootScene.js';
  *
  * `decay: false` is for retrieving a lure: nothing is pulling back, so
  * the line simply stays where the player left it.
+ *
+ * A fish that makes a run (systems/FishFight.js) uses three more things:
+ * `resistance` (how much a turn of the handle is worth, 1 = all of it),
+ * `takeLine()` (line pulled off the reel again) and `setStrained()` (the
+ * widget shows that the fish, not the angler, is winning right now).
  *   // When you want to cancel early:
  *   reel.destroy();
  */
@@ -34,6 +39,9 @@ export class ReelOverlay {
     // While paused, cranking moves the handle but reels nothing in (and
     // nothing drains). Used for the moment a fish grabs the lure.
     this.paused = false;
+    // What a turn of the handle is worth: 1 normally, less while a fish runs.
+    this.resistance = 1;
+    this._strained = false;
     // Total accumulated absolute angular delta (radians). Drains slowly
     // when not dragging so the player has to stay engaged.
     this.accumulatedRadians = 0;
@@ -126,6 +134,23 @@ export class ReelOverlay {
     return Math.min(1, Math.max(0, this.accumulatedRadians / this.requiredRadians));
   }
 
+  /** The fish pulls line off the reel: `share` of the whole fight (0..1). */
+  takeLine(share) {
+    if (this._destroyed || share <= 0) return;
+    this.accumulatedRadians = Math.max(0, this.accumulatedRadians - share * this.requiredRadians);
+    this._redrawProgress();
+  }
+
+  /** The fish is running: the progress ring and the glow turn from calm to alarm. */
+  setStrained(strained) {
+    if (this._destroyed || this._strained === !!strained) return;
+    this._strained = !!strained;
+    const tint = this._strained ? 0xff5a2a : 0xffd24a;
+    this.glowOuter.setFillStyle(tint, this.glowOuter.fillAlpha);
+    this.glowInner.setFillStyle(this._strained ? 0xff9a6a : 0xffeaa0, this.glowInner.fillAlpha);
+    this._redrawProgress();
+  }
+
   /** Freeze / unfreeze reeling progress (the handle keeps following the finger). */
   setPaused(paused) {
     this.paused = !!paused;
@@ -182,7 +207,7 @@ export class ReelOverlay {
         // count as a huge spin.
         if (delta > Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
-        if (!this.paused) this.accumulatedRadians += Math.abs(delta);
+        if (!this.paused) this.accumulatedRadians += Math.abs(delta) * this.resistance;
       }
       this._lastPointerAngle = ang;
       this.handle.rotation = ang;
@@ -217,11 +242,12 @@ export class ReelOverlay {
     this.progressGfx.clear();
     const fraction = Math.min(1, this.accumulatedRadians / this.requiredRadians);
     if (fraction <= 0) return;
-    // Yellow arc growing clockwise from -90deg (top).
+    // An arc growing clockwise from -90deg (top): green while the angler is
+    // winning line, orange-red while the fish takes it back.
     const radius = 80;
     const start = -Math.PI / 2;
     const end = start + fraction * Math.PI * 2;
-    this.progressGfx.lineStyle(8, 0x66ff77, 0.85);
+    this.progressGfx.lineStyle(8, this._strained ? 0xff6a2a : 0x66ff77, 0.85);
     this.progressGfx.beginPath();
     this.progressGfx.arc(this.x, this.y, radius, start, end, false);
     this.progressGfx.strokePath();

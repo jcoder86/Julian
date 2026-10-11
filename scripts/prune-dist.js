@@ -9,24 +9,12 @@
  */
 import { readdirSync, unlinkSync, statSync, rmSync } from 'fs';
 import { join, resolve } from 'path';
+import { RAW_KEEP, NOT_SHIPPED } from './shipping.js';
 
 const DIST = resolve('dist');
 
-// Files inside dist/raw that are actually loaded by Phaser at runtime.
-// (The map paintings and their moving-water videos are not here: the game
-// loads those from clean/, where scripts/make_paintings.py and
-// scripts/make_water.py put them.)
-const RAW_KEEP = new Set([
-  'catch.png',
-  'fishon.png',
-]);
-
-// Files anywhere else under dist/ that are backups / dev-only.
-const PRUNE_PATHS = [
-  'audio/sfx/plop-source.wav',
-  'clean/julian-fishing-with-rod.png',
-  'clean/julian-idle1-pre-rod-long.png',
-];
+// What to delete is listed in scripts/shipping.js.
+const RAW_KEEP_SET = new Set(RAW_KEEP);
 
 let totalDeleted = 0, totalBytesSaved = 0;
 
@@ -47,11 +35,11 @@ function tryUnlink(path) {
 const rawDir = join(DIST, 'raw');
 try {
   for (const f of readdirSync(rawDir)) {
-    if (!RAW_KEEP.has(f)) tryUnlink(join(rawDir, f));
+    if (!RAW_KEEP_SET.has(f)) tryUnlink(join(rawDir, f));
   }
 } catch (e) { /* no raw dir, ok */ }
 
 // Trim other backup files.
-for (const p of PRUNE_PATHS) tryUnlink(join(DIST, p));
+for (const p of NOT_SHIPPED) tryUnlink(join(DIST, p));
 
 console.log(`[prune-dist] deleted ${totalDeleted} files, saved ${(totalBytesSaved / 1024 / 1024).toFixed(1)} MB`);

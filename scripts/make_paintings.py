@@ -12,8 +12,8 @@ Usage (from the project root):
     python scripts/make_paintings.py                 # all of them
     python scripts/make_paintings.py backdrop-sea    # just one
 
-The original lake paintings (raw/backdrop.png, raw/catch.png) predate this
-script and are still loaded as they are.
+raw/catch.png and raw/catch-sea.png (one boy, no friends yet) are no longer
+shown; they are the layout the new catch screens were painted from.
 """
 
 import sys
@@ -33,8 +33,13 @@ QUALITY = 90
 PAINTINGS = {
     "backdrop-naarden": "the moat of Naarden-Vesting (map 'lake')",
     "backdrop-sea":     "the sea from the stone harbour pier (map 'sea')",
-    "catch-sea":        "the catch screen on the stone quay",
     "mapselect":        "the wall behind the 'where shall we fish?' screen",
+    "start-friends":    "the title screen: the three friends and the dog",
+    # The catch screen, per team (save profile) and map:
+    "catch-julian-lake": "Julian and Dirk on the jetty",
+    "catch-julian-sea":  "Julian and Dirk on the stone quay",
+    "catch-guest-lake":  "James and Boaz on the jetty",
+    "catch-guest-sea":   "James and Boaz on the stone quay",
 }
 
 

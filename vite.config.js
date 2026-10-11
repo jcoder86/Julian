@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { RAW_KEEP, NOT_SHIPPED } from './scripts/shipping.js';
 
 // Vite root is the project directory.
 // `assets/` is served as a sibling of `src/`; we expose it via publicDir
@@ -37,6 +38,8 @@ export default defineConfig({
         // Pre-cache everything that could be needed offline. The 49 MB
         // budget is fine for a game that's a single static deploy.
         globPatterns: ['**/*.{js,css,html,png,jpg,mp3,wav,mp4,json}'],
+        // ...except what never reaches the server (scripts/shipping.js).
+        globIgnores: [`raw/!(${RAW_KEEP.join('|')})`, ...NOT_SHIPPED],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,   // 10 MB per file
       },
     }),

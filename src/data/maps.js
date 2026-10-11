@@ -71,18 +71,26 @@ function makeWaterTopAt(samples) {
 //   skyMask         alpha image of the painting's sky, for the clouds
 //   skyMaskFraction how much of the painting's height that image covers
 //   clouds          the layers of clouds drifting across the sky, far one
-//                   first. Each is a long transparent picture that repeats:
+//                   first (painted into this map's own sky and lifted off
+//                   it again: scripts/make_clouds.py). Each is a long
+//                   transparent picture that repeats:
 //                     src     the picture
 //                     height  design px of sky it spans, from the top of
 //                             the painting downwards
 //                     speed   drift in design px per second (far = slow)
 //                     alpha   opacity (far = fainter, as through haze)
-//   catchBgKey /    the "look what I caught" painting. Optional file: when
-//   catchBgImage    it is missing the lake's is used.
-//   julianAnchor    design x/y of the bottom-left corner of Julian's sprite
-//                   (a square with some empty margin around him): where he
-//                   sits on this painting's jetty or pier. Dirk and the rod
-//                   are placed relative to it.
+//                   (The "look what we caught" painting shows the children,
+//                   so it belongs to a team AND a map: see catchBgKey().)
+//   seat            design x/y of the bottom-left corner of the tackle box
+//                   the angler sits on: where the crew is on this
+//                   painting's jetty or pier (systems/Crew.js).
+//   landing         design x/y of the spot on the water, right at the jetty
+//                   or the foot of the pier, where a fish (or a lure) is
+//                   drawn to before it is lifted out. A slack line also
+//                   comes down onto the water between here and the float.
+//   dry             the jetty or pier as it stands in the picture -- top,
+//                   front and posts -- as a polygon of [x, y] points: below
+//                   the waterline, but not water. A float cannot land on it.
 //   waterline       see above
 //   depthFarY       design y where a cast counts as "far away" (the float
 //                   is drawn smallest there, full size at the jetty)
@@ -103,13 +111,19 @@ const MAP_DEFS = [
     backdropVideo: 'clean/backdrop-naarden.mp4',
     skyMask: 'clean/sky-mask-naarden.png',
     skyMaskFraction: 320 / 720,
+    // Each picture spans the top 28% of the painting (the same share as
+    // in scripts/make_clouds.py) and is wider than the screen, so no cloud
+    // is on screen twice.
     clouds: [
-      { src: 'clean/clouds-back.png',  height: 192,   speed: 1.25, alpha: 0.55 },
-      { src: 'clean/clouds-front.png', height: 172.8, speed: 3.75, alpha: 0.85 },
+      { src: 'clean/clouds-lake-back.png',  height: 0.28 * WORLD_HEIGHT, speed: 1.4, alpha: 0.95 },
+      { src: 'clean/clouds-lake-front.png', height: 0.28 * WORLD_HEIGHT, speed: 3.6, alpha: 1 },
     ],
-    catchBgKey: 'catch-bg',
-    catchBgImage: 'raw/catch.png',
-    julianAnchor: { x: 260, y: 640 },
+    seat: { x: 268, y: 618 },
+    landing: { x: 612, y: 634 },
+    dry: [
+      [0, 568], [319, 523], [580, 588], [580, 632], [534, 640], [534, 718], [480, 718],
+      [480, 655], [322, 698], [322, 795], [262, 795], [262, 714], [62, 768], [62, 840], [0, 840],
+    ],
     waterline: NAARDEN_WATERLINE,
     depthFarY: 252,
     defaultBait: 'wormen',
@@ -122,16 +136,18 @@ const MAP_DEFS = [
     backdropVideo: 'clean/backdrop-sea.mp4',
     skyMask: 'clean/sky-mask-sea.png',
     skyMaskFraction: 320 / 720,
-    // Made by scripts/make_clouds.py: each picture spans the whole sky down
-    // to the horizon and is wider than the screen, so no cloud shows twice.
+    // Each picture spans the whole sky, down to the horizon.
     clouds: [
-      { src: 'clean/clouds-sea-back.png',  height: SEA_SKY * WORLD_HEIGHT, speed: 1.5, alpha: 0.8 },
-      { src: 'clean/clouds-sea-front.png', height: SEA_SKY * WORLD_HEIGHT, speed: 4,   alpha: 0.96 },
+      { src: 'clean/clouds-sea-back.png',  height: SEA_SKY * WORLD_HEIGHT, speed: 1.5, alpha: 0.95 },
+      { src: 'clean/clouds-sea-front.png', height: SEA_SKY * WORLD_HEIGHT, speed: 4,   alpha: 1 },
     ],
-    catchBgKey: 'catch-bg-sea',
-    catchBgImage: 'clean/catch-sea.jpg',
     // Well back from the edge, on the paving of the pier's top.
-    julianAnchor: { x: 204, y: 547 },
+    seat: { x: 214, y: 526 },
+    landing: { x: 668, y: 690 },
+    dry: [
+      [0, 480], [172, 444], [300, 450], [468, 430], [522, 432], [566, 478], [600, 505],
+      [620, 735], [540, 770], [400, 792], [315, 840], [0, 840],
+    ],
     waterline: flatHorizon(SEA_HORIZON),
     depthFarY: WORLD_TOP + SEA_HORIZON * WORLD_HEIGHT,
     defaultBait: 'zeepier',
@@ -139,12 +155,26 @@ const MAP_DEFS = [
   },
 ];
 
+/** Is (x, y) inside the polygon? (Even-odd rule.) */
+function insidePolygon(points, x, y) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const [xi, yi] = points[i];
+    const [xj, yj] = points[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 export const MAPS = MAP_DEFS.map((def) => {
   const waterTopAt = makeWaterTopAt(def.waterline);
+  const dry = def.dry || [];
   return Object.freeze({
     ...def,
     /** Design y where water starts at design x. */
     waterTopAt,
+    /** Can something float at design (x, y)? Below the waterline, not on the jetty. */
+    isWater: (x, y) => y >= waterTopAt(x) && !insidePolygon(dry, x, y),
     /** Highest point of the waterline (smallest y). */
     waterMinY: Math.min(...def.waterline.map((p) => p[1])),
   });
@@ -153,6 +183,17 @@ export const MAPS = MAP_DEFS.map((def) => {
 export const MAPS_BY_ID = Object.fromEntries(MAPS.map((m) => [m.id, m]));
 
 export const DEFAULT_MAP_ID = 'lake';
+
+/**
+ * The "look what we caught" painting of a team on a map: texture key and
+ * file (made by scripts/make_paintings.py from assets/raw/catch-*.png).
+ */
+export function catchBgKey(teamId, mapId) {
+  return `catch-${teamId}-${mapId}`;
+}
+export function catchBgImage(teamId, mapId) {
+  return `clean/catch-${teamId}-${mapId}.jpg`;
+}
 
 /** The map for an id, or the default map when the id is unknown. */
 export function getMap(mapId) {

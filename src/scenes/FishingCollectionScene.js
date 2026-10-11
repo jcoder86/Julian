@@ -3,16 +3,18 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 // Phaser is bundled via vite; ensure side-effect import for BlendModes etc.
 import { FISH_SIZES, fishTextureKey, speciesForMap } from '../data/fish.js';
 import { MAPS, getMap } from '../data/maps.js';
+import { getTeam } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
+import { UI, UI_FONT, COLOR, continueKey, lettering, addGlow, addInset, pressable } from '../systems/Ui.js';
 
 /**
- * Trophy collection: a grid of cards, one per species. Each card shows the
- * largest cm landed for each size (or a faded silhouette if never caught),
- * the species' Dutch name, and a total catch count badge. The species of
- * the most recent catch gets a yellow halo so the player can see "what
- * I just caught" at a glance.
+ * Trophy collection: a grid of wooden boards on the cabin wall, one per
+ * species. Each board shows the largest cm landed for each size (or the
+ * fish's dark shape if never caught), the species' Dutch name and how many
+ * were caught. The species of the most recent catch glows, so the player
+ * can see "what I just caught" at a glance.
  *
  * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
@@ -22,11 +24,13 @@ import { TEX } from './BootScene.js';
  * corner flips to the other map's page.
  */
 
-const BG_TOP_COLOR    = 0x0d1f33;
-const BG_BOTTOM_COLOR = 0x1a3b5c;
-const CARD_BG_COLOR   = 0x182a40;
-const CARD_BORDER     = 0x3a557a;
-const HIGHLIGHT_COLOR = 0xffd24a;   // last-catch halo
+// The wall of the fishing cabin (the map-select screen's painting), toned
+// down so the boards with the fish stand out; a plain colour if it is
+// missing.
+const WALL_COLOR = 0x4a2f18;
+const WALL_SHADE = 0.42;
+// A fish that has not been caught yet: its shape, dark, like a burn mark.
+const UNCAUGHT_TINT = 0x2b1505;
 
 // 4 columns x 3 rows = 12 cells, one per species. Cells are 280×190 with 14px gap.
 const COLS = 4;
@@ -36,8 +40,8 @@ const CARD_H = 190;
 const CARD_GAP = 14;
 const TITLE_BAR_H = 92;
 
-// Back button (top-left).
-const BACK_DISPLAY = 75;
+// Back button (top-left): the team's "go on fishing" picture.
+const BACK_DISPLAY = 92;
 const BACK_MARGIN  = 18;
 
 // "Other map" button (top-right): a thumbnail of that map's painting.
@@ -66,51 +70,25 @@ export class FishingCollectionScene extends Phaser.Scene {
     this._hiddenVideoEl = document.querySelector('video');
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = 'none';
 
-    // Background: vertical gradient via two stacked rectangles.
+    // Background: the cabin wall.
     this._buildBackground();
 
     // Title.
-    this.add.text(
-      GAME_WIDTH / 2, 46,
-      "Julian's vangst",
-      {
-        fontFamily: 'sans-serif',
-        fontSize: '44px',
-        fontStyle: 'bold',
-        color: '#ffd24a',
-        stroke: '#000000',
-        strokeThickness: 5,
-      },
-    ).setOrigin(0.5).setDepth(10);
+    const team = getTeam(SaveSystem.getProfile());
+    this.add.text(GAME_WIDTH / 2, 48, team.collectionTitle, lettering(44, COLOR.GOLD))
+      .setOrigin(0.5).setDepth(10);
 
-    // Back button -- top-left. Same green play.png sprite + same pulsing
-    // rounded-rect halo behind it as the catch-screen continue button.
-    // Halo + button share a container that _applyLayout pins to the
-    // screen's left edge.
+    // Back button -- top-left: the same round picture that means "go on
+    // fishing" on the catch screen, with the same breathing glow. Both
+    // share a container that _applyLayout pins to the screen's left edge.
     const backGroup = this.add.container(0, 0);
     backGroup.setDepth(10);
-
-    const halo = this.add.graphics();
-    const HALO_PAD    = 4;     // tight against the button edge
-    const HALO_RADIUS = 14;
-    const haloW = BACK_DISPLAY + HALO_PAD * 2;
-    const haloH = BACK_DISPLAY + HALO_PAD * 2;
-    halo.fillStyle(0x4ecd5a, 1);
-    halo.fillRoundedRect(-haloW / 2, -haloH / 2, haloW, haloH, HALO_RADIUS);
-    halo.setBlendMode(Phaser.BlendModes.ADD);
-    backGroup.add(halo);
-    this.tweens.add({
-      targets: halo,
-      alpha: { from: 0.15, to: 0.55 },
-      scale: { from: 1.0,  to: 1.07 },
-      duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
-
-    const back = this.add.image(0, 0, TEX.PLAY);
+    backGroup.add(addGlow(this, 0, 0, { r: BACK_DISPLAY / 2 - 4 }));
+    const backKey = this.textures.exists(continueKey(team.id)) ? continueKey(team.id) : TEX.PLAY;
+    const back = this.add.image(0, 0, backKey);
     back.setScale(BACK_DISPLAY / Math.max(back.width, back.height));
-    back.setInteractive({ useHandCursor: true });
-    back.on('pointerdown', () => this._close());
     backGroup.add(back);
+    pressable(this, back, () => this._close());
     this._backGroup = backGroup;
 
     this._buildMapSwitch();
@@ -130,6 +108,12 @@ export class FishingCollectionScene extends Phaser.Scene {
    */
   _applyLayout(layout) {
     if (!layout || !this._backGroup) return;
+    // The wall covers whatever part of the frame is on screen.
+    if (this._wall) {
+      const { view } = layout;
+      this._wall.setPosition(view.centerX, view.centerY);
+      this._wall.setScale(Math.max(view.width / this._wall.width, view.height / this._wall.height));
+    }
     // Back button: on the title row, hugging the left edge of the screen
     // (inside the safe area -- phones have a notch there in landscape).
     // If the safe area starts below the title row, the button follows it.
@@ -153,7 +137,8 @@ export class FishingCollectionScene extends Phaser.Scene {
 
     const group = this.add.container(0, 0);
     group.setDepth(10);
-    group.add(this.add.rectangle(0, 0, SWITCH_W + 10, SWITCH_H + 10, 0xffffff));
+    group.add(this.add.rectangle(0, 0, SWITCH_W + 12, SWITCH_H + 12, 0xfff3d6)
+      .setStrokeStyle(3, 0x3a1d06));
     let picture;
     if (this.textures.exists(next.backdropKey)) {
       picture = this.add.image(0, 0, next.backdropKey);
@@ -177,16 +162,14 @@ export class FishingCollectionScene extends Phaser.Scene {
   }
 
   _buildBackground() {
-    // Solid bottom half then a lighter top half evokes "trophy hall".
-    // Both extend far beyond the design frame so they fill any screen.
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2,
-                       BG_OVERSIZE, BG_OVERSIZE, BG_BOTTOM_COLOR).setDepth(0);
-    // Lighter band: from far above the frame down to its vertical middle.
-    const bandBottom = GAME_HEIGHT * 0.5;
-    const topBand = this.add.rectangle(GAME_WIDTH / 2, bandBottom - BG_OVERSIZE / 2,
-                                       BG_OVERSIZE, BG_OVERSIZE, BG_TOP_COLOR);
-    topBand.setDepth(0);
-    topBand.setAlpha(0.6);
+    // Drawn far beyond the design frame so it fills any screen.
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, BG_OVERSIZE, BG_OVERSIZE, WALL_COLOR)
+      .setDepth(0);
+    this._wall = this.textures.exists(TEX.MAPSELECT_BG)
+      ? this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEX.MAPSELECT_BG).setDepth(0)
+      : null;
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, BG_OVERSIZE, BG_OVERSIZE, 0x1a0c02, WALL_SHADE)
+      .setDepth(0);
   }
 
   _buildCards() {
@@ -223,61 +206,43 @@ export class FishingCollectionScene extends Phaser.Scene {
   }
 
   _buildCard(cx, cy, species, info) {
-    // Yellow halo for the most recently caught species. Drawn UNDER the card
-    // so the highlight glows around its edges.
+    // A glow behind the board of the species caught last, so the eye goes
+    // to "what I just caught".
     if (info.isLast) {
-      const halo = this.add.rectangle(cx, cy, CARD_W + 16, CARD_H + 16,
-                                      HIGHLIGHT_COLOR, 0.35);
-      halo.setStrokeStyle(4, HIGHLIGHT_COLOR, 0.9);
-      halo.setDepth(1);
-      // Subtle pulse so the eye is drawn.
-      this.tweens.add({
-        targets: halo,
-        alpha:   { from: 0.35, to: 0.7 },
-        duration: 900,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
+      addGlow(this, cx, cy, { w: CARD_W - 6, h: CARD_H - 6, radius: 30 }).setDepth(1);
     }
 
-    // Card panel.
-    const card = this.add.rectangle(cx, cy, CARD_W, CARD_H, CARD_BG_COLOR, 0.95);
-    card.setStrokeStyle(2, CARD_BORDER, 1);
-    card.setDepth(2);
+    // The board.
+    if (this.textures.exists(UI.BOARD_CARD)) {
+      this.add.image(cx, cy, UI.BOARD_CARD).setDisplaySize(CARD_W, CARD_H).setDepth(2);
+    } else {
+      this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x8a4f1d).setStrokeStyle(3, 0x3a1d06).setDepth(2);
+    }
 
-    // Species name (top-left of card).
-    this.add.text(cx - CARD_W / 2 + 14, cy - CARD_H / 2 + 10,
-      species.nlName, {
-        fontFamily: 'sans-serif',
-        fontSize: '22px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-      }).setDepth(3);
-
-    // Total-caught badge (top-right of card). 0 = grayed.
-    const countColor = info.totalCount > 0 ? '#ffd24a' : '#5a6a80';
-    this.add.text(cx + CARD_W / 2 - 14, cy - CARD_H / 2 + 12,
-      `× ${info.totalCount}`, {
-        fontFamily: 'sans-serif',
-        fontSize: '20px',
-        fontStyle: 'bold',
-        color: countColor,
-      }).setOrigin(1, 0).setDepth(3);
+    // Top line, between the two nails: the name and how many were caught,
+    // centred together.
+    const y = cy - CARD_H / 2 + 29;
+    const name = this.add.text(0, y, species.nlName, lettering(19)).setOrigin(0, 0.5).setDepth(3);
+    const count = this.add.text(0, y, `\u00d7 ${info.totalCount}`,
+                                lettering(18, info.totalCount > 0 ? COLOR.GOLD : COLOR.FADED))
+      .setOrigin(0, 0.5).setDepth(3);
+    const gap = 9;
+    name.x = cx - (name.width + gap + count.width) / 2;
+    count.x = name.x + name.width + gap;
 
     // Centerpiece: the biggest specimen ever caught (any size). Helps the
-    // player see "my best of this species". If never caught, a grey
-    // silhouette of the medium-size sprite hints at what's possible.
-    this._renderBestFish(cx, cy + 2, species, info);
+    // player see "my best of this species". If never caught, its dark
+    // shape hints at what is still out there.
+    this._renderBestFish(cx, cy + 3, species, info);
 
-    // Bottom strip: three small size cells with best-cm-per-size.
-    this._renderSizeStrip(cx, cy + CARD_H / 2 - 22, species, info);
+    // Bottom strip: three small cells with the best cm per size.
+    this._renderSizeStrip(cx, cy + CARD_H / 2 - 29, species, info);
   }
 
   /**
    * Renders the largest specimen the player has caught (across all sizes)
-   * as the card centrepiece. Falls back to a translucent silhouette when
-   * the species has never been caught.
+   * as the card centrepiece. Falls back to a dark shape when the species
+   * has never been caught.
    */
   _renderBestFish(cx, cy, species, info) {
     // Find which size has the biggest cm; default to medium for fallback.
@@ -296,48 +261,42 @@ export class FishingCollectionScene extends Phaser.Scene {
     if (!this.textures.exists(key)) return;
 
     const fish = this.add.image(cx, cy, key);
-    // Available footprint inside the card for the fish image.
-    const targetW = CARD_W - 32;
-    const targetH = CARD_H - 110;
+    // Available footprint inside the board for the fish image.
+    const targetW = CARD_W - 64;
+    const targetH = CARD_H - 106;
     const scale = Math.min(targetW / fish.width, targetH / fish.height);
     fish.setScale(scale);
     fish.setDepth(3);
 
     if (bestSize === null) {
-      // Silhouette: dark tint + low alpha so player can still see species shape.
-      fish.setTint(0x223040);
-      fish.setAlpha(0.45);
+      fish.setTintFill(UNCAUGHT_TINT);
+      fish.setAlpha(0.5);
     }
   }
 
   /**
-   * Three small cells under the card showing the best cm for each size.
-   * Empty (uncaught) cells render as a dim "—" placeholder.
+   * Three small cells at the foot of the board showing the best cm for
+   * each size. Empty (uncaught) cells show a dim dash.
    */
   _renderSizeStrip(cx, cy, species, info) {
-    const cellW = (CARD_W - 24) / 3;
-    const startCellX = cx - CARD_W / 2 + 12 + cellW / 2;
+    const cellW = (CARD_W - 40) / 3;
+    const startCellX = cx - CARD_W / 2 + 20 + cellW / 2;
 
     FISH_SIZES.forEach((size, i) => {
       const x = startCellX + i * cellW;
       const cm = info.speciesBest[size];
       const haveCount = info.speciesSizeCounts[size] || 0;
-
-      // Background pill.
       const filled = typeof cm === 'number';
-      const pill = this.add.rectangle(x, cy, cellW - 6, 30,
-                                      filled ? 0x2a4060 : 0x222d3c, 0.85);
-      pill.setStrokeStyle(1, filled ? HIGHLIGHT_COLOR : 0x3a4a5c, filled ? 1 : 0.7);
-      pill.setDepth(3);
 
+      addInset(this, x, cy, cellW - 5, 28, filled ? 0.72 : 0.4).setDepth(3);
       const label = filled
-        ? `${cm} cm${haveCount > 1 ? ` ·${haveCount}` : ''}`
-        : '—';
+        ? `${cm} cm${haveCount > 1 ? ` \u00b7${haveCount}` : ''}`
+        : '\u2014';
       this.add.text(x, cy, label, {
-        fontFamily: 'sans-serif',
-        fontSize: '16px',
-        fontStyle: filled ? 'bold' : 'normal',
-        color: filled ? '#ffffff' : '#677787',
+        fontFamily: UI_FONT,
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: filled ? COLOR.CREAM : COLOR.FADED,
       }).setOrigin(0.5).setDepth(4);
     });
   }

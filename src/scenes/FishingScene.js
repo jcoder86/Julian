@@ -9,48 +9,20 @@ import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
 import { BAITS_BY_ID, baitSimpleTextureKey, isLure } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
+import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
 import { TEX } from './BootScene.js';
 import {
   createBobberPlaceholder,
 } from '../placeholders.js';
 import { ReelOverlay } from '../systems/ReelOverlay.js';
+import { Crew, CAST_WINDUP_MS } from '../systems/Crew.js';
+import { FishingLine } from '../systems/FishingLine.js';
+import { FishFight } from '../systems/FishFight.js';
 
 // =============================================================================
 // Tunable visual constants -- dial these in once the real assets are rendered.
 // =============================================================================
-
-/**
- * Fraction of canvas height occupied by the Julian sprite.
- * The sprite is rendered preserving its source aspect ratio.
- *
- * Was 0.62 -- shrunk to 0.37 (~40% smaller) per player feedback:
- * the larger Julian dominated the scene and the toddler found the
- * 3-frame idle cycle distracting.
- */
-export const SPRITE_SCALE = 0.37;
-
-/**
- * Julian idle: currently STATIC -- a single still pose. The 3-frame
- * animation made the toddler "nerveus". Keep the constant here so the
- * code path is easy to flip back on if we want a much slower / subtler
- * cycle later.
- */
-export const JULIAN_IDLE_ANIMATED = false;
-export const JULIAN_IDLE_FRAMERATE = 2;   // unused while animated=false
-
-// "Breathing" idle tween. Currently OFF -- on a monolithic sprite the
-// combined scale+y motion reads as the whole figure hovering, not as a
-// chest rising. Proper breathing requires a cutout-puppet rig where
-// ONLY the upper body scales while the feet stay rooted. Constants kept
-// here for the moment we add layered Julian/Dirk parts.
-const BREATHING_ENABLED      = false;
-const BREATH_DURATION_MS     = 1800;
-const BREATH_SCALE_GROWTH    = 0.008;
-const BREATH_Y_LIFT_PX       = 1.5;
-const DIRK_BREATH_DURATION_MS  = 1400;
-const DIRK_BREATH_SCALE_GROWTH = 0.012;
-const DIRK_BREATH_Y_LIFT_PX    = 1.2;
 
 /**
  * Cloud parallax stack -- DOM <div>s behind the (transparent) canvas, in
@@ -95,87 +67,9 @@ const BACKDROP_VIDEO_FADE_MS = 700;
 export const FOREGROUND_SWAY_AMPLITUDE = 1.2;       // degrees peak-to-zero
 export const FOREGROUND_SWAY_PERIOD_MS = 3500;      // full back-and-forth cycle
 
-// Julian's position -- the bottom-left corner of his sprite, in design
-// coordinates -- differs per painting and lives in src/data/maps.js
-// (julianAnchor). Design coordinates are locked to the painting (design x
-// 0..1280 is its full width, design y -120..840 its full height), so that
-// spot on the jetty or pier is the same on every screen shape. Dirk slides
-// relative to it (see DIRK_OFFSET below).
-
-/**
- * Where Dirk sits relative to Julian's bottom-left anchor.
- * Dirk renders behind Julian if his depth is lower (see _buildCharacters).
- * Positive X is right; positive Y is down.
- */
-export const DIRK_OFFSET_X = -120;           // Dirk LEFT of Julian's anchor (tightened with smaller sprites)
-export const DIRK_OFFSET_Y = -5;
-
-/**
- * Dirk sprite size as a fraction of canvas height.
- * Dirk is shorter than Julian; was 0.32 -- shrunk to ~0.19 to match the
- * 40% reduction applied to Julian.
- */
-export const DIRK_SCALE = 0.19;
-
-
-/**
- * Rod-tip position relative to Julian's sprite TOP-LEFT, expressed in
- * DISPLAYED (post-scale) pixels.
- *
- * To dial in: press 'C' to toggle calibration mode, then Shift+Click on
- * the rod tip in the sprite. The browser console logs the exact offset to
- * paste back here.
- */
-// === Rod-long overlay calibration (Phase 22) ===
-// Julian's sprite no longer contains a rod. The rod is overlaid as a
-// separate sprite (rod-long.png, 1024x1024) whose pivot we anchor on
-// Julian's right hand. Tunables are in SOURCE pixels of each PNG so they
-// stay consistent regardless of display scale.
-//
-// Hand position on Julian in source coords (1254x1254). Phase 24:
-// auto-detected via skin-tone centroid of the lap region. Same point
-// works for both julian-idle1 and julian-fishing (their hand bboxes
-// match to within ~11 src px).
-// Earlier guess-calibrations (565,538) and (605,498) were both ABOVE
-// the actual hand -- they happened to look ok because the rod-long
-// origin offset was loose.
-export const JULIAN_HAND_SRC_X = 570;   // tiny nudge right (+15 src ≈ 3 display px)
-export const JULIAN_HAND_SRC_Y = 470;   // shifted further up (-35 src ≈ 7 display px)
-
-// Grip point on rod-long.png (1024x1024 source). The grip is roughly at
-// the centre of the handle, just above the reel housing.
-export const ROD_GRIP_SRC_X = 235;
-export const ROD_GRIP_SRC_Y = 740;
-// Rod tip on rod-long.png source coords (far end of the rod).
-// Auto-detected: rightmost opaque x = 996, avg y of rightmost 8 cols = 55.
-export const ROD_LONG_TIP_SRC_X = 996;
-export const ROD_LONG_TIP_SRC_Y = 55;
-// Display size: rod displayed-height as fraction of Julian's displayed
-// height. The painted rod in the source is roughly 1.6x Julian's body
-// height, but for visual balance we render it slightly smaller.
-export const ROD_LONG_SCALE_VS_JULIAN = 1.4;
-// Resting rotation of the rod (degrees). The painted rod-long.png already
-// points up-and-right at about -40° from horizontal in its source image.
-// Adding +20 here rotates it ~20° clockwise from that, giving a more
-// natural "rod pointing slightly upward over the water" pose.
-export const ROD_LONG_REST_ANGLE_DEG = 20;
-
-// Cast/strike rod kinematics (degrees + ms). Sign convention: positive
-// angle delta = CLOCKWISE rotation in Phaser, which on our rod (painted
-// pointing up-and-right) moves the tip DOWN-RIGHT (toward the water =
-// "forward"). Negative angle delta moves the tip UP-LEFT (toward Julian's
-// shoulder = "back"). Windup pulls back, throw whips forward.
-export const ROD_CAST_WINDUP_DEG  = -35;    // pull rod BACK over shoulder
-export const ROD_CAST_WINDUP_MS   = 120;
-export const ROD_CAST_THROW_DEG   = 25;     // whip rod FORWARD past rest
-export const ROD_CAST_THROW_MS    = 280;
-export const ROD_CAST_RECOVER_MS  = 350;
-export const ROD_STRIKE_BACK_DEG  = -22;    // sharp UPWARD-BACK jerk on strike
-export const ROD_STRIKE_BACK_MS   = 110;
-export const ROD_STRIKE_RECOVER_MS = 300;
-
-// Dirk idle/sleep toggle (Phase 22).
-export const DIRK_SLEEP_TOGGLE_MS = 30000;   // wisselt elke 30 seconden
+// The figures on the jetty -- who they are, their poses and the end of
+// the rod the line is tied to -- are the Crew's business (systems/Crew.js,
+// data/teams.js). Where they sit is each map's `seat` (data/maps.js).
 
 // =============================================================================
 // Internal constants -- gameplay, not layout.
@@ -232,16 +126,30 @@ const CAST_ARC_HEIGHT = 220;
 // Catch leap (bobber jumps out of the water just before the catch display).
 const CATCH_LEAP_MS = 450;
 
-// Fishing line style. A monofilament line in real life is nearly
-// invisible against a busy water-and-sky background, but for this game
-// we want kid-friendly clarity: thin white with mild transparency reads
-// as "fishing line" the way kids draw it. Shape is a catenary-style sag
-// so the line droops naturally under gravity between rod tip and float.
-const LINE_COLOR = 0xffffff;
-const LINE_WIDTH = 1.2;            // 40% thinner than previous 2px
-const LINE_ALPHA = 0.85;
-// Quadratic-bezier segments used to draw the curve in update().
-const LINE_BEZIER_SEGMENTS = 24;
+// The fishing line -- its shape in every phase, the way it moves and how
+// it is drawn -- is systems/FishingLine.js. Here: how slack it is when.
+// 1 = lying on the water, 0 = pulled tight.
+const LINE_SLACK = Object.freeze({
+  IDLE: 1,              // the float sits and waits
+  NIBBLE: 0.8,          // something is at the bait
+  DIVE: 0.4,            // the float goes under: the line is pulled along
+  LURE_RESTING: 0.45,   // a lure in the water, nobody cranking
+  LURE_CRANKING: 0.08,
+  FISH_RESTING: 0.2,    // a fish on, nobody cranking
+  FISH_CRANKING: 0.03,
+});
+// A line snaps tight, but takes its time to fall slack (per second).
+const LINE_TIGHTEN_RATE = 14;
+const LINE_SLACKEN_RATE = 1.7;
+// How much a line under strain shivers (design px): a fish on, a fish
+// running, the bite on a lure, the float pulled under.
+const LINE_TREMBLE = Object.freeze({ FISH: 0.6, RUN: 1.7, LURE_BITE: 1.2, DIVE: 0.5 });
+
+// The rig as it hangs from the rod before the cast: the whole float (in
+// the water only its tip shows), a bit of line under it and the bait.
+const RIG_FLOAT_HEIGHT = 58;
+const RIG_LEADER = 12;
+const RIG_BAIT_WIDTH = 24;
 
 // Bobber depth-scaling. The float is rendered smaller when dropped near
 // the horizon and full-size when dropped at the player's feet. Linear
@@ -252,11 +160,6 @@ const LINE_BEZIER_SEGMENTS = 24;
 const BOBBER_SCALE_FAR  = 0.22;   // furthest dropped (top of water)
 const BOBBER_SCALE_NEAR = 1.0;    // closest dropped (bottom of water)
 const BOBBER_DEPTH_NEAR_Y = GAME_HEIGHT;
-
-// Where a reeled-in line ends up: at the rod tip's x, this far from the
-// tip in y. Expressed relative to the tip (not the waterline) so it works
-// on any painting, whatever the height of its horizon.
-const REEL_HOME_DY = -35;
 
 // Which slice of the painting must survive when a wide screen crops it
 // top and bottom: Julian and Dirk sit on the dock with their feet at
@@ -396,7 +299,6 @@ export class FishingScene extends Phaser.Scene {
     this.cloudDomLayers = [];
     this._skyMaskReady = false;
     this._skyMaskProbe = null;
-    this._rodTween = null;
     this._sceneListeners = [];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       for (const [event, fn] of this._sceneListeners) this.events.off(event, fn);
@@ -419,13 +321,6 @@ export class FishingScene extends Phaser.Scene {
     this.nibbleTween = null;
     this.activeCastTween = null;
 
-    // Runtime hand-position offset (in Julian's SOURCE pixels). Shift+Click
-    // during calibration moves this; we then derive the rod-long anchor
-    // from it. Paste logged values into JULIAN_HAND_SRC_X/Y to persist.
-    this._julianHandSrcX = JULIAN_HAND_SRC_X;
-    this._julianHandSrcY = JULIAN_HAND_SRC_Y;
-    this._calibrationActive = false;
-
     this._buildBackdrop();
     this._buildClouds();
     this._buildForeground();
@@ -433,17 +328,15 @@ export class FishingScene extends Phaser.Scene {
     this._buildBobber();
     this._buildFishOnIndicator();
     this._buildCollectionButton();
-    this._buildCalibrationOverlay();
+    this._buildWaterlineOverlay();
 
-    // Dynamic line from rod tip to bobber, redrawn each frame in update().
-    // Depth 8 puts the line BEHIND Julian (depth 10) and Dirk (depth 9),
-    // above the foreground branch (3) and the water background (0). When
-    // Julian fishes to the left, the line passes diagonally across his
-    // body -- without this, the line drew on top and broke depth-reading
-    // (line "in front of" Julian's torso looks wrong). The rod itself
-    // stays on top (depth 11) so the line tucks neatly behind it.
-    this.lineGfx = this.add.graphics();
-    this.lineGfx.setDepth(8);
+    // The line from the rod tip to whatever is on its end. Depth 8 puts it
+    // BEHIND the figures (9, 10): when the angler fishes to his left the
+    // line passes across his body, and in front of him it would look wrong.
+    this.line = new FishingLine(this, 8);
+    this.fight = null;
+    this._slack = 1;
+    this._castReleased = false;
 
     // Camera + everything that is anchored to the screen rather than to
     // the painting (HUD, reel) or lives in the DOM (video, clouds). Runs
@@ -463,7 +356,9 @@ export class FishingScene extends Phaser.Scene {
     // Single global input handler -- state machine decides what to do.
     this.input.on('pointerdown', this._onPointerDown, this);
 
-    // Coming back from the collection scene resets to ready-to-cast.
+    // Ready to cast: the rig hangs from the rod. And again whenever the
+    // scene wakes up (back from the collection, a menu or a catch).
+    this._enterReady();
     this._onScene(Phaser.Scenes.Events.WAKE, () => this._enterReady());
   }
 
@@ -489,9 +384,9 @@ export class FishingScene extends Phaser.Scene {
     return isLure(this._currentBaitId());
   }
 
-  /** Where the end of the line is when fully reeled in. */
+  /** Where the end of the line is when fully reeled in: at the jetty, on the water. */
   _reelHome() {
-    return { x: this.rodTip.x, y: this.rodTip.y + REEL_HOME_DY };
+    return this.map.landing;
   }
 
   /**
@@ -505,9 +400,6 @@ export class FishingScene extends Phaser.Scene {
     if (this.reelOverlay) {
       const pos = this._reelPosition();
       this.reelOverlay.setPosition(pos.x, pos.y);
-    }
-    if (this.calibrationHint) {
-      this.calibrationHint.setPosition(layout.safe.left + 10, layout.safe.bottom - 28);
     }
   }
 
@@ -523,88 +415,109 @@ export class FishingScene extends Phaser.Scene {
       }
     }
 
-    // Recompute rod tip every frame so the fishing line follows the
-    // rotating rod-long sprite (cast / strike animations).
-    if (this.rodLongSprite) this._recomputeRodTip();
+    // The crew moves (poses, breathing) and with it the end of the rod,
+    // which is where the fishing line starts.
+    this.crew.update(delta);
 
-    // REELING (a hooked fish) and RETRIEVE / LURE_BITE (a lure): the end
-    // of the line travels from where it started toward the reel-home point
-    // at the rod tip, as far as the reel has been cranked. While a fish is
-    // hooked the bobber sprite is hidden and only the line is drawn; a
-    // lure stays visible on the end of it.
-    const reeling = this.state === STATE.REELING
-      || this.state === STATE.RETRIEVE
-      || this.state === STATE.LURE_BITE;
-    if (reeling && this.reelOverlay && this.reelEnd && this.bobber) {
+    // Where the end of the line is while it is being reeled in.
+    if (this.state === STATE.REELING && this.fight) {
+      // A hooked fish: drawn in by the reel, but with a will of its own.
+      // Only the line shows where it is; the float stays hidden.
+      this.fight.update(delta);
+      this.bobber.x = this.fight.x;
+      this.bobber.y = this.fight.y;
+    } else if ((this.state === STATE.RETRIEVE || this.state === STATE.LURE_BITE)
+               && this.reelOverlay && this.reelEnd) {
+      // A lure swims straight home, as far as the reel has been cranked.
       const p = this.reelOverlay.progress;
       const home = this._reelHome();
       this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, home.x, p);
       this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, home.y, p);
-
-      if (this.state !== STATE.REELING) {
-        // The lure shrinks or grows with distance like the float does, and
-        // points its nose (the line eye) at the rod it is being pulled to.
-        this.bobber.setScale(this._bobberDepthScale(this.bobber.y));
-        this._pointLureAtRod();
-        if (this.state === STATE.RETRIEVE && this.lure && this.lure.biteAt != null
-            && p >= this.lure.biteAt) {
-          this._enterLureBite();
-        }
+      // It shrinks or grows with distance like the float does, and points
+      // its nose (the line eye) at the rod it is being pulled to.
+      this.bobber.setScale(this._bobberDepthScale(this.bobber.y));
+      this._pointLureAtRod();
+      if (this.state === STATE.RETRIEVE && this.lure && this.lure.biteAt != null
+          && p >= this.lure.biteAt) {
+        this._enterLureBite();
       }
     }
 
-    this.lineGfx.clear();
-    if (this.bobber && this.state !== STATE.READY && this.state !== STATE.CATCHING) {
-      this._drawFishingLine(this.rodTip.x, this.rodTip.y, this.bobber.x, this.bobber.y);
-    }
+    this._updateLine(delta);
   }
 
   /**
-   * Draw the fishing line from rod tip to bobber as a catenary-style sag
-   * curve. The line dips DOWN under gravity between the two endpoints --
-   * a quadratic bezier with the control point pushed below the midpoint
-   * approximates a real fishing line's slack between rod and float.
-   *
-   * Sag amount is proportional to the horizontal span and damped for
-   * near-vertical lines (which would be taut, not draped). Together this
-   * gives "lifelike physics" without simulating a full catenary.
+   * The line, in the shape that fits what is going on (systems/
+   * FishingLine.js). Before the cast the rig hangs from the rod and it is
+   * the line that says where the float is; after that the float (or lure,
+   * or fish) leads and the line follows.
    */
-  _drawFishingLine(sx, sy, ex, ey) {
-    const dx = ex - sx;
-    const dy = ey - sy;
-    // Sag is biggest for a horizontal line and tapers to ~0 as the line
-    // becomes vertical. We use the "horizontalness" (|dx| / dist) so the
-    // multiplier is 1 when fully horizontal and 0 when fully vertical.
-    const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-    const horizontalness = Math.abs(dx) / dist;
-    // Sag in screen pixels. Tweak SAG_FRACTION to taste.
-    const SAG_FRACTION = 0.14;
-    const sag = Math.max(10, dist * SAG_FRACTION) * horizontalness;
+  _updateLine(delta) {
+    const tip = this.rodTip;
+    const end = this.bobber;
+    const cranking = !!(this.reelOverlay && this.reelOverlay.isDragging);
 
-    // Control point: midpoint between endpoints, displaced DOWN by `sag`
-    // pixels. The greater the sag, the deeper the U-shape.
-    const cpX = (sx + ex) / 2;
-    const cpY = (sy + ey) / 2 + sag;
-
-    this.lineGfx.lineStyle(LINE_WIDTH, LINE_COLOR, LINE_ALPHA);
-    this.lineGfx.beginPath();
-    this.lineGfx.moveTo(sx, sy);
-    for (let i = 1; i <= LINE_BEZIER_SEGMENTS; i++) {
-      const t = i / LINE_BEZIER_SEGMENTS;
-      const inv = 1 - t;
-      // Quadratic bezier formula -- one control point in the middle.
-      const x = inv * inv * sx + 2 * inv * t * cpX + t * t * ex;
-      const y = inv * inv * sy + 2 * inv * t * cpY + t * t * ey;
-      this.lineGfx.lineTo(x, y);
+    if (this.state === STATE.READY || (this.state === STATE.CASTING && !this._castReleased)) {
+      const hanging = this.line.hang(tip, delta);
+      end.setPosition(hanging.x, hanging.y);
+      this._aimRig(hanging.x - tip.x, hanging.y - tip.y);
+      this.line.update(delta, tip, end, { kind: 'straight' });
+      return;
     }
-    this.lineGfx.strokePath();
+    if (this.state === STATE.CASTING) {
+      this.line.update(delta, tip, end, { kind: 'flight', t: this._castT });
+      return;
+    }
+    if (this.state === STATE.CATCHING) {
+      this.line.update(delta, tip, end, { kind: 'straight' });
+      return;
+    }
+
+    let slack = LINE_SLACK.IDLE;
+    let tremble = 0;
+    switch (this.state) {
+      case STATE.NIBBLE: slack = LINE_SLACK.NIBBLE; break;
+      case STATE.DIVE: slack = LINE_SLACK.DIVE; tremble = LINE_TREMBLE.DIVE; break;
+      case STATE.RETRIEVE: slack = cranking ? LINE_SLACK.LURE_CRANKING : LINE_SLACK.LURE_RESTING; break;
+      case STATE.LURE_BITE: slack = 0; tremble = LINE_TREMBLE.LURE_BITE; break;
+      case STATE.REELING: {
+        const running = !!(this.fight && this.fight.running);
+        slack = running ? 0 : (cranking ? LINE_SLACK.FISH_CRANKING : LINE_SLACK.FISH_RESTING);
+        tremble = running ? LINE_TREMBLE.RUN : LINE_TREMBLE.FISH * (cranking ? 1 : 0.5);
+        break;
+      }
+      default: break;
+    }
+    const rate = slack < this._slack ? LINE_TIGHTEN_RATE : LINE_SLACKEN_RATE;
+    this._slack += (slack - this._slack) * (1 - Math.exp(-rate * Math.min(delta, 64) / 1000));
+    this.line.update(delta, tip, end, {
+      kind: 'water', slack: this._slack, foot: this.map.landing, tremble,
+    });
   }
 
   /**
-   * Map a design-y on the water to a relative bobber scale.
+   * Turn what is on the end of the line while it is in the air: a float
+   * hangs (or flies) along (dx, dy), a lure keeps its eye toward the rod.
+   */
+  _aimRig(dx, dy) {
+    if (this.lureSprite) this._pointLureAtRod();
+    else if (this._rigAir) this.bobber.rotation = Math.atan2(dy, dx) - Math.PI / 2;
+  }
+
+  /**
+   * In the air the whole float shows, with the bait under it; in the water
+   * only its tip. (A lure looks the same in both.)
+   */
+  _setRigInAir(inAir) {
+    if (this._rigAir) for (const part of this._rigAir) part.setVisible(inAir);
+    if (this._rigTip) this._rigTip.setVisible(!inAir);
+    if (!inAir && this.bobber && !this.lureSprite) this.bobber.rotation = 0;
+  }
+
+  /**
+   * Compute the depth-driven scale for a bobber at the given canvas y.
    * y near the water-horizon returns BOBBER_SCALE_FAR; y at the player's
-   * feet returns BOBBER_SCALE_NEAR. Values outside the band clamp to the
-   * nearer extreme.
+   * feet returns BOBBER_SCALE_NEAR. Linear interpolation in between.
    */
   _bobberDepthScale(y) {
     const farY = this.map.depthFarY;
@@ -950,300 +863,11 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildCharacters() {
-    // Preference order:
-    //   1. Julian idle animation (julian-idle1/2/3) + dirk-idle  ← preferred
-    //   2. Legacy separate julian_fishing + dirk_sitting (no animation)
-    //   3. Legacy combined julian_dirk_fishing (transitional fallback)
-    //   4. Flat placeholder rectangle (very first run, no assets)
-    //
-    // Each branch ends up populating `this.julianSprite` with whichever
-    // object owns the rod tip (the rod is attached to Julian, never Dirk).
-    const julianDisplayHeight = GAME_HEIGHT * SPRITE_SCALE;
-    const dirkDisplayHeight = GAME_HEIGHT * DIRK_SCALE;
-    const anchor = this.map.julianAnchor;
-
-    const hasIdleFrames =
-      this.textures.exists(TEX.JULIAN_IDLE_1) &&
-      this.textures.exists(TEX.DIRK_IDLE);
-
-    if (hasIdleFrames) {
-      // Dirk first (lower depth) so Julian overlaps where they meet.
-      this.dirkSprite = this.add.image(
-        anchor.x + DIRK_OFFSET_X,
-        anchor.y + DIRK_OFFSET_Y,
-        TEX.DIRK_IDLE
-      );
-      this.dirkSprite.setOrigin(0, 1);
-      this._scaleToHeight(this.dirkSprite, dirkDisplayHeight);
-      this.dirkSprite.setDepth(9);
-
-      // Julian: optionally cycle the 3 idle frames. Currently disabled --
-      // the toddler player found the cycle visually busy. We render the
-      // first frame as a static Image instead.
-      if (JULIAN_IDLE_ANIMATED &&
-          this.textures.exists(TEX.JULIAN_IDLE_2) &&
-          this.textures.exists(TEX.JULIAN_IDLE_3)) {
-        if (!this.anims.exists('julian-idle')) {
-          this.anims.create({
-            key: 'julian-idle',
-            frames: [
-              { key: TEX.JULIAN_IDLE_1 },
-              { key: TEX.JULIAN_IDLE_2 },
-              { key: TEX.JULIAN_IDLE_3 },
-              { key: TEX.JULIAN_IDLE_2 },   // ping-pong -- avoids hard 3->1 jump
-            ],
-            frameRate: JULIAN_IDLE_FRAMERATE,
-            repeat: -1,
-          });
-        }
-        this.julianSprite = this.add.sprite(
-          anchor.x, anchor.y, TEX.JULIAN_IDLE_1
-        );
-        this.julianSprite.play('julian-idle');
-      } else {
-        // Static image -- much calmer for a 4-year-old viewer.
-        this.julianSprite = this.add.image(
-          anchor.x, anchor.y, TEX.JULIAN_IDLE_1
-        );
-      }
-      this.julianSprite.setOrigin(0, 1);
-      this._scaleToHeight(this.julianSprite, julianDisplayHeight);
-      this.julianSprite.setDepth(10);
-
-      // Rod overlay (Phase 22) -- a separate sprite anchored on Julian's
-      // hand so we can rotate it for cast/strike animations without
-      // re-rendering Julian.
-      if (this.textures.exists(TEX.ROD_LONG)) {
-        this._buildRodLong();
-      }
-
-      // Dirk idle/sleep toggle: alternate dirk-idle and dirk-idle-sleep
-      // every DIRK_SLEEP_TOGGLE_MS so he subtly drifts in and out of nap.
-      if (this.textures.exists(TEX.DIRK_IDLE_SLEEP)) {
-        this._scheduleDirkSleepToggle();
-      }
-
-    } else if (
-      this.textures.exists(TEX.JULIAN_FISHING) &&
-      this.textures.exists(TEX.DIRK_SITTING)
-    ) {
-      // Legacy: static separate sprites.
-      this.dirkSprite = this.add.image(
-        anchor.x + DIRK_OFFSET_X,
-        anchor.y + DIRK_OFFSET_Y,
-        TEX.DIRK_SITTING
-      );
-      this.dirkSprite.setOrigin(0, 1);
-      this._scaleToHeight(this.dirkSprite, dirkDisplayHeight);
-      this.dirkSprite.setDepth(9);
-
-      this.julianSprite = this.add.image(
-        anchor.x, anchor.y, TEX.JULIAN_FISHING
-      );
-      this.julianSprite.setOrigin(0, 1);
-      this._scaleToHeight(this.julianSprite, julianDisplayHeight);
-      this.julianSprite.setDepth(10);
-
-    } else if (this.textures.exists(TEX.JULIAN_DIRK_FISHING)) {
-      console.warn(
-        '[FishingScene] using combined julian_dirk_fishing sprite. ' +
-        'Drop julian-idle1/2/3.png + dirk-idle.png to enable idle animation.'
-      );
-      this.julianSprite = this.add.image(
-        anchor.x, anchor.y, TEX.JULIAN_DIRK_FISHING
-      );
-      this.julianSprite.setOrigin(0, 1);
-      this._scaleToHeight(this.julianSprite, julianDisplayHeight);
-      this.julianSprite.setDepth(10);
-
-    } else {
-      this.julianSprite = this.add.rectangle(
-        anchor.x, anchor.y,
-        julianDisplayHeight, julianDisplayHeight,
-        0x888888, 0.4
-      );
-      this.julianSprite.setOrigin(0, 1);
-      this.julianSprite.setStrokeStyle(2, 0xffffff, 0.6);
-      this.julianSprite.setDepth(10);
-    }
-
-    this._recomputeRodTip();
-
-    // "Breathing" idle tween. Wrapped behind isImage check because the
-    // placeholder-rectangle fallback path doesn't need (or want) it.
-    this._startBreathingTweens();
-  }
-
-  /**
-   * Continuous, very subtle idle motion on Julian + Dirk to give the
-   * scene a sense of life without the discrete-frame "nervous" cycle.
-   * Tweens scale and y around the current values; resurfaces every
-   * BREATH_DURATION_MS for Julian and DIRK_BREATH_DURATION_MS for Dirk.
-   */
-  _startBreathingTweens() {
-    if (!BREATHING_ENABLED) return;
-    if (this.julianSprite && this.julianSprite.scale) {
-      const baseJX = this.julianSprite.scale;
-      const baseJY = this.julianSprite.y;
-      this.tweens.add({
-        targets: this.julianSprite,
-        scale:   { from: baseJX, to: baseJX * (1 + BREATH_SCALE_GROWTH) },
-        y:       { from: baseJY, to: baseJY - BREATH_Y_LIFT_PX },
-        duration: BREATH_DURATION_MS,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
-    }
-    if (this.dirkSprite && this.dirkSprite.scale) {
-      const baseDX = this.dirkSprite.scale;
-      const baseDY = this.dirkSprite.y;
-      this.tweens.add({
-        targets: this.dirkSprite,
-        scale:   { from: baseDX, to: baseDX * (1 + DIRK_BREATH_SCALE_GROWTH) },
-        y:       { from: baseDY, to: baseDY - DIRK_BREATH_Y_LIFT_PX },
-        duration: DIRK_BREATH_DURATION_MS,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-        // Offset start so Dirk and Julian don't pulse in unison.
-        delay: 350,
-      });
-    }
-  }
-
-  /**
-   * Scale a Phaser image so its displayed height matches `targetH`, while
-   * preserving the source aspect ratio. Returns the final display width.
-   */
-  _scaleToHeight(image, targetH) {
-    const scale = targetH / image.height;
-    image.setScale(scale);
-    return image.displayWidth;
-  }
-
-  /**
-   * Place rod-long.png on Julian's hand. The rod's origin is set to its
-   * grip point on the source image so rotating it tilts around the hand.
-   */
-  _buildRodLong() {
-    const handScene = this._julianHandSceneCoord();
-    const rod = this.add.image(handScene.x, handScene.y, TEX.ROD_LONG);
-    rod.setOrigin(ROD_GRIP_SRC_X / rod.width, ROD_GRIP_SRC_Y / rod.height);
-    rod.setScale(this.julianSprite.scale * ROD_LONG_SCALE_VS_JULIAN);
-    rod.setAngle(ROD_LONG_REST_ANGLE_DEG);
-    rod.setDepth(11);   // above Julian (10) so the rod-grip overlaps his hand
-    this.rodLongSprite = rod;
-  }
-
-  /**
-   * Compute the canvas position of Julian's right hand from his current
-   * sprite transform + the source-pixel hand coordinates.
-   */
-  _julianHandSceneCoord() {
-    const scale = this.julianSprite.scale;
-    const topLeftX = this.julianSprite.x;
-    const topLeftY = this.julianSprite.y - this.julianSprite.displayHeight;
-    return {
-      x: topLeftX + this._julianHandSrcX * scale,
-      y: topLeftY + this._julianHandSrcY * scale,
-    };
-  }
-
-  /**
-   * Recompute rod tip world position. Phase 22: derived from rod-long's
-   * sprite transform (position + rotation + scale) and the source-pixel
-   * grip-to-tip vector. Falls back to a static hand offset when the
-   * rod sprite isn't present.
-   */
-  _recomputeRodTip() {
-    if (!this.rodTip) this.rodTip = new Phaser.Math.Vector2();
-
-    if (this.rodLongSprite) {
-      const rod = this.rodLongSprite;
-      // Vector from grip to tip in source-pixel coords, then scaled.
-      const dx = (ROD_LONG_TIP_SRC_X - ROD_GRIP_SRC_X) * rod.scale;
-      const dy = (ROD_LONG_TIP_SRC_Y - ROD_GRIP_SRC_Y) * rod.scale;
-      const cos = Math.cos(rod.rotation);
-      const sin = Math.sin(rod.rotation);
-      this.rodTip.set(
-        rod.x + dx * cos - dy * sin,
-        rod.y + dx * sin + dy * cos,
-      );
-    } else {
-      // No rod sprite yet -- fall back to the hand position so the line
-      // at least starts somewhere sensible.
-      const hand = this._julianHandSceneCoord();
-      this.rodTip.set(hand.x, hand.y);
-    }
-
-    if (this.calibrationDot) {
-      this.calibrationDot.setPosition(this.rodTip.x, this.rodTip.y);
-    }
-  }
-
-  /**
-   * Cast rod animation -- chain: windup back, snap forward, settle to rest.
-   * Cancels any in-flight rod tween so repeated casts feel responsive.
-   */
-  _playCastRodAnimation() {
-    if (!this.rodLongSprite) return;
-    if (this._rodTween) { this._rodTween.stop(); this._rodTween = null; }
-    const restAngle = ROD_LONG_REST_ANGLE_DEG;
-    this._rodTween = this.tweens.chain({
-      targets: this.rodLongSprite,
-      tweens: [
-        { angle: restAngle + ROD_CAST_WINDUP_DEG, duration: ROD_CAST_WINDUP_MS, ease: 'Sine.easeOut' },
-        { angle: restAngle + ROD_CAST_THROW_DEG,  duration: ROD_CAST_THROW_MS,  ease: 'Quad.easeIn' },
-        { angle: restAngle,                       duration: ROD_CAST_RECOVER_MS, ease: 'Sine.easeOut' },
-      ],
-    });
-  }
-
-  /**
-   * Strike rod animation -- sharp pull back then settle. Played on
-   * _catchFish (the moment the player taps during the dive).
-   */
-  _playStrikeRodAnimation() {
-    if (!this.rodLongSprite) return;
-    if (this._rodTween) { this._rodTween.stop(); this._rodTween = null; }
-    const restAngle = ROD_LONG_REST_ANGLE_DEG;
-    this._rodTween = this.tweens.chain({
-      targets: this.rodLongSprite,
-      tweens: [
-        { angle: restAngle + ROD_STRIKE_BACK_DEG, duration: ROD_STRIKE_BACK_MS, ease: 'Quad.easeOut' },
-        { angle: restAngle,                       duration: ROD_STRIKE_RECOVER_MS, ease: 'Sine.easeInOut' },
-      ],
-    });
-  }
-
-  /**
-   * Cycle Dirk through 3 poses (idle -> idle2 -> sleep -> idle ...) every
-   * DIRK_SLEEP_TOGGLE_MS so he drifts through varied behaviour over time.
-   * All 3 source PNGs share aligned content-bottom-y so the texture swap
-   * doesn't visibly move him on the dock.
-   */
-  _scheduleDirkSleepToggle() {
-    const sequence = [
-      TEX.DIRK_IDLE,
-      TEX.DIRK_IDLE_2,
-      TEX.DIRK_IDLE_SLEEP,
-    ].filter(key => this.textures.exists(key));
-    if (sequence.length < 2) return;   // nothing useful to cycle through
-    this._dirkPoseIndex = 0;
-    const tick = () => {
-      if (!this.dirkSprite) return;
-      this._dirkPoseIndex = (this._dirkPoseIndex + 1) % sequence.length;
-      this.dirkSprite.setTexture(sequence[this._dirkPoseIndex]);
-      // setTexture resets displayHeight; re-apply the canonical size.
-      const targetH = GAME_HEIGHT * DIRK_SCALE;
-      this._scaleToHeight(this.dirkSprite, targetH);
-    };
-    this._dirkToggleTimer = this.time.addEvent({
-      delay: DIRK_SLEEP_TOGGLE_MS,
-      loop: true,
-      callback: tick,
-    });
+    // Who is playing follows from the save profile chosen on the title
+    // screen. The crew owns the figures; the scene only needs to know
+    // where the rod ends.
+    this.crew = new Crew(this, getTeam(SaveSystem.getProfile()), this.map.seat);
+    this.rodTip = this.crew.tip;
   }
 
   _buildBobber() {
@@ -1265,6 +889,8 @@ export class FishingScene extends Phaser.Scene {
     if (this.bobber) this.bobber.destroy();
     this.lureSprite = null;
     this.lureWake = null;
+    this._rigAir = null;       // float mode: what shows in the air...
+    this._rigTip = null;       // ...and what shows in the water
 
     const lureKey = this._isLureMode() ? baitSimpleTextureKey(this._currentBaitId()) : null;
     if (lureKey && this.textures.exists(lureKey)) {
@@ -1312,6 +938,30 @@ export class FishingScene extends Phaser.Scene {
       tip.setOrigin(0.5, 1);
       tip.y = 0;          // container origin = water line
       c.add(tip);
+      this._rigTip = tip;
+
+      // In the air (before the cast, and flying out) the whole float shows,
+      // hanging from the end of the line by its top, with a little line and
+      // the bait under it.
+      const fullKey = floatFullTextureKey(floatId);
+      if (this.textures.exists(fullKey)) {
+        const full = this.add.image(0, 0, fullKey);
+        full.setOrigin(0.5, 0);
+        full.setScale(RIG_FLOAT_HEIGHT / full.height);
+        const leader = this.add.rectangle(0, RIG_FLOAT_HEIGHT + RIG_LEADER / 2, 1.2, RIG_LEADER, 0xfbfaf2, 0.9);
+        this._rigAir = [leader, full];
+        c.add(leader);
+        const baitKey = baitSimpleTextureKey(this._currentBaitId());
+        if (this.textures.exists(baitKey)) {
+          const bait = this.add.image(0, RIG_FLOAT_HEIGHT + RIG_LEADER - 2, baitKey);
+          bait.setOrigin(0.5, 0.06);          // its little eye, top centre
+          bait.setScale(RIG_BAIT_WIDTH / bait.width);
+          this._rigAir.push(bait);
+          c.add(bait);
+        }
+        c.add(full);
+        for (const part of this._rigAir) part.setVisible(false);
+      }
       c.setDepth(20);
       this.bobber = c;
     } else {
@@ -1327,20 +977,20 @@ export class FishingScene extends Phaser.Scene {
    * the moment the bobber goes under. Hidden by default; toggled from
    * the state-machine transitions (visible only during DIVE).
    *
-   * Sized to ~70% of Julian's display height for clear visibility on an
-   * iPad. Depth 14 keeps it above Julian (10) and the rod (11) but below
-   * the HUD icons and the catch overlay.
+   * Sized to about half the angler's height for clear visibility on an
+   * iPad. Depth 14 keeps it above the figures (9, 10) but below the HUD
+   * icons and the catch overlay.
    */
   _buildFishOnIndicator() {
-    if (!this.textures.exists(TEX.FISHON) || !this.julianSprite) {
+    if (!this.textures.exists(TEX.FISHON)) {
       this.fishOnSprite = null;
       return;
     }
-    const julianTopY = this.julianSprite.y - this.julianSprite.displayHeight;
-    const cx = this.julianSprite.x + this.julianSprite.displayWidth / 2;
-    const cy = julianTopY - 30;
+    const head = this.crew.headTop();
+    const cx = head.x;
+    const cy = head.y - 14;
     const spr = this.add.image(cx, cy, TEX.FISHON);
-    const targetH = this.julianSprite.displayHeight * 0.55;
+    const targetH = this.crew.team.angler.height * 0.6;
     spr.setScale(targetH / spr.height);
     spr.setOrigin(0.5, 1);
     spr.setDepth(14);
@@ -1547,41 +1197,13 @@ export class FishingScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
-  // Calibration overlay
-  //
-  // Press 'C' to toggle: a red dot marks the current rod tip and a hint text
-  // is shown. While active, Shift+Click anywhere updates the rod tip live and
-  // logs the (x, y) offset to the browser console -- paste those numbers into
-  // ROD_TIP_OFFSET_X/Y above to persist.
+  // Debug overlay
   // ---------------------------------------------------------------------------
 
-  _buildCalibrationOverlay() {
-    // Red dot, initially hidden, sitting on top of everything.
-    this.calibrationDot = this.add.circle(this.rodTip.x, this.rodTip.y, 5, 0xff0040);
-    this.calibrationDot.setStrokeStyle(2, 0xffffff, 1);
-    this.calibrationDot.setDepth(100);
-    this.calibrationDot.setVisible(false);
-
-    // Small bottom-left hint badge.
-    this.calibrationHint = this.add.text(
-      10, GAME_HEIGHT - 28,
-      'CAL: Shift+Click rod tip in sprite to log offsets',
-      { fontFamily: 'monospace', fontSize: '14px', color: '#ffffff', backgroundColor: '#000000aa', padding: { x: 6, y: 3 } }
-    );
-    this.calibrationHint.setDepth(100);
-    this.calibrationHint.setVisible(false);
-
-    // Toggle on 'C'. Keyboard plugin is undefined in headless tests.
-    this.input.keyboard?.on('keydown-C', () => {
-      this._calibrationActive = !this._calibrationActive;
-      this.calibrationDot.setVisible(this._calibrationActive);
-      this.calibrationHint.setVisible(this._calibrationActive);
-      console.log(`[calibration] ${this._calibrationActive ? 'ON' : 'OFF'}`);
-    });
-
-    // Water-curve debug overlay: toggle with 'W'. Draws the parabolic
-    // waterline as a translucent cyan fill so you can see exactly where
-    // casts are allowed and tune WATER_TOP_CENTER / WATER_TOP_EDGE.
+  _buildWaterlineOverlay() {
+    // Toggle with 'W': where casts are allowed -- the water below the
+    // map's waterline in cyan, the jetty or pier cut out of it in red --
+    // and the landing spot (data/maps.js).
     this.waterBoundsDebug = this.add.graphics();
     this.waterBoundsDebug.setDepth(99);
     this.waterBoundsDebug.setVisible(false);
@@ -1609,30 +1231,21 @@ export class FishingScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
     g.strokePath();
-  }
 
-  /**
-   * Tries to interpret a click as a calibration drop.
-   * Returns true when the click was consumed by calibration.
-   */
-  _maybeHandleCalibrationClick(pointer) {
-    if (!this._calibrationActive) return false;
-    if (!(pointer.event && pointer.event.shiftKey)) return false;
-
-    const topLeftX = this.julianSprite.x;
-    const topLeftY = this.julianSprite.y - this.julianSprite.displayHeight;
-    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const offsetX = Math.round(world.x - topLeftX);
-    const offsetY = Math.round(world.y - topLeftY);
-
-    this._rodTipOffsetX = offsetX;
-    this._rodTipOffsetY = offsetY;
-    this._recomputeRodTip();
-
-    console.log(
-      `[calibration] ROD_TIP_OFFSET_X = ${offsetX};  ROD_TIP_OFFSET_Y = ${offsetY};`
-    );
-    return true;
+    // ...minus the jetty or pier, in red; and the landing spot, a dot.
+    const dry = this.map.dry || [];
+    if (dry.length) {
+      g.fillStyle(0xff3030, 0.35);
+      g.lineStyle(2, 0xff3030, 0.9);
+      g.beginPath();
+      g.moveTo(dry[0][0], dry[0][1]);
+      for (const [x, y] of dry.slice(1)) g.lineTo(x, y);
+      g.closePath();
+      g.fillPath();
+      g.strokePath();
+    }
+    g.fillStyle(0xffff00, 1);
+    g.fillCircle(this.map.landing.x, this.map.landing.y, 6);
   }
 
   // ---------------------------------------------------------------------------
@@ -1640,9 +1253,6 @@ export class FishingScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   _onPointerDown(pointer) {
-    // Calibration takes precedence -- Shift+Click never casts.
-    if (this._maybeHandleCalibrationClick(pointer)) return;
-
     // pointer.x/y are canvas pixels; the camera decides which part of the
     // world those pixels show, so translate to design coordinates first.
     const { x, y } = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -1692,7 +1302,7 @@ export class FishingScene extends Phaser.Scene {
   _isInsideWater(x, y) {
     if (x < WORLD_LEFT || x >= WORLD_RIGHT) return false;
     if (y > WORLD_BOTTOM) return false;
-    return y >= this.map.waterTopAt(x);
+    return this.map.isWater(x, y);
   }
 
   // ---------------------------------------------------------------------------
@@ -1700,69 +1310,46 @@ export class FishingScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   _enterReady() {
+    // Whatever was out on the water is wound in: the rig comes up from
+    // where it was (a float after a missed bite, a lure that came home
+    // empty) and ends up hanging from the rod tip.
+    const from = this.bobber.visible && this.state !== STATE.READY
+      ? { x: this.bobber.x, y: this.bobber.y }
+      : null;
     this._hideFishOn();
     this._cancelAllPhaseLogic();
     this.state = STATE.READY;
-    // Idle pose (head facing left, looking at us) while the rod is in hand
-    // and the line isn't out yet.
-    this._setJulianPose(false);
-    this.bobber.setVisible(false);
+    // Rod in hand, nothing out yet: the crew relaxes and looks at us.
+    this.crew.mood('ready');
+    this.tweens.killTweensOf(this.bobber);
+    this.bobber.setVisible(true);
     this.bobber.setScale(1);
     this.bobber.setAlpha(1);
-    this.bobber.x = this.rodTip.x;
-    this.bobber.y = this.rodTip.y;
     this.bobberBaseScale = 1;
     this._resetLureSprite();
-  }
-
-  /**
-   * Swap Julian's sprite texture based on whether the line is out:
-   *   isLineOut === true  -> fishing pose (head facing right, watching water)
-   *   isLineOut === false -> idle pose   (head facing left)
-   * Both source images are aligned on the tackle box so the swap reads as
-   * a head turn, not a body jump. Falls back gracefully when the fishing
-   * sprite isn't loaded.
-   */
-  _setJulianPose(isLineOut) {
-    if (!this.julianSprite) return;
-    const fallbackKey = TEX.JULIAN_IDLE_1;
-    const wantedKey = isLineOut && this.textures.exists(TEX.JULIAN_FISHING_LIVE)
-      ? TEX.JULIAN_FISHING_LIVE
-      : fallbackKey;
-    if (this.julianSprite.texture.key === wantedKey) return;
-    this.julianSprite.setTexture(wantedKey);
-    // Re-apply target display height -- setTexture resets to source dims.
-    this._scaleToHeight(this.julianSprite, GAME_HEIGHT * SPRITE_SCALE);
+    this._setRigInAir(true);
+    this._castReleased = false;
+    this.line.startHanging(this.rodTip, from);
   }
 
   _beginCast(targetX, targetY) {
     this.state = STATE.CASTING;
     this.audio.playSfx(SFX.CAST);
-    // Switch to "line is out" pose as soon as the cast starts. The pose
-    // stays through idle/nibble/dive/reeling/catching; _enterReady flips
-    // back to the calm idle.
-    this._setJulianPose(true);
+    // The angler swings the rod back, then whips it forward.
+    this.crew.cast();
 
-    // Rod animation: windup back, then snap forward, then settle.
-    this._playCastRodAnimation();
-
-    // Hide the bobber during the windup. It "appears" at the rod tip the
-    // moment the rod transitions from going back to going forward, which
-    // is when the line would be released in a real cast.
-    this.bobber.setVisible(false);
-
-    // Schedule the actual bobber release + arc to start AFTER the windup
-    // finishes -- i.e. as the throw begins.
-    this.time.delayedCall(ROD_CAST_WINDUP_MS, () => {
+    // During the windup the rig still hangs from the rod and swings back
+    // with it (see _updateLine). It is let go, and flies, AFTER the windup
+    // -- as the rod whips forward -- from wherever the swing has taken it.
+    this._castReleased = false;
+    this.time.delayedCall(CAST_WINDUP_MS + 60, () => {
       if (this.state !== STATE.CASTING) return;   // cancelled by reset
-      this.bobber.setVisible(true);
-      this.bobber.setScale(1);
-      this.bobber.setAlpha(1);
-      this.bobber.x = this.rodTip.x;
-      this.bobber.y = this.rodTip.y;
+      this._castReleased = true;
+      this._castT = 0;
+      this.line.startFlight();
 
-      const startX = this.rodTip.x;
-      const startY = this.rodTip.y;
+      const startX = this.bobber.x;
+      const startY = this.bobber.y;
       const midX = (startX + targetX) / 2;
       const peakY = Math.min(startY, targetY) - CAST_ARC_HEIGHT;
       const targetScale = this._bobberDepthScale(targetY);
@@ -1775,13 +1362,15 @@ export class FishingScene extends Phaser.Scene {
         ease: 'Sine.easeOut',
         onUpdate: () => {
           const t = progress.t;
+          this._castT = t;
           const inv = 1 - t;
           const x = inv * inv * startX + 2 * inv * t * midX + t * t * targetX;
           const y = inv * inv * startY + 2 * inv * t * peakY + t * t * targetY;
+          // The float flies heavy end first, the line trailing from its top.
+          this._aimRig(x - this.bobber.x, y - this.bobber.y);
           this.bobber.x = x;
           this.bobber.y = y;
           this.bobber.setScale(Phaser.Math.Linear(1, targetScale, t));
-          this._pointLureAtRod();
         },
         onComplete: () => {
           this.activeCastTween = null;
@@ -1795,10 +1384,17 @@ export class FishingScene extends Phaser.Scene {
 
   _enterIdle(x, y, playSplash = true) {
     this.state = STATE.IDLE;
+    this.crew.mood('wait');
     // "playSplash" here actually means "the bobber just landed" -- the
     // sfx is now PLOP rather than SPLASH. Name kept for parameter
     // compatibility with existing call sites.
-    if (playSplash) this.audio.playSfx(SFX.PLOP);
+    if (playSplash) {
+      this.audio.playSfx(SFX.PLOP);
+      // Just landed: the line is still stretched out behind the float and
+      // now falls slack onto the water.
+      this._slack = 0;
+    }
+    this._setRigInAir(false);
 
     this.bobber.x = x;
     this.bobber.y = y;
@@ -1909,6 +1505,7 @@ export class FishingScene extends Phaser.Scene {
     this.time.delayedCall(125, () => {
       if (this.state !== STATE.DIVE) return;
       this._showFishOn();
+      this.crew.mood('bite');
       this.audio.playSfx(SFX.FISHON);
     });
 
@@ -1997,9 +1594,6 @@ export class FishingScene extends Phaser.Scene {
     this._stopPhaseTimer();
     this._stopBobTween();
 
-    // Strike! Quick rod-tilt backward to "set the hook".
-    this._playStrikeRodAnimation();
-
     const pick = this._pickFish();
 
     // Phase 7: predators + any "large" fish demand the reel widget. Smaller
@@ -2034,7 +1628,10 @@ export class FishingScene extends Phaser.Scene {
   /** The lure has landed: hand the player the reel. */
   _enterRetrieve(x, y) {
     this.state = STATE.RETRIEVE;
+    this.crew.mood('wait');
     this.audio.playSfx(SFX.PLOP);
+    this._slack = 0;
+    this._setRigInAir(false);
 
     this.bobber.x = x;
     this.bobber.y = y;
@@ -2083,7 +1680,7 @@ export class FishingScene extends Phaser.Scene {
     this.audio.playSfx(SFX.DIVE);
     this._showFishOn();
     this.audio.playSfx(SFX.FISHON);
-    this._playBiteRodAnimation();
+    this.crew.mood('bite');
     if (this.lureSprite) {
       this.tweens.add({
         targets: this.lureSprite,
@@ -2105,6 +1702,7 @@ export class FishingScene extends Phaser.Scene {
   /** Too slow: the fish lets go. Keep reeling; it may come back once. */
   _lureBiteMissed() {
     this._hideFishOn();
+    this.crew.mood('wait');
     this.state = STATE.RETRIEVE;
     if (!this.reelOverlay || !this.lure) return;
     this.reelOverlay.setPaused(false);
@@ -2122,7 +1720,6 @@ export class FishingScene extends Phaser.Scene {
   _strikeLure() {
     this._hideFishOn();
     this._stopPhaseTimer();
-    this._playStrikeRodAnimation();
     this._enterReeling(this._pickFish());
   }
 
@@ -2145,28 +1742,13 @@ export class FishingScene extends Phaser.Scene {
     this.lureSprite.setFlipY(false);
   }
 
-  /** Rod tip dips twice as the fish tugs on the lure. */
-  _playBiteRodAnimation() {
-    if (!this.rodLongSprite) return;
-    if (this._rodTween) { this._rodTween.stop(); this._rodTween = null; }
-    const restAngle = ROD_LONG_REST_ANGLE_DEG;
-    this._rodTween = this.tweens.chain({
-      targets: this.rodLongSprite,
-      tweens: [
-        { angle: restAngle + 9, duration: 90,  ease: 'Quad.easeOut' },
-        { angle: restAngle,     duration: 140, ease: 'Sine.easeInOut' },
-        { angle: restAngle + 6, duration: 90,  ease: 'Quad.easeOut' },
-        { angle: restAngle,     duration: 180, ease: 'Sine.easeInOut' },
-      ],
-    });
-  }
-
   /**
    * Show the reel widget and wait until the player completes the required
    * number of turns. On success → standard catch leap + display.
    */
   _enterReeling(pick) {
     this.state = STATE.REELING;
+    this.crew.mood('reel');
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
     // Coming from a lure retrieve the reel widget is already on screen,
@@ -2184,15 +1766,14 @@ export class FishingScene extends Phaser.Scene {
     // wildly across the canvas.
     this.tweens.killTweensOf(this.bobber);
 
-    // Where the fish currently is (underwater, where it got hooked). The
-    // endpoint is computed in update() from the live rod tip so the line
-    // pulls TOWARD Julian's rod and stops there -- never past him.
+    // Where the fish is now (underwater, where it got hooked). From here
+    // it is drawn to the landing spot at the jetty -- see FishFight.
     const startX = this.bobber ? this.bobber.x : this.rodTip.x;
     const startY = (this.bobber ? this.bobber.y : this.rodTip.y) + 8;
     this.reelEnd = { startX, startY };
 
     // The fish is "on the line" -- hide the bobber sprite; only the line
-    // is drawn during this phase, pulling toward the pier endpoint.
+    // is drawn during this phase, cutting through the water to the fish.
     if (this.bobber) {
       this.bobber.setVisible(false);
       this.bobber.x = startX;
@@ -2210,9 +1791,9 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
-        // Plant the bobber at the reel-home point by the rod tip so the
-        // catch-leap arcs UP from there -- the "fish breaks the surface
-        // right at the rod" moment.
+        this._endFight();
+        // The fish is at the landing spot: from there the catch-leap lifts
+        // it out -- the "fish breaks the surface right at the jetty" moment.
         if (this.bobber) {
           const home = this._reelHome();
           this.bobber.setVisible(true);
@@ -2224,6 +1805,29 @@ export class FishingScene extends Phaser.Scene {
         this.reelEnd = null;
       },
     });
+
+    // The fish's side of it: swimming about, and for a big one, runs.
+    this.fight = new FishFight(this, {
+      pick,
+      reel: this.reelOverlay,
+      start: { x: startX, y: startY },
+      home: this._reelHome(),
+      depthScale: (y) => this._bobberDepthScale(y),
+      isWater: (x, y) => this.map.isWater(x, y),
+      onRun: (running) => {
+        if (this.state !== STATE.REELING) return;
+        // It tears off: the angler can only hold on, rod bent double.
+        this.crew.mood(running ? 'run' : 'reel');
+        if (running) this.audio.playSfx(SFX.SPLASH, { volume: 0.35 });
+      },
+    });
+  }
+
+  _endFight() {
+    if (this.fight) {
+      this.fight.destroy();
+      this.fight = null;
+    }
   }
 
   /**
@@ -2233,16 +1837,16 @@ export class FishingScene extends Phaser.Scene {
    */
   _performCatchLeap(pick) {
     this.state = STATE.CATCHING;
+    this.crew.mood('cheer');
     // Splash fires at the START of the leap -- the fish breaks the water.
     // Applause + voice follow once the catch display opens.
     this.audio.playSfx(SFX.SPLASH);
     SaveSystem.recordCatch(pick);
 
+    this._setRigInAir(true);
+
     const startX = this.bobber.x;
     const startY = this.bobber.y;
-    const endX = this.rodTip.x;
-    const endY = this.rodTip.y;
-    const peakY = Math.min(startY, endY) - 120;
 
     const progress = { t: 0 };
     this.tweens.add({
@@ -2251,10 +1855,15 @@ export class FishingScene extends Phaser.Scene {
       duration: CATCH_LEAP_MS,
       ease: 'Sine.easeOut',
       onUpdate: () => {
+        // Up to the rod tip, wherever the cheering angler holds it now.
+        const endX = this.rodTip.x;
+        const endY = this.rodTip.y;
+        const peakY = Math.min(startY, endY) - 120;
         const t = progress.t;
         const inv = 1 - t;
         const x = inv * inv * startX + 2 * inv * t * ((startX + endX) / 2) + t * t * endX;
         const y = inv * inv * startY + 2 * inv * t * peakY + t * t * endY;
+        this._aimRig(x - endX, y - endY);
         this.bobber.x = x;
         this.bobber.y = y;
       },
@@ -2304,6 +1913,7 @@ export class FishingScene extends Phaser.Scene {
       this.activeCastTween.stop();
       this.activeCastTween = null;
     }
+    this._endFight();
     if (this.reelOverlay) {
       this.reelOverlay.destroy();
       this.reelOverlay = null;

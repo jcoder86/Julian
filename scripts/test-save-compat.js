@@ -270,6 +270,15 @@ await runScenario('device where the old pike-only wipe already ran', { wipeAlrea
 await runScenario('device where that wipe never ran', { wipeAlreadyRan: false });
 await runReleasedWriterScenario();
 
+// Both released saves must still be reachable from the title screen: each
+// START button there is a team, and a team plays on the save profile of
+// the same id. ('guest' was a try-it-out button once; it is James's save.)
+const { TEAMS } = await import('../src/data/teams.js');
+for (const profile of ['julian', 'guest']) {
+  check(TEAMS.some((team) => team.id === profile),
+        `no team plays on the "${profile}" save any more: its catches would be out of reach`);
+}
+
 // The code itself must not contain a way to delete.
 const source = readFileSync(join(ROOT, 'src/systems/SaveSystem.js'), 'utf8');
 check(!/\.removeItem\s*\(|localStorage\.clear\s*\(/.test(source),
