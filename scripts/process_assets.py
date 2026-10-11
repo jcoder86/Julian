@@ -41,9 +41,15 @@ CLEAN_DIR = REPO_ROOT / "assets" / "clean"
 # Filename prefixes we skip outright (handled as-is by scenes).
 #   backdrop    -- painterly scene used as-is (no chromakey)
 #   foreground  -- near-camera layer, transparent PNG (no chromakey needed)
-# Note: cloud strips DO run through chromakey -- AI image tools typically
-# output green-screen, and the script no-ops on already-transparent inputs.
-SKIP_PREFIXES = ("backdrop", "foreground")
+#   fish- / baits-  -- species strips and bait sheets that split_atlas.py
+#                      cuts into individual sprites (fish-catfish, baits-sea)
+#   catch-sea / mapselect -- full-screen paintings, see make_paintings.py
+#   clouds-sea-     -- strips that make_clouds.py joins into cloud layers
+# Note: the lake's cloud strips DO run through chromakey -- AI image tools
+# typically output green-screen, and the script no-ops on already-transparent
+# inputs.
+SKIP_PREFIXES = ("backdrop", "foreground", "fish-", "baits-",
+                 "catch-sea", "mapselect", "clouds-sea-")
 
 # Chromakey tuning -- values are in [0, 255] image space.
 # These work well for a typical "Hollywood green" backdrop (#00ff00-ish).

@@ -45,7 +45,69 @@ scripts/
 
 `vite.config.js` sets `publicDir: 'assets'`, so anything under `assets/` is
 served at the dev-server root. Phaser's loader paths reflect that:
-`raw/backdrop.png`, `clean/julian_dirk_fishing.png`, `audio/sfx/cast.mp3`.
+`clean/backdrop-sea.jpg`, `clean/julian-idle1.png`, `audio/sfx/plop.wav`.
+
+## Maps
+
+There are two fishing spots, picked on a wordless map-select screen after
+the title (and reachable again through the compass button in the HUD):
+
+* **lake** -- the moat of Naarden-Vesting, from a wooden jetty: float
+  fishing with bread, corn, maggots, worms or a bait fish. (The id is
+  still `lake`: it is in every player's save data.)
+* **sea** -- from a stone harbour pier: float fishing with a lugworm or a
+  bait fish, **or lure fishing** with a feather rig, a spoon or a pilk jig.
+
+Everything specific to one spot (painting, optional video, sky mask,
+waterline, default bait, music) is one entry in `src/data/maps.js`; `FishingScene`
+takes a `{ mapId }` and contains no lake or sea specifics itself. Each
+species (`src/data/fish.js`) and each bait or lure (`src/data/baits.js`)
+names the map it belongs to. The collection has one page of 12 per map.
+
+### Lure fishing
+
+A lure has no float. Cast, and the reel appears at once: cranking swims
+the lure back to the jetty. Somewhere on the way a fish may grab it -- the
+"fish on" sign pops up -- and a tap anywhere on the screen sets the hook;
+from there it is the normal reel fight. No bite, or a tap that comes too
+late, and the lure arrives empty: cast again. Rings of ripples spread
+from the lure while it swims, so it is easy to follow on a choppy sea. The
+tunables are the `LURE_*` constants in `FishingScene.js`.
+
+## Generating artwork
+
+The sea, the Naarden-Vesting painting, the sea fish, the sea tackle, the
+map button and the map-select wall were painted by an image model, driven
+from the command line through the Codex app / CLI (it must be installed
+and signed in: `codex login status`). The brief for every image -- what
+to paint, and which existing artwork the model is shown for layout and
+style -- is in `scripts/art_prompts.py`.
+
+```bash
+python scripts/gen_art.py --list                       # every image by name
+python scripts/gen_art.py fish-cod --out-dir try-outs  # a candidate, to look at first
+python scripts/gen_art.py fish-cod                     # straight into assets/raw/
+```
+
+A fresh image lands in `assets/raw/`; the game loads what the pipeline
+makes of it:
+
+| image | then run | result |
+| --- | --- | --- |
+| `fish-<id>` | `python scripts/split_atlas.py fish-<id>` | `clean/fish_<id>_<size>.png` |
+| `sea-baits`, `icon-map` | `python scripts/split_atlas.py baits-sea icon-map` | `clean/bait_<id>_<full/simple>.png`, `clean/icon-map.png` |
+| `sea-backdrop`, `naarden` | `python scripts/make_paintings.py` and `python scripts/make_sky_mask.py --image assets/raw/<file>.png --out assets/clean/sky-mask-<map>.png` | `clean/backdrop-<map>.jpg`, `clean/sky-mask-<map>.png` |
+| `sea-catch`, `mapselect-bg` | `python scripts/make_paintings.py` | `clean/catch-sea.jpg`, `clean/mapselect.jpg` |
+| `clouds-sea-front-1..3`, `clouds-sea-back-1..3` | `python scripts/make_clouds.py` | `clean/clouds-sea-front.png`, `clean/clouds-sea-back.png` |
+
+A new backdrop also needs its numbers checked in `src/data/maps.js`: the
+waterline (press `W` in the fishing scene to see it drawn over the
+painting), for the sea `SEA_SKY` (where the horizon lies), and
+`julianAnchor` -- where on the jetty or pier Julian sits; Dirk and the rod
+follow him. The jetty or pier itself has to stay in the lower-left corner;
+the briefs ask for exactly that.
+
+More detail, in Dutch: [`docs/art-brief.md`](docs/art-brief.md).
 
 ## Screen sizes & layout
 
@@ -96,7 +158,9 @@ What it does:
   so hair, fur, and feathered edges don't keep a green halo.
 * Feathers the alpha channel ~0.6px to avoid stair-stepping on diagonals.
 * Outputs to `assets/clean/<same-name>.png`.
-* Skips anything named `backdrop*.png` -- backdrops are used as-is.
+* Skips anything named `backdrop*.png`: full-screen paintings have no
+  background to remove. `scripts/make_paintings.py` turns those into the
+  light JPEGs the game loads.
 
 If the chromakey result looks rough on a particular asset (subject is close
 to green, or the source isn't green-screen at all), force the AI fallback:
@@ -126,45 +190,53 @@ into, raise `CHROMA_HIGH`.
 
 A new species arrives as its own green-screen image: the three sizes side
 by side (small, medium, large), each inside a white box -- see
-`assets/raw/fish-catfish.webp`.
+`assets/raw/fish-catfish.webp`. Describe the species in the `FISH` table
+of `scripts/art_prompts.py` and `python scripts/gen_art.py fish-<id>`
+paints it.
 
-1. Save the image in `assets/raw/` and add a `(file, species id)` pair to
-   `FISH_STRIPS` in `scripts/split_atlas.py`.
-2. Run `python scripts/split_atlas.py`. That re-cuts every atlas; the new
-   sprites come out as `assets/clean/fish_<id>_<size>.png`.
-3. Add the species to `FISH_SPECIES` in `src/data/fish.js` (Dutch name,
-   baits, rarity weight, cm range per size). Preloading, the catch screen
-   and the collection card all follow from that list.
+1. Save the image in `assets/raw/` as `fish-<id>.webp` (or `.png`) and add
+   a `(file stem, species id)` pair to `FISH_STRIPS` in
+   `scripts/split_atlas.py`. The twelve sea species are already listed.
+2. Run `python scripts/split_atlas.py fish-<id>` (without a name it
+   re-cuts every atlas). The new sprites come out as
+   `assets/clean/fish_<id>_<size>.png`.
+3. Add the species to `FISH_SPECIES` in `src/data/fish.js` (map, Dutch
+   name, baits, rarity weight, cm range per size). Preloading, the catch
+   screen and the collection card all follow from that list.
 4. Optional voice clips: add `small_<id>` / `medium_<id>` / `large_<id>`
    phrases to `assets/audio/sfx/vissen.json` + `vissen.mp3`, or drop
    separate `assets/audio/voice/<size>-<id>.wav` files. Without them a
    catch is simply announced without a voice.
 
-The collection screen is a 4 x 3 grid and currently holds exactly 12
-species; a 13th needs a layout change in `FishingCollectionScene.js`.
+The collection screen is a 4 x 3 grid per map and each map currently has
+exactly 12 species; a 13th on one map needs a layout change in
+`FishingCollectionScene.js`.
 
 ## Animated backdrop
 
-Drop `assets/raw/backdrop.mp4` next to the static PNG. The scene prefers
-the video when present and loops it silently. Constraints:
+A map can have a looping video of its painting (gently moving water). At
+the moment neither map has one -- the original lake video belonged to the
+painting that Naarden-Vesting replaced -- so both show their still
+painting. To add one, save it as e.g. `assets/raw/backdrop-naarden.mp4`,
+set `backdropVideo: 'raw/backdrop-naarden.mp4'` on the map in
+`src/data/maps.js` and add the file name to `RAW_KEEP` in
+`scripts/prune-dist.js`. The scene then prefers the video and loops it
+silently. Constraints:
 
 * **Seamlessly loopable** (first and last frame match) -- otherwise you
   see a hard cut every loop.
-* **H.264 MP4** for broad browser compatibility. WEBM/VP9 also fine if
-  you swap the loader URL.
+* **H.264 MP4** for broad browser compatibility.
 * **No audio track** (we mute anyway).
-* The scene itself must be **4:3**, framed exactly like `backdrop.png`.
-  The current file is 1280x720 with the 4:3 painting in the middle and
-  black bars left and right; the game shows it in a 4:3 box with
-  `object-fit: cover`, which crops those bars away. A true 4:3 file works
-  just as well.
-* Keep it < 20 MB so HMR stays snappy.
-* After replacing the video, regenerate the sky mask (see the cloud layer
-  section below).
-
-The python pipeline ignores `backdrop*` files, so MP4s in `raw/` are
-served untouched. If both `backdrop.mp4` and `backdrop.png` exist, the
-video wins.
+* The scene itself must be **4:3**, framed exactly like the still
+  painting. A 16:9 file with the 4:3 painting in the middle and black
+  bars left and right also works: the game shows it in a 4:3 box with
+  `object-fit: cover`, which crops those bars away.
+* Only the water may move: Julian, the jetty and the far bank must stay
+  exactly where they are in the still.
+* Keep it < 20 MB.
+* Afterwards regenerate the sky mask from the video
+  (`python scripts/make_sky_mask.py --video ... --out ...`, needs
+  `ffmpeg`), so nothing that moves ends up inside the mask.
 
 ### Foreground layer
 
@@ -198,26 +270,34 @@ animated foreground (e.g. an alpha-channel WebM that already moves).
 ### Decoupled cloud layer (parallax)
 
 Clouds are **separate layers** that scroll horizontally and infinitely:
-two DOM strips (`clean/clouds-back.png`, `clean/clouds-front.png`) behind
-the transparent canvas and in front of the backdrop video. The backdrop
-video itself should have a clean **cloud-free sky** -- the cloud layers do
-the drifting.
+DOM strips behind the transparent canvas and in front of the backdrop. The
+backdrop itself should have a clean **cloud-free sky** -- the cloud layers
+do the drifting. Which layers a map shows, how tall, how fast and how
+opaque, is its `clouds` list in `src/data/maps.js`.
 
-The strips are masked with `assets/clean/sky-mask.png`, an alpha image of
-where the painting is sky, so clouds pass **behind** the tree tops and
-mountain ridges on every screen shape. The mask is generated from
-`backdrop.mp4`; re-run this whenever the backdrop changes:
+The sea's two layers are built by `scripts/make_clouds.py` from six
+generated strips: three different strips end to end per layer, so a layer
+is wider than the screen and no cloud is on screen twice -- a short strip
+of look-alike clouds reads as wallpaper over an open sea. The far layer's
+clouds are lined up just above the horizon, the near layer's hang higher.
+
+The strips are masked with the map's sky mask
+(`assets/clean/sky-mask-<map>.png`), an alpha image of where the painting
+is sky, so clouds pass **behind** the tree tops, the church tower and the
+sea's horizon on every screen shape. The mask is generated from the
+painting; re-run this whenever a backdrop changes:
 
 ```bash
-python scripts/make_sky_mask.py
+python scripts/make_sky_mask.py --image assets/raw/backdrop-naarden.png --out assets/clean/sky-mask-naarden.png
+python scripts/make_sky_mask.py --image assets/raw/backdrop-sea.png --out assets/clean/sky-mask-sea.png
 ```
 
-(needs `ffmpeg` on the PATH, plus Pillow / numpy / scipy). If the mask is
-missing the clouds simply render unmasked.
+(needs Pillow / numpy / scipy; reading a video instead needs `ffmpeg` on
+the PATH). If the mask is missing the clouds simply render unmasked.
 
 The notes below describe the original single-strip setup and are kept for
-the asset requirements; the tunables that actually exist today are the
-`CLOUD_*` constants at the top of `FishingScene.js`.
+the asset requirements; the tunables that actually exist today are each
+map's `clouds` list in `src/data/maps.js`.
 
 Drop a transparent-background cloud strip at `assets/raw/clouds.png`:
 

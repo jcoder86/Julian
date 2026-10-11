@@ -8,3 +8,5 @@ Thumbs.db
 *.log
 __pycache__/
 *.pyc
+# API keys for the art / video / voice scripts -- never commit these
+.env*

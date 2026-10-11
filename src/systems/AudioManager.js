@@ -18,7 +18,9 @@ export const SFX = Object.freeze({
 
 // Music keys.
 export const MUSIC = Object.freeze({
-  AMBIENT: 'ambient',      // relaxed background loop on FishingScene
+  AMBIENT: 'ambient',      // relaxed background loop on FishingScene (the lake)
+  SEA:     'sea',          // sea ambience (waves, gulls). Optional file:
+                           // without audio/music/sea.mp3 the sea uses AMBIENT.
   START:   'start',        // title-screen theme
 });
 

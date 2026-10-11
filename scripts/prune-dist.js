@@ -13,9 +13,10 @@ import { join, resolve } from 'path';
 const DIST = resolve('dist');
 
 // Files inside dist/raw that are actually loaded by Phaser at runtime.
+// (The map paintings are not here: the game loads their JPEG copies from
+// clean/, made by scripts/make_paintings.py. A map's optional backdrop
+// video does belong in this list -- see backdropVideo in src/data/maps.js.)
 const RAW_KEEP = new Set([
-  'backdrop.mp4',
-  'backdrop.png',
   'catch.png',
   'fishon.png',
 ]);

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 // Phaser is bundled via vite; ensure side-effect import for BlendModes etc.
-import { FISH_SPECIES, FISH_SIZES, fishTextureKey, speciesNlName } from '../data/fish.js';
+import { FISH_SIZES, fishTextureKey, speciesForMap } from '../data/fish.js';
+import { MAPS, getMap } from '../data/maps.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
@@ -15,6 +16,10 @@ import { TEX } from './BootScene.js';
  *
  * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
+ *
+ * Each map has its own page of 12. The scene opens on the page of the map
+ * it was launched from ({ mapId }); the little painting in the top-right
+ * corner flips to the other map's page.
  */
 
 const BG_TOP_COLOR    = 0x0d1f33;
@@ -35,6 +40,10 @@ const TITLE_BAR_H = 92;
 const BACK_DISPLAY = 75;
 const BACK_MARGIN  = 18;
 
+// "Other map" button (top-right): a thumbnail of that map's painting.
+const SWITCH_W = 112;
+const SWITCH_H = 84;
+
 // The background is drawn far larger than the design frame: on screens
 // that aren't 16:9 the camera shows more than the frame, and it should
 // all be "trophy hall", never a gap.
@@ -43,6 +52,10 @@ const BG_OVERSIZE = 6000;
 export class FishingCollectionScene extends Phaser.Scene {
   constructor() {
     super('FishingCollectionScene');
+  }
+
+  init(data) {
+    this.map = getMap((data && data.mapId) || SaveSystem.getCurrentMap());
   }
 
   create() {
@@ -100,6 +113,7 @@ export class FishingCollectionScene extends Phaser.Scene {
     backGroup.add(back);
     this._backGroup = backGroup;
 
+    this._buildMapSwitch();
     this._buildCards();
 
     // Camera: zoom out just enough that the whole design frame (title +
@@ -120,10 +134,40 @@ export class FishingCollectionScene extends Phaser.Scene {
     // (inside the safe area -- phones have a notch there in landscape).
     // If the safe area starts below the title row, the button follows it.
     const half = BACK_DISPLAY / 2;
-    this._backGroup.setPosition(
-      layout.safe.left + BACK_MARGIN + half,
-      Math.max(BACK_MARGIN + half, layout.safe.top + BACK_MARGIN + half),
-    );
+    const rowY = Math.max(BACK_MARGIN + half, layout.safe.top + BACK_MARGIN + half);
+    this._backGroup.setPosition(layout.safe.left + BACK_MARGIN + half, rowY);
+    // The map switch mirrors it on the right edge.
+    if (this._switchGroup) {
+      this._switchGroup.setPosition(layout.safe.right - BACK_MARGIN - SWITCH_W / 2, rowY);
+    }
+  }
+
+  /**
+   * A small framed painting of the NEXT map; tap it to see that map's
+   * catches. With a single map there is nothing to switch to.
+   */
+  _buildMapSwitch() {
+    this._switchGroup = null;
+    if (MAPS.length < 2) return;
+    const next = MAPS[(MAPS.findIndex((m) => m.id === this.map.id) + 1) % MAPS.length];
+
+    const group = this.add.container(0, 0);
+    group.setDepth(10);
+    group.add(this.add.rectangle(0, 0, SWITCH_W + 10, SWITCH_H + 10, 0xffffff));
+    let picture;
+    if (this.textures.exists(next.backdropKey)) {
+      picture = this.add.image(0, 0, next.backdropKey);
+      picture.setDisplaySize(SWITCH_W, SWITCH_H);
+    } else {
+      picture = this.add.rectangle(0, 0, SWITCH_W, SWITCH_H, 0x205070);
+    }
+    picture.setInteractive({ useHandCursor: true });
+    picture.on('pointerdown', () => {
+      // Next frame: restarting from inside the pointerdown pass can be lost.
+      this.time.delayedCall(0, () => this.scene.restart({ mapId: next.id }));
+    });
+    group.add(picture);
+    this._switchGroup = group;
   }
 
   _close() {
@@ -157,7 +201,7 @@ export class FishingCollectionScene extends Phaser.Scene {
     const startX = (GAME_WIDTH  - totalGridW) / 2 + CARD_W / 2;
     const startY = TITLE_BAR_H + (GAME_HEIGHT - TITLE_BAR_H - totalGridH) / 2 + CARD_H / 2;
 
-    FISH_SPECIES.forEach((species, idx) => {
+    speciesForMap(this.map.id).forEach((species, idx) => {
       const col = idx % COLS;
       const row = Math.floor(idx / COLS);
       const cx = startX + col * (CARD_W + CARD_GAP);

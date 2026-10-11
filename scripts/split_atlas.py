@@ -7,12 +7,16 @@ background, and splits them into a grid of cells, auto-tightening each
 cell to its bounding box. Outputs to assets/clean/.
 
 Usage:
-    python scripts/split_atlas.py
+    python scripts/split_atlas.py                      # cut everything again
+    python scripts/split_atlas.py fish-shark icon-map  # only these (raw file stems)
 
 Atlases handled:
-    fish.png    -- 10 species x 3 sizes (small/medium/large) = 30 cells
-    baits.png   -- 5 baits x 2 styles  (full/simple)         = 10 cells
-    floats.png  -- 5 floats x 2 parts  (full/tip)            = 10 cells
+    fish2.png      -- 11 lake species x 3 sizes (small/medium/large)
+    fish-<id>.*    -- one species per strip: 3 sizes in white boxes
+    baits.png      -- 5 baits x 2 styles  (full/simple)         = 10 cells
+    baits-sea.png  -- 2 sea baits + 3 lures, same layout        = 10 cells
+    floats.png     -- 5 floats x 2 parts  (full/tip)            = 10 cells
+    rod.png, icon-*.png, play.png
 
 Each split cell is auto-cropped to its non-transparent bounding box, so
 downstream code can scale freely without dealing with padding.
@@ -292,11 +296,27 @@ def process_fish(atlas_path: Path) -> int:
 #
 # Species added after the main atlas was drawn arrive as their own image:
 # ONE species, three sizes side by side (small, medium, large), each inside
-# a white box on the green chromakey. Add a (file, species id) pair here
-# and the three sprites come out as clean/fish_<species>_<size>.png.
+# a white box on the green chromakey. Add a (file stem, species id) pair
+# here and the three sprites come out as clean/fish_<species>_<size>.png.
+# The source may be raw/<stem>.webp or raw/<stem>.png; a species whose
+# image isn't there yet is simply skipped.
 FISH_STRIPS = [
-    ("fish-catfish.webp", "catfish"),   # meerval
+    ("fish-catfish", "catfish"),     # meerval
+    # The sea (see docs/art-brief.md):
+    ("fish-herring", "herring"),     # haring
+    ("fish-whiting", "whiting"),     # wijting
+    ("fish-mackerel", "mackerel"),   # makreel
+    ("fish-flounder", "flounder"),   # bot
+    ("fish-plaice", "plaice"),       # schol
+    ("fish-garfish", "garfish"),     # geep
+    ("fish-seabass", "seabass"),     # zeebaars
+    ("fish-cod", "cod"),             # kabeljauw
+    ("fish-ray", "ray"),             # rog
+    ("fish-conger", "conger"),       # zeepaling
+    ("fish-tuna", "tuna"),           # tonijn
+    ("fish-shark", "shark"),         # haai
 ]
+STRIP_EXTENSIONS = (".webp", ".png")
 
 # Pixels this bright on all channels count as "box line white"...
 BOX_LINE_MIN = 200
@@ -310,6 +330,11 @@ BOX_INSET = 3
 # screen by the time they reach a pixel; the default key erases them,
 # this one keeps them as thin, semi-transparent strokes.
 STRIP_CHROMA_HIGH = 190
+# How much greener than red/blue a pixel well inside a sprite may be and
+# still count as the fish's own colour (a herring's back), and from where
+# on it can only be green screen showing through a translucent fin.
+CORE_FISH_EXCESS = 30
+CORE_SCREEN_EXCESS = 70
 
 
 def _line_runs(is_line: np.ndarray) -> list[tuple[int, int]]:
@@ -345,6 +370,32 @@ def _keep_main_sprite(img: Image.Image, reach: int = 8) -> Image.Image:
     return Image.fromarray(arr, mode="RGBA")
 
 
+def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3) -> Image.Image:
+    """
+    Make the inside of a keyed sprite fully opaque again, in its true colours.
+
+    The soft key reads any greenish pixel as "partly green screen", so a
+    herring's blue-green back comes out slightly see-through and greyed.
+    Everything more than `margin` px inside the sprite's outline is fish,
+    not screen: there a mildly green pixel goes back to alpha 255 and its
+    original colour. A STRONGLY green pixel in there is the screen showing
+    through a translucent fin, and keeps the soft key (the two cases fade
+    into each other, so no seam shows). The outline itself -- and thin
+    details such as whiskers, which have no inside -- keep the soft key too.
+    """
+    from scipy import ndimage
+    keyed = np.asarray(cell.convert("RGBA")).astype(np.float32)
+    true = np.asarray(source.convert("RGB")).astype(np.float32)
+    excess = true[..., 1] - np.maximum(true[..., 0], true[..., 2])
+    core = ndimage.binary_erosion(keyed[..., 3] > 100, iterations=margin)
+    # 1 = certainly fish, 0 = certainly screen seen through a fin.
+    fish = np.clip((CORE_SCREEN_EXCESS - excess) / (CORE_SCREEN_EXCESS - CORE_FISH_EXCESS), 0.0, 1.0)
+    fish = np.where(core, fish, 0.0)[..., None]
+    solid = np.concatenate([true, np.full_like(true[..., :1], 255.0)], axis=-1)
+    out = keyed + (solid - keyed) * fish
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), mode="RGBA")
+
+
 def process_fish_strip(atlas_path: Path, species: str) -> int:
     """
     Cut a three-box species strip into small / medium / large sprites.
@@ -371,9 +422,9 @@ def process_fish_strip(atlas_path: Path, species: str) -> int:
     for i, size in enumerate(FISH_SIZES):
         x0 = v_lines[i][1] + 1 + BOX_INSET
         x1 = v_lines[i + 1][0] - BOX_INSET
-        cell = chromakey_remove(img.crop((x0, y0, x1, y1)),
-                                chroma_high=STRIP_CHROMA_HIGH)
-        cell = auto_crop(_keep_main_sprite(cell))
+        box = img.crop((x0, y0, x1, y1))
+        cell = chromakey_remove(box, chroma_high=STRIP_CHROMA_HIGH)
+        cell = auto_crop(_keep_main_sprite(_solidify_core(cell, box)))
         out = CLEAN_DIR / f"fish_{species}_{size}.png"
         cell.save(out, "PNG")
         print(f"[info] {atlas_path.name} -> {out.name} ({cell.width}x{cell.height})")
@@ -383,7 +434,28 @@ def process_fish_strip(atlas_path: Path, species: str) -> int:
 
 # Bait atlas: 5 columns (bait types) x 2 rows (top=full-on-hook, bottom=simple).
 BAIT_NAMES = ["brood", "mais", "maden", "wormen", "vis"]
+# The sea's sheet (raw/baits-sea.png) has the same layout: two baits, then
+# the three lures.
+SEA_BAIT_NAMES = ["zeepier", "aasvisje", "veren", "blinker", "pilker"]
 BAIT_ROW_LABELS = ["full", "simple"]  # row 0 = full, row 1 = simple
+SEA_BAIT_MERGE_PX = 14
+
+
+def process_baits_sea(atlas_path: Path) -> int:
+    img = Image.open(atlas_path)
+    # Soft key, like the fish strips: hooks, trebles and the feather rig's
+    # line are as thin as a catfish whisker.
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    return _process_grid_via_blobs(
+        cleaned,
+        rows=len(BAIT_ROW_LABELS),
+        cols=len(SEA_BAIT_NAMES),
+        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{SEA_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
+        atlas_name="baits-sea.png",
+        # The feather rig is a string of loose parts (swivel, three
+        # feathers, lead) on a hair-thin line: keep them together.
+        morph=SEA_BAIT_MERGE_PX,
+    )
 
 
 def process_baits(atlas_path: Path) -> int:
@@ -416,14 +488,15 @@ def process_floats(atlas_path: Path) -> int:
 
 
 def _process_grid_via_blobs(cleaned: Image.Image, rows: int, cols: int,
-                            out_pattern, atlas_name: str) -> int:
+                            out_pattern, atlas_name: str, morph: int = 0) -> int:
     """
     Shared blob-detection grid processing for baits/floats. Finds rows*cols
     blobs, clusters by Y then X, masks neighbour pixels out of each crop,
-    and saves to the given output naming pattern.
+    and saves to the given output naming pattern. `morph` > 0 treats parts
+    that lie within that many px of each other as one item.
     """
     expected = rows * cols
-    blobs, labels = _find_blobs(cleaned, alpha_threshold=32, min_area=300, morph=0)
+    blobs, labels = _find_blobs(cleaned, alpha_threshold=32, min_area=300, morph=morph)
     if len(blobs) < expected:
         print(f"[warn] {atlas_name}: only {len(blobs)} blobs (expected {expected}). "
               f"Falling back to uniform grid.")
@@ -449,18 +522,20 @@ def _process_grid_via_blobs(cleaned: Image.Image, rows: int, cols: int,
         for col_idx, blob_idx in enumerate(members[:cols]):
             blob = blobs[blob_idx]
             cell = _crop_blob(cleaned, labels, blob)
+            if morph > 0:
+                cell = auto_crop(cell)   # the merged outline is `morph` px too wide
             cell.save(out_pattern(row_idx, col_idx), "PNG")
             saved += 1
     return saved
 
 
 # Standalone icons (no splitting, just chromakey). Source: raw/icon-*.png.
-ICONS = ["icon-bait", "icon-fish", "icon-float"]
+ICONS = ["icon-bait", "icon-fish", "icon-float", "icon-map"]
 
 
-def process_icons() -> int:
+def process_icons(names=None) -> int:
     saved = 0
-    for name in ICONS:
+    for name in (ICONS if names is None else names):
         src = RAW_DIR / f"{name}.png"
         if not src.exists():
             print(f"[skip] {name}.png not found")
@@ -571,12 +646,27 @@ def main():
     atlases = [
         ("fish2.png",  process_fish),     # 11 species, gridlined source
         ("baits.png",  process_baits),
+        ("baits-sea.png", process_baits_sea),   # sea baits + lures
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]
 
+    # Names on the command line (raw file stems) limit the run to those
+    # sources, so one new image can be cut without touching the rest.
+    only = set(sys.argv[1:])
+    known = ({Path(fname).stem for fname, _ in atlases}
+             | {stem for stem, _ in FISH_STRIPS} | set(ICONS) | {"play"})
+    if only - known:
+        sys.exit(f"unknown name(s): {', '.join(sorted(only - known))}\n"
+                 f"known: {', '.join(sorted(known))}")
+
+    def wanted(stem):
+        return not only or stem in only
+
     total = 0
     for fname, handler in atlases:
+        if not wanted(Path(fname).stem):
+            continue
         path = RAW_DIR / fname
         if not path.exists():
             print(f"[skip] {fname} not found in raw/")
@@ -585,22 +675,28 @@ def main():
         print(f"[ok]   {fname} -> {count} cells")
         total += count
 
-    for fname, species in FISH_STRIPS:
-        path = RAW_DIR / fname
-        if not path.exists():
-            print(f"[skip] {fname} not found in raw/")
+    for stem, species in FISH_STRIPS:
+        if not wanted(stem):
+            continue
+        path = next((RAW_DIR / f"{stem}{ext}" for ext in STRIP_EXTENSIONS
+                     if (RAW_DIR / f"{stem}{ext}").exists()), None)
+        if path is None:
+            print(f"[skip] {stem} not found in raw/")
             continue
         count = process_fish_strip(path, species)
-        print(f"[ok]   {fname} -> {count} cells")
+        print(f"[ok]   {path.name} -> {count} cells")
         total += count
 
-    icons = process_icons()
-    print(f"[ok]   3 icon files -> {icons} cleaned")
-    total += icons
+    icon_names = [name for name in ICONS if wanted(name)]
+    if icon_names:
+        icons = process_icons(icon_names)
+        print(f"[ok]   {len(icon_names)} icon files -> {icons} cleaned")
+        total += icons
 
-    play = process_play_button()
-    print(f"[ok]   play.png -> {play} cleaned")
-    total += play
+    if wanted("play"):
+        play = process_play_button()
+        print(f"[ok]   play.png -> {play} cleaned")
+        total += play
 
     print(f"\nDone. Total assets produced: {total}")
 

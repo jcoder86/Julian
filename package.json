@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/prune-dist.js",
+    "test": "node scripts/test-save-compat.js",
+    "build": "node scripts/test-save-compat.js && vite build && node scripts/prune-dist.js",
     "preview": "vite preview"
   },
   "dependencies": {

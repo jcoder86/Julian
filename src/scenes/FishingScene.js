@@ -6,8 +6,9 @@ import {
 import { bindLayout } from '../systems/Layout.js';
 import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { weightedPick, legacyShape, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
-import { DEFAULT_BAIT_ID, baitSimpleTextureKey } from '../data/baits.js';
+import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
+import { BAITS_BY_ID, baitSimpleTextureKey, isLure } from '../data/baits.js';
+import { getMap } from '../data/maps.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
 import { TEX } from './BootScene.js';
 import {
@@ -52,102 +53,30 @@ const DIRK_BREATH_SCALE_GROWTH = 0.012;
 const DIRK_BREATH_Y_LIFT_PX    = 1.2;
 
 /**
- * Where the player can click to cast. The waterline is the actual painted
- * boundary between trees/shore and water -- auto-detected from
- * backdrop.png by scripts/detect_waterline.py and baked in as 64 sample
- * points. waterTopAt(x) does linear interpolation between samples.
- *
- * Re-run the script when the backdrop changes, then paste the new
- * output into WATERLINE_RAW. Press 'W' in-game to see the curve as a
- * debug overlay.
- */
-// Auto-detected from assets/raw/backdrop.png. The detector resized the 4:3
-// painting to 1280x720, so x runs across the painting's full width but y
-// is in a squashed 720-high space -- NOT design coordinates. Converted
-// below.
-const WATERLINE_RAW = [
-  [   0, 346], [  20, 347], [  40, 438], [  60, 450], [  81, 455],
-  [ 101, 457], [ 121, 454], [ 142, 442], [ 162, 438], [ 182, 415],
-  [ 203, 379], [ 223, 378], [ 243, 408], [ 264, 381], [ 284, 374],
-  [ 304, 374], [ 325, 361], [ 345, 344], [ 365, 308], [ 386, 302],
-  [ 406, 335], [ 426, 294], [ 446, 294], [ 467, 319], [ 487, 296],
-  [ 507, 292], [ 528, 301], [ 548, 292], [ 568, 290], [ 589, 315],
-  [ 609, 298], [ 629, 290], [ 650, 284], [ 670, 285], [ 690, 295],
-  [ 711, 289], [ 731, 286], [ 751, 296], [ 772, 293], [ 792, 285],
-  [ 812, 285], [ 833, 293], [ 853, 284], [ 873, 283], [ 893, 282],
-  [ 914, 292], [ 934, 290], [ 954, 290], [ 975, 276], [ 995, 287],
-  [1015, 292], [1036, 292], [1056, 302], [1076, 295], [1097, 327],
-  [1117, 326], [1137, 288], [1158, 282], [1178, 286], [1198, 276],
-  [1219, 276], [1239, 284], [1259, 267], [1280, 264],
-];
-
-// The same curve in design coordinates: the painting is WORLD_HEIGHT tall
-// and starts at WORLD_TOP. With this the cast area follows the painted
-// water's edge exactly, on every screen shape.
-export const WATERLINE_SAMPLES = WATERLINE_RAW.map(
-  ([x, y]) => [x, WORLD_TOP + y * (WORLD_HEIGHT / 720)]
-);
-
-export function waterTopAt(x) {
-  if (x <= WATERLINE_SAMPLES[0][0]) return WATERLINE_SAMPLES[0][1];
-  const last = WATERLINE_SAMPLES.length - 1;
-  if (x >= WATERLINE_SAMPLES[last][0]) return WATERLINE_SAMPLES[last][1];
-  // Binary search for the bracketing pair.
-  let lo = 0, hi = last;
-  while (hi - lo > 1) {
-    const mid = (lo + hi) >> 1;
-    if (WATERLINE_SAMPLES[mid][0] <= x) lo = mid; else hi = mid;
-  }
-  const [x0, y0] = WATERLINE_SAMPLES[lo];
-  const [x1, y1] = WATERLINE_SAMPLES[hi];
-  const t = (x - x0) / (x1 - x0);
-  return y0 + (y1 - y0) * t;
-}
-
-// Bounding rectangle of the water (kept for the click-area). Real hit-test
-// lives in _isInsideWater() using the per-x sampled curve.
-const _minY = Math.min(...WATERLINE_SAMPLES.map(p => p[1]));
-export const WATER_BOUNDS = Object.freeze({
-  x: WORLD_LEFT, y: _minY, width: WORLD_WIDTH, height: WORLD_BOTTOM - _minY,
-});
-
-/**
  * Cloud parallax stack -- DOM <div>s behind the (transparent) canvas, in
  * front of the backdrop video. Kept in the DOM because the browser scales
  * and scrolls the big cloud PNGs far more smoothly than a canvas sprite
  * would at ~1px/sec.
  *
- * They are positioned from the scene layout, in the SAME coordinates as
- * everything else: the band starts at the top of the visible sky and ends
- * at a fixed line in the painting, just above the mountains.
+ * Which layers, how tall, how fast and how opaque is up to the map
+ * (map.clouds in src/data/maps.js). They are positioned from the scene
+ * layout, in the SAME coordinates as everything else: a band starts at the
+ * top of the visible sky and ends at a fixed line in the painting.
  *
- * Heights are design px. On a 4:3 screen the whole sky is visible and a
- * layer is exactly this tall (192 = 20% of the world height). On wider
- * screens the top of the painting is cropped away, so the band shrinks
- * with the remaining sky -- but never below CLOUD_MIN_SCALE, where it is
- * allowed to drift over the mountain tops instead.
+ * On a 4:3 screen the whole sky is visible and a layer is exactly as tall
+ * as its map says. On wider screens the top of the painting is cropped
+ * away, so the band shrinks with the remaining sky -- but never below
+ * CLOUD_MIN_SCALE, where it is allowed to drift over the tree tops instead.
  */
-export const CLOUD_BACK_HEIGHT    = 192;   // distant layer; taller starts overlapping the tree-line
-export const CLOUD_BACK_SPEED     = 1.25;  // design px/sec horizontal drift (slow = far away)
-export const CLOUD_BACK_ALPHA     = 0.55;  // atmospheric fading, slightly translucent
-
-export const CLOUD_FRONT_HEIGHT   = 172.8; // near layer (larger, more present)
-export const CLOUD_FRONT_SPEED    = 3.75;  // ~3x back = visible parallax depth
-export const CLOUD_FRONT_ALPHA    = 0.85;
-
 export const CLOUD_MIN_SCALE      = 0.5;
 
-/**
- * Sky mask: an alpha image of where the backdrop painting is sky
- * (generated from backdrop.mp4 by scripts/make_sky_mask.py). Applied to
- * the cloud strips as a CSS mask, so clouds pass BEHIND the tree tops and
- * mountain ridges instead of in front of them -- which matters most on
- * wide screens, where little sky is left and the strip overlaps the
- * terrain. The image covers the top SKY_MASK_FRACTION of the painting,
- * full width. If it fails to load the clouds simply stay unmasked.
- */
-const SKY_MASK_SRC      = 'clean/sky-mask.png';
-const SKY_MASK_FRACTION = 320 / 720;
+// Sky mask: each map names an alpha image of where its painting is sky
+// (map.skyMask, generated by scripts/make_sky_mask.py). Applied to the
+// cloud strips as a CSS mask, so clouds pass BEHIND the tree tops and
+// mountain ridges instead of in front of them -- which matters most on
+// wide screens, where little sky is left and the strip overlaps the
+// terrain. The image covers the top map.skyMaskFraction of the painting,
+// full width. If it fails to load the clouds simply stay unmasked.
 
 /**
  * Foreground sway -- programmatic wind for the static foreground PNG
@@ -162,19 +91,12 @@ const SKY_MASK_FRACTION = 320 / 720;
 export const FOREGROUND_SWAY_AMPLITUDE = 1.2;       // degrees peak-to-zero
 export const FOREGROUND_SWAY_PERIOD_MS = 3500;      // full back-and-forth cycle
 
-/**
- * Julian sprite position: where to anchor his bottom-left, in design
- * coordinates. Dirk slides relative to this point (see DIRK_OFFSET below).
- *
- * Design coordinates are locked to the painting (design x 0..1280 is the
- * painting's full width, design y -120..840 its full height), so this
- * spot on the dock is the same on every screen shape.
- */
-// After the Phase 7 shrink the sprite's footprint is much smaller, so we
-// nudge the anchor a bit toward the centre and lift it upward so Julian
-// sits higher on the dock rather than at the bottom of the frame.
-export const JULIAN_ANCHOR_X = 260;
-export const JULIAN_ANCHOR_Y = GAME_HEIGHT - 80;
+// Julian's position -- the bottom-left corner of his sprite, in design
+// coordinates -- differs per painting and lives in src/data/maps.js
+// (julianAnchor). Design coordinates are locked to the painting (design x
+// 0..1280 is its full width, design y -120..840 its full height), so that
+// spot on the jetty or pier is the same on every screen shape. Dirk slides
+// relative to it (see DIRK_OFFSET below).
 
 /**
  * Where Dirk sits relative to Julian's bottom-left anchor.
@@ -319,14 +241,18 @@ const LINE_BEZIER_SEGMENTS = 24;
 
 // Bobber depth-scaling. The float is rendered smaller when dropped near
 // the horizon and full-size when dropped at the player's feet. Linear
-// interpolation between the two extremes -- t=0 at BOBBER_DEPTH_FAR_Y,
-// t=1 at BOBBER_DEPTH_NEAR_Y (design y; the far shore sits at ~265).
+// interpolation between the two extremes -- t=0 at the map's depthFarY
+// (its far shore or horizon), t=1 at BOBBER_DEPTH_NEAR_Y (design y).
 // FAR was 0.45 -- shrunk to 0.22 so a cast at the painted horizon really
 // reads as "miles away".
 const BOBBER_SCALE_FAR  = 0.22;   // furthest dropped (top of water)
 const BOBBER_SCALE_NEAR = 1.0;    // closest dropped (bottom of water)
-const BOBBER_DEPTH_FAR_Y  = 264;
 const BOBBER_DEPTH_NEAR_Y = GAME_HEIGHT;
+
+// Where a reeled-in line ends up: at the rod tip's x, this far from the
+// tip in y. Expressed relative to the tip (not the waterline) so it works
+// on any painting, whatever the height of its horizon.
+const REEL_HOME_DY = -35;
 
 // Which slice of the painting must survive when a wide screen crops it
 // top and bottom: Julian and Dirk sit on the dock with their feet at
@@ -340,7 +266,7 @@ const VIEW_ALIGN_X = 0.3;
 const HUD_ICON_SIZE   = 110;
 const HUD_ICON_MARGIN = 14;
 const HUD_ICON_STEP   = HUD_ICON_SIZE + HUD_ICON_MARGIN;
-const HUD_ICON_COUNT  = 3;
+const HUD_ICON_COUNT  = 4;
 
 // Reel widget (bottom-right): distance of its centre from the screen
 // corner, and the radius its pulsing glow can reach.
@@ -357,7 +283,48 @@ const STATE = Object.freeze({
   DIVE: 'dive',
   REELING: 'reeling',    // Phase 7: strong fish, reel widget is active
   CATCHING: 'catching',
+  // Lure fishing (no float). The player reels the lure back in:
+  RETRIEVE: 'retrieve',     // lure in the water, reel widget brings it home
+  LURE_BITE: 'lure-bite',   // a fish grabbed it: tap NOW to set the hook
 });
+
+// ---------------------------------------------------------------------------
+// Lure fishing
+// ---------------------------------------------------------------------------
+// Cast -> reel the lure back -> somewhere on the way a fish may grab it ->
+// tap the screen to strike -> reel the fish in (the normal REELING phase).
+
+// Reel turns to bring an untouched lure all the way home: one turn per
+// this many design px of cast distance, within [min, max].
+const LURE_PX_PER_TURN  = 170;
+const LURE_TURNS_MIN    = 2;
+const LURE_TURNS_MAX    = 6;
+// Chance that a fish goes for the lure at all during one retrieve. High on
+// purpose: an empty retrieve is a let-down for a four-year-old.
+const LURE_BITE_CHANCE  = 0.8;
+// The bite comes somewhere in this stretch of the retrieve (0 = just
+// landed, 1 = back at the jetty).
+const LURE_BITE_FROM    = 0.2;
+const LURE_BITE_TO      = 0.8;
+// After a missed strike the fish may have one more go, if there is this
+// much of the retrieve left.
+const LURE_SECOND_CHANCE     = 0.5;
+const LURE_SECOND_MIN_LEFT   = 0.3;
+// How long the fish hangs on before letting go (ms). A little longer than
+// the float's dive window: the player is busy cranking when it happens.
+const LURE_STRIKE_MIN_MS = 1400;
+const LURE_STRIKE_MAX_MS = 2200;
+// Lure sprite on the line: display length (design px at full scale) and
+// how see-through it is while under water.
+const LURE_DISPLAY_LENGTH = 82;
+const LURE_UNDERWATER_ALPHA = 0.92;
+// Ripples spreading from the lure while it swims: a small silver lure is
+// easily lost from sight on a choppy sea. Width in design px at full scale.
+const LURE_WAKE_WIDTH = 130;
+const LURE_WAKE_PERIOD_MS = 1100;
+// A lure far out is drawn less tiny than a float out there (see
+// BOBBER_SCALE_FAR): the player has to follow it all the way home.
+const LURE_SCALE_FAR = 0.45;
 
 // All fish use the reel widget now. Common little ones need just one
 // turn (a flick of the wrist); rare giants take ~9 turns. Kept as a
@@ -401,14 +368,44 @@ export class FishingScene extends Phaser.Scene {
     super('FishingScene');
   }
 
+  /**
+   * Which map to fish on: scene.start('FishingScene', { mapId }). Without
+   * one, the map the player was on last.
+   */
+  init(data) {
+    this.map = getMap((data && data.mapId) || SaveSystem.getCurrentMap());
+    SaveSystem.setCurrentMap(this.map.id);
+  }
+
   create() {
     this.audio = new AudioManager(this);
     this.state = STATE.READY;
 
-    // Start the ambient background loop. Idempotent across scene wakes --
-    // playMusic stops any existing loop before starting the new one, so
-    // re-entering the fishing scene from a child scene does not stack.
-    this.audio.playMusic(MUSIC.AMBIENT);
+    // The scene object is reused every time a map is (re)entered, so
+    // leftovers from the previous visit must not leak into this one.
+    this.bobber = null;
+    this.reelOverlay = null;
+    this.reelEnd = null;
+    this.lure = null;
+    this.hudIcons = null;
+    this.cloudDomLayers = [];
+    this._skyMaskReady = false;
+    this._skyMaskProbe = null;
+    this._rodTween = null;
+    this._sceneListeners = [];
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const [event, fn] of this._sceneListeners) this.events.off(event, fn);
+      this._sceneListeners = [];
+      this.input.off('pointerdown', this._onPointerDown, this);
+    });
+
+    // Start the map's ambient loop (the lake's when the map has none of
+    // its own yet). Idempotent across scene wakes -- playMusic stops any
+    // existing loop before starting the new one, so re-entering the
+    // fishing scene from a child scene does not stack.
+    this.sound.stopByKey(MUSIC.AMBIENT);
+    this.sound.stopByKey(MUSIC.SEA);
+    this.audio.playMusic(this.cache.audio.exists(this.map.music) ? this.map.music : MUSIC.AMBIENT);
 
     // Timers and tweens we may need to cancel mid-flight.
     this.biteTimer = null;
@@ -452,11 +449,44 @@ export class FishingScene extends Phaser.Scene {
       (layout) => this._applyLayout(layout),
     );
 
+    // Two fingers at once: one hand cranking the reel, the other free to
+    // tap -- which is how a bite on a lure gets struck. Phaser starts out
+    // with a single touch pointer (plus the mouse), so add a second.
+    // (pointersTotal counts touch pointers only.)
+    if (this.input.manager.pointersTotal < 2) this.input.addPointer(1);
+
     // Single global input handler -- state machine decides what to do.
     this.input.on('pointerdown', this._onPointerDown, this);
 
     // Coming back from the collection scene resets to ready-to-cast.
-    this.events.on(Phaser.Scenes.Events.WAKE, () => this._enterReady());
+    this._onScene(Phaser.Scenes.Events.WAKE, () => this._enterReady());
+  }
+
+  /**
+   * scene.events.on(), remembered so the listener is removed again when
+   * the scene shuts down. Scene event listeners survive a restart, and this
+   * scene restarts on every map change -- without this they would pile up.
+   */
+  _onScene(event, fn) {
+    this.events.on(event, fn);
+    this._sceneListeners.push([event, fn]);
+  }
+
+  /** The bait or lure on the line: the saved choice for this map, if valid. */
+  _currentBaitId() {
+    const saved = SaveSystem.getSelectedBait(this.map.id);
+    const bait = BAITS_BY_ID[saved];
+    return bait && bait.map === this.map.id ? saved : this.map.defaultBait;
+  }
+
+  /** True when the player is fishing with a lure (no float). */
+  _isLureMode() {
+    return isLure(this._currentBaitId());
+  }
+
+  /** Where the end of the line is when fully reeled in. */
+  _reelHome() {
+    return { x: this.rodTip.x, y: this.rodTip.y + REEL_HOME_DY };
   }
 
   /**
@@ -492,19 +522,30 @@ export class FishingScene extends Phaser.Scene {
     // rotating rod-long sprite (cast / strike animations).
     if (this.rodLongSprite) this._recomputeRodTip();
 
-    // REELING: drag the (hidden) bobber from where the fish was hooked
-    // toward the water directly UNDER the rod tip. The line then hangs
-    // straight down from the rod into the water (no horizontal sag,
-    // since dx -> 0) -- exactly "the fish is reeled in, dangling
-    // beneath the rod" at full progress. endY is well below the water
-    // surface so the underwater dip reads clearly on a busy backdrop.
-    if (this.state === STATE.REELING && this.reelOverlay && this.reelEnd && this.bobber) {
-      const p = Phaser.Math.Clamp(
-        this.reelOverlay.accumulatedRadians / this.reelOverlay.requiredRadians, 0, 1);
-      const endX = this.rodTip.x;
-      const endY = waterTopAt(endX) + 40;
-      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, endX, p);
-      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, endY, p);
+    // REELING (a hooked fish) and RETRIEVE / LURE_BITE (a lure): the end
+    // of the line travels from where it started toward the reel-home point
+    // at the rod tip, as far as the reel has been cranked. While a fish is
+    // hooked the bobber sprite is hidden and only the line is drawn; a
+    // lure stays visible on the end of it.
+    const reeling = this.state === STATE.REELING
+      || this.state === STATE.RETRIEVE
+      || this.state === STATE.LURE_BITE;
+    if (reeling && this.reelOverlay && this.reelEnd && this.bobber) {
+      const p = this.reelOverlay.progress;
+      const home = this._reelHome();
+      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, home.x, p);
+      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, home.y, p);
+
+      if (this.state !== STATE.REELING) {
+        // The lure shrinks or grows with distance like the float does, and
+        // points its nose (the line eye) at the rod it is being pulled to.
+        this.bobber.setScale(this._bobberDepthScale(this.bobber.y));
+        this._pointLureAtRod();
+        if (this.state === STATE.RETRIEVE && this.lure && this.lure.biteAt != null
+            && p >= this.lure.biteAt) {
+          this._enterLureBite();
+        }
+      }
     }
 
     this.lineGfx.clear();
@@ -561,11 +602,10 @@ export class FishingScene extends Phaser.Scene {
    * nearer extreme.
    */
   _bobberDepthScale(y) {
-    const t = Phaser.Math.Clamp(
-      (y - BOBBER_DEPTH_FAR_Y) / (BOBBER_DEPTH_NEAR_Y - BOBBER_DEPTH_FAR_Y),
-      0, 1
-    );
-    return Phaser.Math.Linear(BOBBER_SCALE_FAR, BOBBER_SCALE_NEAR, t);
+    const farY = this.map.depthFarY;
+    const t = Phaser.Math.Clamp((y - farY) / (BOBBER_DEPTH_NEAR_Y - farY), 0, 1);
+    const far = this._isLureMode() ? LURE_SCALE_FAR : BOBBER_SCALE_FAR;
+    return Phaser.Math.Linear(far, BOBBER_SCALE_NEAR, t);
   }
 
   // ---------------------------------------------------------------------------
@@ -576,12 +616,15 @@ export class FishingScene extends Phaser.Scene {
     // Backdrop strategy:
     //   1. Always render the static PNG immediately as a "first paint"
     //      so the user sees the scene right away.
-    //   2. In parallel, try to attach an HTML5 <video> element behind the
-    //      Phaser canvas. Native browser scaling via object-fit: cover --
-    //      no fighting with Phaser's Video GameObject sizing quirks.
+    //   2. In parallel, if the map has a video, try to attach an HTML5
+    //      <video> element behind the Phaser canvas. Native browser scaling
+    //      via object-fit: cover -- no fighting with Phaser's Video
+    //      GameObject sizing quirks.
     //   3. On video-ready, hide the PNG and let video show through the
-    //      now-transparent canvas. On video error, keep the PNG.
-    if (this.textures.exists(TEX.BACKDROP)) {
+    //      now-transparent canvas. A map without a video gets the same
+    //      painting as a DOM <img> in the video's place instead -- either
+    //      way the painting ends up BEHIND the cloud layers.
+    if (this.textures.exists(this.map.backdropKey)) {
       this._buildImageBackdrop();
     } else {
       this.backdropImage = this.add.rectangle(
@@ -593,14 +636,16 @@ export class FishingScene extends Phaser.Scene {
 
     this._tryAttachDomVideoBackdrop();
 
-    // Transparent water-hit target. Bound to WATER_BOUNDS so taps on shore
-    // are not interpreted as casts. Sits below the sprite/UI so those still
-    // win pointer events.
+    // Transparent water-hit target over the map's water (from the highest
+    // point of its waterline down to the bottom of the painting). Sits
+    // below the sprite/UI so those still win pointer events. The exact
+    // "is this water?" test is _isInsideWater().
+    const waterTop = this.map.waterMinY;
     this.waterHit = this.add.rectangle(
-      WATER_BOUNDS.x + WATER_BOUNDS.width / 2,
-      WATER_BOUNDS.y + WATER_BOUNDS.height / 2,
-      WATER_BOUNDS.width,
-      WATER_BOUNDS.height,
+      WORLD_LEFT + WORLD_WIDTH / 2,
+      (waterTop + WORLD_BOTTOM) / 2,
+      WORLD_WIDTH,
+      WORLD_BOTTOM - waterTop,
       0x000000,
       0
     );
@@ -612,7 +657,7 @@ export class FishingScene extends Phaser.Scene {
     // The painting IS the world: stretch it over exactly the world rect so
     // it lines up with the video that replaces it once loaded.
     const bg = this.add.image(
-      WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2, TEX.BACKDROP
+      WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2, this.map.backdropKey
     );
     bg.setOrigin(0.5);
     bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
@@ -624,8 +669,23 @@ export class FishingScene extends Phaser.Scene {
     // Don't add a duplicate if scene was woken up.
     if (this.backdropVideoEl) return;
 
+    // Clean up the DOM backdrop (video or still) on scene shutdown.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this._backdropLoading = null;
+      if (this.backdropVideoEl) {
+        if (this.backdropVideoEl.pause) this.backdropVideoEl.pause();
+        this.backdropVideoEl.remove();
+        this.backdropVideoEl = null;
+      }
+    });
+
+    if (!this.map.backdropVideo) {
+      this._attachDomImageBackdrop();
+      return;
+    }
+
     const videoEl = document.createElement('video');
-    videoEl.src = 'raw/backdrop.mp4';
+    videoEl.src = this.map.backdropVideo;
     videoEl.muted = true;
     videoEl.loop = true;
     videoEl.playsInline = true;       // iOS friendly
@@ -633,8 +693,12 @@ export class FishingScene extends Phaser.Scene {
     videoEl.crossOrigin = 'anonymous';
 
     videoEl.addEventListener('loadeddata', () => {
-      // backdrop.mp4 is a 16:9 file holding the 4:3 painting with black
-      // bars baked in left and right. We give the <video> the painting's
+      // The scene may have been left (or switched to another map) while
+      // the video was still loading.
+      if (this._backdropLoading !== videoEl) return;
+      this._backdropLoading = null;
+      // A backdrop video may be a 16:9 file holding the 4:3 painting with
+      // black bars baked in left and right. We give the <video> the painting's
       // own 4:3 box (the world rect, see _layoutBackdropVideo) and let
       // object-fit: cover fill it by height -- which crops exactly those
       // bars away. The painting then sits pixel-for-pixel under the canvas
@@ -665,25 +729,48 @@ export class FishingScene extends Phaser.Scene {
     }, { once: true });
 
     videoEl.addEventListener('error', () => {
-      console.log('[FishingScene] no backdrop.mp4 found, keeping static PNG');
       videoEl.remove();
+      if (this._backdropLoading !== videoEl) return;
+      this._backdropLoading = null;
+      console.log(`[FishingScene] no ${this.map.backdropVideo}, using the still painting`);
+      this._attachDomImageBackdrop();
     }, { once: true });
 
     // Kick off the load (some browsers don't start without it).
+    this._backdropLoading = videoEl;
     videoEl.load();
-
-    // Clean up the DOM video on scene shutdown.
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      if (this.backdropVideoEl) {
-        this.backdropVideoEl.pause();
-        this.backdropVideoEl.remove();
-        this.backdropVideoEl = null;
-      }
-    });
   }
 
   /**
-   * Pin the backdrop <video> to the world rect, in viewport CSS px.
+   * No video for this map: put the still painting in the DOM where the
+   * video would be. Drawn inside the canvas it would cover the cloud
+   * layers, which live behind the canvas.
+   */
+  _attachDomImageBackdrop() {
+    if (this.backdropVideoEl) return;
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = this.map.backdropImage;
+    img.style.position = 'fixed';
+    img.style.objectFit = 'cover';
+    img.style.zIndex = '-2';
+    img.style.pointerEvents = 'none';
+    const show = () => {
+      // Only swap once the image is really there, so the canvas copy never
+      // gives way to an empty box.
+      if (this.backdropVideoEl !== img) return;
+      if (this.backdropImage) this.backdropImage.setVisible(false);
+    };
+    img.addEventListener('load', show, { once: true });
+    document.body.appendChild(img);
+    this.backdropVideoEl = img;
+    this._layoutBackdropVideo(this.layout);
+    if (img.complete && img.naturalWidth > 0) show();
+  }
+
+  /**
+   * Pin the DOM backdrop (video, or still image) to the world rect, in
+   * viewport CSS px.
    */
   _layoutBackdropVideo(layout) {
     const el = this.backdropVideoEl;
@@ -733,8 +820,8 @@ export class FishingScene extends Phaser.Scene {
 
     // Clean up DOM layers when the scene shuts down or sleeps.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._removeDomClouds());
-    this.events.on(Phaser.Scenes.Events.SLEEP, () => this._removeDomClouds());
-    this.events.on(Phaser.Scenes.Events.WAKE, () => {
+    this._onScene(Phaser.Scenes.Events.SLEEP, () => this._removeDomClouds());
+    this._onScene(Phaser.Scenes.Events.WAKE, () => {
       if (this.cloudDomLayers.length === 0) this._spawnDomClouds();
     });
   }
@@ -747,18 +834,7 @@ export class FishingScene extends Phaser.Scene {
       stale.remove();
     }
 
-    this._addDomCloudLayer({
-      src:    'clean/clouds-back.png',
-      height: CLOUD_BACK_HEIGHT,
-      alpha:  CLOUD_BACK_ALPHA,
-      speed:  CLOUD_BACK_SPEED,
-    });
-    this._addDomCloudLayer({
-      src:    'clean/clouds-front.png',
-      height: CLOUD_FRONT_HEIGHT,
-      alpha:  CLOUD_FRONT_ALPHA,
-      speed:  CLOUD_FRONT_SPEED,
-    });
+    for (const layer of this.map.clouds) this._addDomCloudLayer(layer);
 
     this._applySkyMask();
     this._layoutClouds(this.layout);
@@ -774,8 +850,8 @@ export class FishingScene extends Phaser.Scene {
       this._skyMaskReady = true;
       for (const layer of this.cloudDomLayers || []) {
         const st = layer.el.style;
-        st.webkitMaskImage = `url(${SKY_MASK_SRC})`;
-        st.maskImage = `url(${SKY_MASK_SRC})`;
+        st.webkitMaskImage = `url(${this.map.skyMask})`;
+        st.maskImage = `url(${this.map.skyMask})`;
         st.webkitMaskRepeat = 'no-repeat';
         st.maskRepeat = 'no-repeat';
       }
@@ -786,7 +862,7 @@ export class FishingScene extends Phaser.Scene {
     const probe = new Image();
     probe.onload = apply;
     probe.onerror = () => console.log('[FishingScene] no sky mask, clouds stay unmasked');
-    probe.src = SKY_MASK_SRC;
+    probe.src = this.map.skyMask;
     this._skyMaskProbe = probe;
   }
 
@@ -828,7 +904,7 @@ export class FishingScene extends Phaser.Scene {
     const bandTop = Math.max(WORLD_TOP, layout.view.top);
     // Where the sky mask sits on screen: glued to the painting.
     const mask = layout.cssRect(
-      WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT * SKY_MASK_FRACTION
+      WORLD_LEFT, WORLD_TOP, WORLD_WIDTH, WORLD_HEIGHT * this.map.skyMaskFraction
     );
     for (const layer of this.cloudDomLayers) {
       const skyBottom = WORLD_TOP + layer.height;
@@ -873,6 +949,7 @@ export class FishingScene extends Phaser.Scene {
     // object owns the rod tip (the rod is attached to Julian, never Dirk).
     const julianDisplayHeight = GAME_HEIGHT * SPRITE_SCALE;
     const dirkDisplayHeight = GAME_HEIGHT * DIRK_SCALE;
+    const anchor = this.map.julianAnchor;
 
     const hasIdleFrames =
       this.textures.exists(TEX.JULIAN_IDLE_1) &&
@@ -881,8 +958,8 @@ export class FishingScene extends Phaser.Scene {
     if (hasIdleFrames) {
       // Dirk first (lower depth) so Julian overlaps where they meet.
       this.dirkSprite = this.add.image(
-        JULIAN_ANCHOR_X + DIRK_OFFSET_X,
-        JULIAN_ANCHOR_Y + DIRK_OFFSET_Y,
+        anchor.x + DIRK_OFFSET_X,
+        anchor.y + DIRK_OFFSET_Y,
         TEX.DIRK_IDLE
       );
       this.dirkSprite.setOrigin(0, 1);
@@ -909,13 +986,13 @@ export class FishingScene extends Phaser.Scene {
           });
         }
         this.julianSprite = this.add.sprite(
-          JULIAN_ANCHOR_X, JULIAN_ANCHOR_Y, TEX.JULIAN_IDLE_1
+          anchor.x, anchor.y, TEX.JULIAN_IDLE_1
         );
         this.julianSprite.play('julian-idle');
       } else {
         // Static image -- much calmer for a 4-year-old viewer.
         this.julianSprite = this.add.image(
-          JULIAN_ANCHOR_X, JULIAN_ANCHOR_Y, TEX.JULIAN_IDLE_1
+          anchor.x, anchor.y, TEX.JULIAN_IDLE_1
         );
       }
       this.julianSprite.setOrigin(0, 1);
@@ -941,8 +1018,8 @@ export class FishingScene extends Phaser.Scene {
     ) {
       // Legacy: static separate sprites.
       this.dirkSprite = this.add.image(
-        JULIAN_ANCHOR_X + DIRK_OFFSET_X,
-        JULIAN_ANCHOR_Y + DIRK_OFFSET_Y,
+        anchor.x + DIRK_OFFSET_X,
+        anchor.y + DIRK_OFFSET_Y,
         TEX.DIRK_SITTING
       );
       this.dirkSprite.setOrigin(0, 1);
@@ -950,7 +1027,7 @@ export class FishingScene extends Phaser.Scene {
       this.dirkSprite.setDepth(9);
 
       this.julianSprite = this.add.image(
-        JULIAN_ANCHOR_X, JULIAN_ANCHOR_Y, TEX.JULIAN_FISHING
+        anchor.x, anchor.y, TEX.JULIAN_FISHING
       );
       this.julianSprite.setOrigin(0, 1);
       this._scaleToHeight(this.julianSprite, julianDisplayHeight);
@@ -962,7 +1039,7 @@ export class FishingScene extends Phaser.Scene {
         'Drop julian-idle1/2/3.png + dirk-idle.png to enable idle animation.'
       );
       this.julianSprite = this.add.image(
-        JULIAN_ANCHOR_X, JULIAN_ANCHOR_Y, TEX.JULIAN_DIRK_FISHING
+        anchor.x, anchor.y, TEX.JULIAN_DIRK_FISHING
       );
       this.julianSprite.setOrigin(0, 1);
       this._scaleToHeight(this.julianSprite, julianDisplayHeight);
@@ -970,7 +1047,7 @@ export class FishingScene extends Phaser.Scene {
 
     } else {
       this.julianSprite = this.add.rectangle(
-        JULIAN_ANCHOR_X, JULIAN_ANCHOR_Y,
+        anchor.x, anchor.y,
         julianDisplayHeight, julianDisplayHeight,
         0x888888, 0.4
       );
@@ -1159,11 +1236,13 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildBobber() {
-    // Bobber uses the SELECTED float's "tip" sprite -- only the above-water
-    // portion shows in game (per the design). The container is recreated
-    // on WAKE so float-selection changes are picked up immediately.
+    // "Bobber" = whatever is on the end of the line. With a bait that is
+    // the SELECTED float's "tip" sprite -- only the above-water portion
+    // shows in game (per the design). With a lure it is the lure itself.
+    // The container is recreated on WAKE so a new float / bait / lure
+    // choice is picked up immediately.
     this._spawnBobberSprite();
-    this.events.on(Phaser.Scenes.Events.WAKE, () => this._spawnBobberSprite());
+    this._onScene(Phaser.Scenes.Events.WAKE, () => this._spawnBobberSprite());
   }
 
   _spawnBobberSprite() {
@@ -1171,7 +1250,40 @@ export class FishingScene extends Phaser.Scene {
     const x = this.bobber ? this.bobber.x : this.rodTip.x;
     const y = this.bobber ? this.bobber.y : this.rodTip.y;
     const wasVisible = this.bobber ? this.bobber.visible : false;
+    if (this.lureWake) this.tweens.killTweensOf(this.lureWake);
     if (this.bobber) this.bobber.destroy();
+    this.lureSprite = null;
+    this.lureWake = null;
+
+    const lureKey = this._isLureMode() ? baitSimpleTextureKey(this._currentBaitId()) : null;
+    if (lureKey && this.textures.exists(lureKey)) {
+      // Lure sprites are drawn lying flat with the line eye on the LEFT.
+      // Origin sits on that eye, so the line ends exactly where it is tied
+      // and the lure trails behind it; _pointLureAtRod() turns it.
+      const c = this.add.container(x, y);
+      const wake = this.add.ellipse(0, 0, LURE_WAKE_WIDTH, LURE_WAKE_WIDTH * 0.36);
+      wake.setStrokeStyle(4, 0xffffff, 1);
+      wake.setVisible(false);            // only while the lure swims
+      this.tweens.add({
+        targets: wake,
+        scale: { from: 0.3, to: 1.2 },
+        alpha: { from: 0.9, to: 0 },
+        duration: LURE_WAKE_PERIOD_MS,
+        repeat: -1,
+        ease: 'Sine.easeOut',
+      });
+      const lure = this.add.image(0, 0, lureKey);
+      lure.setScale(LURE_DISPLAY_LENGTH / lure.width);
+      lure.setOrigin(0.04, 0.5);
+      c.add([wake, lure]);
+      c.setDepth(20);
+      this.bobber = c;
+      this.lureSprite = lure;
+      this.lureWake = wake;
+      this.bobber.setVisible(wasVisible);
+      this.bobberHomeY = y;
+      return;
+    }
 
     const floatId = SaveSystem.getSelectedFloat() || DEFAULT_FLOAT_ID;
     const tipKey = floatTipTextureKey(floatId);
@@ -1244,19 +1356,16 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _buildCollectionButton() {
-    // HUD: three stacked icons on the right edge.
-    //   top:    fish   -- shows last-caught fish, tap to open collection
-    //   middle: float  -- shows current float, tap to choose another (Phase 4)
-    //   bottom: bait   -- shows current bait,  tap to choose another (Phase 4)
+    // HUD: four stacked icons on the right edge.
+    //   fish   -- shows last-caught fish, tap to open the collection
+    //   float  -- shows current float, tap to choose another
+    //   bait   -- shows current bait or lure, tap to choose another
+    //   map    -- back to the map-select screen
     this.hudIcons = {};
     this.hudIcons.fish  = this._buildHudIcon({
       key:   TEX.ICON_FISH,
       slot:  0,
-      onTap: () => {
-        this._cancelAllPhaseLogic();
-        this.scene.sleep();
-        this.scene.run('FishingCollectionScene');
-      },
+      onTap: () => this._openModal('FishingCollectionScene'),
     });
     this.hudIcons.float = this._buildHudIcon({
       key:   TEX.ICON_FLOAT,
@@ -1268,13 +1377,26 @@ export class FishingScene extends Phaser.Scene {
       slot:  2,
       onTap: () => this._openModal('BaitSelectionScene'),
     });
+    this.hudIcons.map   = this._buildHudIcon({
+      // Until there is a dedicated icon the bait badge stands in.
+      key:   this.textures.exists(TEX.ICON_MAP) ? TEX.ICON_MAP : TEX.ICON_BAIT,
+      slot:  3,
+      onTap: () => this._leaveToMapSelect(),
+    });
 
     // Initial render of the inner overlays.
     this._refreshHud();
 
     // Refresh when waking from a sub-scene -- selection or collection may
     // have updated the selected bait/float or last caught fish.
-    this.events.on(Phaser.Scenes.Events.WAKE, () => this._refreshHud());
+    this._onScene(Phaser.Scenes.Events.WAKE, () => this._refreshHud());
+  }
+
+  /** Pack up and go back to the screen where you pick a map. */
+  _leaveToMapSelect() {
+    this._cancelAllPhaseLogic();
+    this.audio.stopMusic();
+    this.scene.start('MapSelectScene');
   }
 
   _buildHudIcon({ key, slot, onTap }) {
@@ -1347,7 +1469,7 @@ export class FishingScene extends Phaser.Scene {
   }
 
   /**
-   * Refresh the three HUD icons with the current selection / last catch.
+   * Refresh the HUD icons with the current selection / last catch.
    * Each overlay is scaled to fit roughly inside the inner circle of the
    * icon (about 65% of the icon size).
    */
@@ -1378,10 +1500,13 @@ export class FishingScene extends Phaser.Scene {
     } else {
       fl.overlay.setVisible(false);
     }
+    // A lure is fished without a float: fade the float button out so it
+    // is clear it plays no part right now (it still opens its menu).
+    fl.container.setAlpha(this._isLureMode() ? 0.35 : 1);
 
-    // --- Bait icon: selected bait simple sprite ---
+    // --- Bait icon: selected bait / lure simple sprite ---
     const ba = this.hudIcons.bait;
-    const baId = SaveSystem.getSelectedBait() || DEFAULT_BAIT_ID;
+    const baId = this._currentBaitId();
     const baKey = baitSimpleTextureKey(baId);
     if (this.textures.exists(baKey)) {
       ba.overlay.setTexture(baKey);
@@ -1407,7 +1532,7 @@ export class FishingScene extends Phaser.Scene {
   _openModal(sceneKey) {
     this._cancelAllPhaseLogic();
     this.scene.sleep();
-    this.scene.run(sceneKey);
+    this.scene.run(sceneKey, { mapId: this.map.id });
   }
 
   // ---------------------------------------------------------------------------
@@ -1467,7 +1592,7 @@ export class FishingScene extends Phaser.Scene {
     g.moveTo(WORLD_LEFT, WORLD_BOTTOM);
     for (let i = 0; i <= SAMPLES; i++) {
       const x = WORLD_LEFT + (WORLD_WIDTH * i) / SAMPLES;
-      g.lineTo(x, waterTopAt(x));
+      g.lineTo(x, this.map.waterTopAt(x));
     }
     g.lineTo(WORLD_RIGHT, WORLD_BOTTOM);
     g.closePath();
@@ -1538,6 +1663,15 @@ export class FishingScene extends Phaser.Scene {
         // Reel widget owns input. Don't recast / don't catch from here.
         break;
 
+      case STATE.RETRIEVE:
+        // The reel brings the lure in; a tap on the water means nothing.
+        break;
+
+      case STATE.LURE_BITE:
+        // A fish has the lure: any tap on the screen sets the hook.
+        this._strikeLure();
+        break;
+
       case STATE.CATCHING:
         // Animation in progress -- ignore.
         break;
@@ -1547,7 +1681,7 @@ export class FishingScene extends Phaser.Scene {
   _isInsideWater(x, y) {
     if (x < WORLD_LEFT || x >= WORLD_RIGHT) return false;
     if (y > WORLD_BOTTOM) return false;
-    return y >= waterTopAt(x);
+    return y >= this.map.waterTopAt(x);
   }
 
   // ---------------------------------------------------------------------------
@@ -1567,6 +1701,7 @@ export class FishingScene extends Phaser.Scene {
     this.bobber.x = this.rodTip.x;
     this.bobber.y = this.rodTip.y;
     this.bobberBaseScale = 1;
+    this._resetLureSprite();
   }
 
   /**
@@ -1635,10 +1770,13 @@ export class FishingScene extends Phaser.Scene {
           this.bobber.x = x;
           this.bobber.y = y;
           this.bobber.setScale(Phaser.Math.Linear(1, targetScale, t));
+          this._pointLureAtRod();
         },
         onComplete: () => {
           this.activeCastTween = null;
-          this._enterIdle(targetX, targetY);
+          // A float sits and waits for a bite; a lure is reeled back in.
+          if (this._isLureMode()) this._enterRetrieve(targetX, targetY);
+          else this._enterIdle(targetX, targetY);
         },
       });
     });
@@ -1851,11 +1989,7 @@ export class FishingScene extends Phaser.Scene {
     // Strike! Quick rod-tilt backward to "set the hook".
     this._playStrikeRodAnimation();
 
-    // Pick a fish according to the currently selected bait. legacyShape() keeps
-    // the FishingCollectionScene happy; pick {species,size} drives the catch
-    // display + SaveSystem.
-    const baitId = SaveSystem.getSelectedBait() || DEFAULT_BAIT_ID;
-    const pick = weightedPick(baitId) || weightedPick('wormen');
+    const pick = this._pickFish();
 
     // Phase 7: predators + any "large" fish demand the reel widget. Smaller
     // peaceful fish use the original single-tap catch as before.
@@ -1867,12 +2001,171 @@ export class FishingScene extends Phaser.Scene {
   }
 
   /**
+   * Which fish took it: a weighted pick among the species that go for the
+   * bait or lure on the line. The pick {species, size, lengthCm} drives the
+   * reel fight, the catch display and SaveSystem.
+   */
+  _pickFish() {
+    return weightedPick(this._currentBaitId()) || weightedPick(this.map.defaultBait);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lure fishing
+  //
+  //   cast -> RETRIEVE (crank the reel, the lure swims home)
+  //        -> LURE_BITE (a fish grabs it: tap the screen in time)
+  //        -> REELING (the normal fight) -> catch
+  //
+  // Nothing takes the lure, or the tap comes too late: it arrives back at
+  // the jetty empty and the player casts again.
+  // ---------------------------------------------------------------------------
+
+  /** The lure has landed: hand the player the reel. */
+  _enterRetrieve(x, y) {
+    this.state = STATE.RETRIEVE;
+    this.audio.playSfx(SFX.PLOP);
+
+    this.bobber.x = x;
+    this.bobber.y = y;
+    this.bobberHomeY = y;
+    this.bobber.setAlpha(LURE_UNDERWATER_ALPHA);
+    if (this.lureWake) this.lureWake.setVisible(true);
+    this.reelEnd = { startX: x, startY: y };
+
+    // A long cast takes more cranking than a short one.
+    const home = this._reelHome();
+    const dist = Phaser.Math.Distance.Between(x, y, home.x, home.y);
+    const turns = Phaser.Math.Clamp(dist / LURE_PX_PER_TURN, LURE_TURNS_MIN, LURE_TURNS_MAX);
+
+    // Decide now whether, and how far along, a fish will go for it.
+    this.lure = {
+      biteAt: Math.random() < LURE_BITE_CHANCE
+        ? Phaser.Math.FloatBetween(LURE_BITE_FROM, LURE_BITE_TO)
+        : null,
+      secondChanceUsed: false,
+    };
+
+    const reelPos = this._reelPosition();
+    this.reelOverlay = new ReelOverlay(this, {
+      x: reelPos.x,
+      y: reelPos.y,
+      requiredTurns: turns,
+      decay: false,           // nothing pulls back on an empty lure
+      onComplete: () => {
+        this.reelOverlay = null;
+        // Home without a fish: straight back to "ready", no sad sound --
+        // just cast again.
+        this._enterReady();
+      },
+    });
+  }
+
+  /** A fish grabs the lure. Reeling freezes until the player strikes. */
+  _enterLureBite() {
+    if (this.state !== STATE.RETRIEVE) return;
+    this.state = STATE.LURE_BITE;
+    this.lure.biteAt = null;
+    if (this.reelOverlay) this.reelOverlay.setPaused(true);
+
+    // Same cues as the float going under -- thump, "fish on!" sign and
+    // ping -- but at once: the player is mid-crank and needs to notice now.
+    this.audio.playSfx(SFX.DIVE);
+    this._showFishOn();
+    this.audio.playSfx(SFX.FISHON);
+    this._playBiteRodAnimation();
+    if (this.lureSprite) {
+      this.tweens.add({
+        targets: this.lureSprite,
+        x: { from: 0, to: 7 },
+        duration: 70,
+        yoyo: true,
+        repeat: 5,
+        onComplete: () => { if (this.lureSprite) this.lureSprite.x = 0; },
+      });
+    }
+
+    const window = Phaser.Math.Between(LURE_STRIKE_MIN_MS, LURE_STRIKE_MAX_MS);
+    this.phaseTimer = this.time.delayedCall(window, () => {
+      if (this.state !== STATE.LURE_BITE) return;
+      this._lureBiteMissed();
+    });
+  }
+
+  /** Too slow: the fish lets go. Keep reeling; it may come back once. */
+  _lureBiteMissed() {
+    this._hideFishOn();
+    this.state = STATE.RETRIEVE;
+    if (!this.reelOverlay || !this.lure) return;
+    this.reelOverlay.setPaused(false);
+
+    const p = this.reelOverlay.progress;
+    const left = 1 - p;
+    if (!this.lure.secondChanceUsed && left > LURE_SECOND_MIN_LEFT
+        && Math.random() < LURE_SECOND_CHANCE) {
+      this.lure.secondChanceUsed = true;
+      this.lure.biteAt = p + Phaser.Math.FloatBetween(0.12, left - 0.1);
+    }
+  }
+
+  /** The tap came in time: hook set, the fight begins. */
+  _strikeLure() {
+    this._hideFishOn();
+    this._stopPhaseTimer();
+    this._playStrikeRodAnimation();
+    this._enterReeling(this._pickFish());
+  }
+
+  /** Turn the lure so its nose (the line eye, on the sprite's left) faces the rod. */
+  _pointLureAtRod() {
+    if (!this.lureSprite || !this.bobber) return;
+    const toRod = Math.atan2(this.rodTip.y - this.bobber.y, this.rodTip.x - this.bobber.x);
+    const rotation = toRod + Math.PI;
+    this.lureSprite.rotation = rotation;
+    // Cast to the left of the rod the lure would swim belly-up: flip it.
+    this.lureSprite.setFlipY(Math.cos(rotation) < 0);
+  }
+
+  _resetLureSprite() {
+    if (this.lureWake) this.lureWake.setVisible(false);
+    if (!this.lureSprite) return;
+    this.tweens.killTweensOf(this.lureSprite);
+    this.lureSprite.setPosition(0, 0);
+    this.lureSprite.setRotation(0);
+    this.lureSprite.setFlipY(false);
+  }
+
+  /** Rod tip dips twice as the fish tugs on the lure. */
+  _playBiteRodAnimation() {
+    if (!this.rodLongSprite) return;
+    if (this._rodTween) { this._rodTween.stop(); this._rodTween = null; }
+    const restAngle = ROD_LONG_REST_ANGLE_DEG;
+    this._rodTween = this.tweens.chain({
+      targets: this.rodLongSprite,
+      tweens: [
+        { angle: restAngle + 9, duration: 90,  ease: 'Quad.easeOut' },
+        { angle: restAngle,     duration: 140, ease: 'Sine.easeInOut' },
+        { angle: restAngle + 6, duration: 90,  ease: 'Quad.easeOut' },
+        { angle: restAngle,     duration: 180, ease: 'Sine.easeInOut' },
+      ],
+    });
+  }
+
+  /**
    * Show the reel widget and wait until the player completes the required
    * number of turns. On success → standard catch leap + display.
    */
   _enterReeling(pick) {
     this.state = STATE.REELING;
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
+
+    // Coming from a lure retrieve the reel widget is already on screen,
+    // counting turns for the empty lure. The fight needs its own count.
+    if (this.reelOverlay) {
+      this.reelOverlay.destroy();
+      this.reelOverlay = null;
+    }
+    this.lure = null;
+    this._resetLureSprite();
 
     // Kill any in-flight bobber tween (the DIVE tween is still moving x/y
     // when the player strikes mid-dive). Without this, the dive tween and
@@ -1897,7 +2190,7 @@ export class FishingScene extends Phaser.Scene {
 
     const turns = reelTurnsFor(pick);
     // Position: bottom-right corner of the visible screen, clear of the
-    // 3-icon HUD stack. Follows the screen on rotation via _applyLayout.
+    // HUD stack. Follows the screen on rotation via _applyLayout.
     const reelPos = this._reelPosition();
 
     this.reelOverlay = new ReelOverlay(this, {
@@ -1906,13 +2199,15 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
-        // Plant the bobber in the water right under the rod tip so the
+        // Plant the bobber at the reel-home point by the rod tip so the
         // catch-leap arcs UP from there -- the "fish breaks the surface
-        // right under the rod" moment.
+        // right at the rod" moment.
         if (this.bobber) {
+          const home = this._reelHome();
           this.bobber.setVisible(true);
-          this.bobber.x = this.rodTip.x;
-          this.bobber.y = waterTopAt(this.rodTip.x) + 40;
+          this.bobber.setAlpha(1);
+          this.bobber.x = home.x;
+          this.bobber.y = home.y;
         }
         this._performCatchLeap(pick);
         this.reelEnd = null;
@@ -1959,6 +2254,7 @@ export class FishingScene extends Phaser.Scene {
           species: pick.species,
           size: pick.size,
           lengthCm: pick.lengthCm,
+          mapId: this.map.id,
         });
       },
     });
@@ -2001,5 +2297,8 @@ export class FishingScene extends Phaser.Scene {
       this.reelOverlay.destroy();
       this.reelOverlay = null;
     }
+    this.reelEnd = null;
+    this.lure = null;
+    this._resetLureSprite();
   }
 }

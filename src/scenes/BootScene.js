@@ -6,14 +6,13 @@ import {
 import { FISH_SPECIES, FISH_SIZES, fishTextureKey } from '../data/fish.js';
 import { BAITS, baitFullTextureKey, baitSimpleTextureKey } from '../data/baits.js';
 import { FLOATS, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
+import { MAPS } from '../data/maps.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
 export const TEX = Object.freeze({
-  BACKDROP: 'backdrop',                          // static lake/mountains, NO characters
+  BACKDROP: 'backdrop',                          // the moat painting; every map has its own key in data/maps.js
   CLOUDS: 'clouds',                              // single-layer legacy strip (kept for fallback)
-  CLOUDS_BACK: 'clouds-back',                    // parallax: distant layer (slow, small, faded)
-  CLOUDS_FRONT: 'clouds-front',                  // parallax: near layer (fast, big, opaque)
   FOREGROUND: 'foreground',                      // near-camera elements (e.g. overhanging tree branch) on transparent bg
   JULIAN_IDLE_1: 'julian-idle1',                 // Julian animation frame 1
   JULIAN_IDLE_2: 'julian-idle2',                 // Julian animation frame 2
@@ -30,7 +29,9 @@ export const TEX = Object.freeze({
   ICON_FISH:  'icon-fish',
   ICON_FLOAT: 'icon-float',
   ICON_BAIT:  'icon-bait',
-  // Catch-screen background
+  ICON_MAP:   'icon-map',                        // back to the map-select screen
+  MAPSELECT_BG: 'mapselect-bg',                  // cabin wall behind the map-select cards
+  // Catch-screen background (the lake's; per-map keys live in data/maps.js)
   CATCH_BG:   'catch-bg',
   // Title-screen background
   START_BG:   'start-bg',
@@ -71,17 +72,27 @@ export class BootScene extends Phaser.Scene {
       console.log(`[Boot] missing asset: ${file.key} (${file.src})`);
     });
 
-    // Images. backdrop.png is consumed straight from assets/raw/ (the
-    // pipeline skips it). The sprite PNGs come from assets/clean/, produced
-    // by the python pipeline. We load all candidates -- any missing file
+    // Images. The paintings and sprites come from assets/clean/, produced
+    // by the python pipeline; a few hand-finished files are consumed
+    // straight from assets/raw/. We load all candidates -- any missing file
     // simply doesn't end up in the texture cache and the scene falls back.
-    this.load.image(TEX.BACKDROP, 'raw/backdrop.png');
+    //
+    // One painting per map, plus that map's catch-screen painting. A map
+    // without its own catch painting quietly uses the lake's.
+    for (const map of MAPS) {
+      this.load.image(map.backdropKey, map.backdropImage);
+      this.load.image(map.catchBgKey, map.catchBgImage);
+    }
     // Clouds run through the chromakey pipeline (AI image tools usually
     // output green-screen). Foreground is hand-authored transparent so
     // the pipeline skips it.
     this.load.image(TEX.CLOUDS, 'clean/clouds.png');
-    this.load.image(TEX.CLOUDS_BACK, 'clean/clouds-back.png');
-    this.load.image(TEX.CLOUDS_FRONT, 'clean/clouds-front.png');
+    // Each map's cloud layers are shown by the browser itself (DOM strips
+    // behind the canvas); loading them here only makes sure they are
+    // already in the browser's cache when the map opens.
+    for (const map of MAPS) {
+      for (const layer of map.clouds) this.load.image(`clouds:${layer.src}`, layer.src);
+    }
     this.load.image(TEX.FOREGROUND, 'raw/foreground.png');
     // Preferred new animation frames (Julian sprite anim + Dirk static)
     this.load.image(TEX.JULIAN_IDLE_1, 'clean/julian-idle1.png');
@@ -97,12 +108,13 @@ export class BootScene extends Phaser.Scene {
     this.load.image(TEX.DIRK_SITTING, 'clean/dirk_sitting.png');
     this.load.image(TEX.JULIAN_DIRK_FISHING, 'clean/julian_dirk_fishing.png');
 
-    // HUD icons + catch-screen background.
+    // HUD icons + title-screen background.
     this.load.image(TEX.ICON_FISH,  'clean/icon-fish.png');
     this.load.image(TEX.ICON_FLOAT, 'clean/icon-float.png');
     this.load.image(TEX.ICON_BAIT,  'clean/icon-bait.png');
-    this.load.image(TEX.CATCH_BG,   'raw/catch.png');
+    this.load.image(TEX.ICON_MAP,   'clean/icon-map.png');
     this.load.image(TEX.START_BG,   'clean/start.png');
+    this.load.image(TEX.MAPSELECT_BG, 'clean/mapselect.jpg');
 
     // Reel + handle for the Phase 7 reeling-in mechanic.
     this.load.image(TEX.REEL,        'clean/reel.png');

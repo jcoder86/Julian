@@ -2,19 +2,27 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
-import { BAITS, baitFullTextureKey, DEFAULT_BAIT_ID } from '../data/baits.js';
+import { BAITS_BY_ID, baitsForMap, baitFullTextureKey } from '../data/baits.js';
+import { getMap } from '../data/maps.js';
 
 // The scrim is drawn far larger than the design frame so it dims the whole
 // screen on any aspect ratio.
 const SCRIM_OVERSIZE = 6000;
 
 /**
- * Modal-style scene that overlays the running FishingScene. Shows the five
- * baits as large cards, with the current selection highlighted. Tap a card
- * to set the new selection and return; tap outside (the scrim) to cancel.
+ * Modal-style scene that overlays the running FishingScene. Shows the
+ * current map's baits and lures as large cards, with the current selection
+ * highlighted. Tap a card to set the new selection and return; tap outside
+ * (the scrim) to cancel.
+ *
+ * Launched with { mapId }; the choice is remembered per map.
  */
 export class BaitSelectionScene extends Phaser.Scene {
   constructor() { super('BaitSelectionScene'); }
+
+  init(data) {
+    this.map = getMap((data && data.mapId) || SaveSystem.getCurrentMap());
+  }
 
   create() {
     // Dim the underlying scene -- semi-transparent black scrim.
@@ -41,15 +49,17 @@ export class BaitSelectionScene extends Phaser.Scene {
     panel.setStrokeStyle(3, 0xffffff, 0.4);
     panel.setInteractive();   // swallow taps so they don't bubble to scrim
 
-    const selectedId = SaveSystem.getSelectedBait() || DEFAULT_BAIT_ID;
+    const baits = baitsForMap(this.map.id);
+    const saved = SaveSystem.getSelectedBait(this.map.id);
+    const selectedId = BAITS_BY_ID[saved]?.map === this.map.id ? saved : this.map.defaultBait;
 
     // Layout: single row of N cards, evenly spaced.
-    const cardW = Math.floor((panelW - 60) / BAITS.length);
+    const cardW = Math.floor((panelW - 60) / baits.length);
     const cardH = Math.round(panelH * 0.85);
     const startX = GAME_WIDTH / 2 - panelW / 2 + 30 + cardW / 2;
     const cardY = GAME_HEIGHT / 2;
 
-    BAITS.forEach((bait, i) => {
+    baits.forEach((bait, i) => {
       const x = startX + i * cardW;
       this._buildCard(bait, x, cardY, cardW - 12, cardH, bait.id === selectedId);
     });
@@ -82,7 +92,7 @@ export class BaitSelectionScene extends Phaser.Scene {
     c.add([cardBg, sprite, label]);
     c.on('pointerdown', (_pointer, _x, _y, event) => {
       if (event && event.stopPropagation) event.stopPropagation();
-      SaveSystem.setSelectedBait(bait.id);
+      SaveSystem.setSelectedBait(bait.id, this.map.id);
       this._close();
     });
 

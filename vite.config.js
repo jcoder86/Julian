@@ -36,7 +36,7 @@ export default defineConfig({
       workbox: {
         // Pre-cache everything that could be needed offline. The 49 MB
         // budget is fine for a game that's a single static deploy.
-        globPatterns: ['**/*.{js,css,html,png,mp3,wav,mp4,json}'],
+        globPatterns: ['**/*.{js,css,html,png,jpg,mp3,wav,mp4,json}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,   // 10 MB per file
       },
     }),

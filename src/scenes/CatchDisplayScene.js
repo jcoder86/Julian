@@ -6,6 +6,7 @@ import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
 import { fishTextureKey, speciesNlName } from '../data/fish.js';
 import { AudioManager, SFX } from '../systems/AudioManager.js';
+import { getMap } from '../data/maps.js';
 
 /**
  * Catch display: shown when a fish is caught. Renders catch.png full-screen
@@ -16,7 +17,10 @@ import { AudioManager, SFX } from '../systems/AudioManager.js';
  * Play button in the bottom-right -- taps elsewhere are ignored.
  *
  * Launched via:
- *   this.scene.run('CatchDisplayScene', { species, size, lengthCm });
+ *   this.scene.run('CatchDisplayScene', { species, size, lengthCm, mapId });
+ *
+ * mapId picks the painting behind the fish: each map can have its own
+ * catch painting (data/maps.js); one that has none uses the lake's.
  */
 
 // Julian is ~100cm tall. In the catch.png painting his sitting body fills
@@ -33,6 +37,10 @@ const PX_PER_CM = (JULIAN_PIXEL_HEIGHT_IN_CATCH / JULIAN_HEIGHT_CM) * FISH_DISPL
 // canvas pixels so a 4-year-old can still see what they caught. The "XX CM"
 // label tells the actual length.
 const MIN_FISH_DISPLAY_WIDTH = 90;
+// ...and the true giants are capped: a 3.5 m shark at full cm scale would
+// be half again as wide as the painting. Past this width a fish simply
+// "fills the jetty"; the label still tells its real length.
+const MAX_FISH_DISPLAY_WIDTH = 1240;
 
 // Calmer wiggle than the original spec -- a 4-year-old plays for many
 // catches, so the motion should feel "fresh fish flopping gently" rather
@@ -87,8 +95,10 @@ export class CatchDisplayScene extends Phaser.Scene {
     // The canvas covers the screen, so this is full-bleed on every device.
     const worldCx = WORLD_LEFT + WORLD_WIDTH / 2;
     const worldCy = WORLD_TOP + WORLD_HEIGHT / 2;
-    if (this.textures.exists(TEX.CATCH_BG)) {
-      const bg = this.add.image(worldCx, worldCy, TEX.CATCH_BG);
+    const map = getMap(this.catchData.mapId);
+    const bgKey = this.textures.exists(map.catchBgKey) ? map.catchBgKey : TEX.CATCH_BG;
+    if (this.textures.exists(bgKey)) {
+      const bg = this.add.image(worldCx, worldCy, bgKey);
       bg.setOrigin(0.5);
       bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
       bg.setDepth(0);
@@ -118,7 +128,8 @@ export class CatchDisplayScene extends Phaser.Scene {
         group.setDepth(10);
 
         const fish = this.add.image(0, 0, key);
-        const targetW = Math.max(MIN_FISH_DISPLAY_WIDTH, (lengthCm || 30) * PX_PER_CM);
+        const targetW = Phaser.Math.Clamp(
+          (lengthCm || 30) * PX_PER_CM, MIN_FISH_DISPLAY_WIDTH, MAX_FISH_DISPLAY_WIDTH);
         fish.setScale(targetW / fish.width);
         const halfW = fish.displayWidth / 2;
         const halfH = fish.displayHeight / 2;

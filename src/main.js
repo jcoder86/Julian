@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { WORLD_WIDTH, WORLD_HEIGHT } from './constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { TitleScene } from './scenes/TitleScene.js';
+import { MapSelectScene } from './scenes/MapSelectScene.js';
 import { FishingScene } from './scenes/FishingScene.js';
 import { FishingCollectionScene } from './scenes/FishingCollectionScene.js';
 import { BaitSelectionScene } from './scenes/BaitSelectionScene.js';
@@ -29,7 +30,7 @@ const config = {
   },
   // Pixel snapping keeps placeholder shapes crisp at integer scales.
   pixelArt: false,
-  scene: [BootScene, TitleScene, FishingScene, FishingCollectionScene, BaitSelectionScene, FloatSelectionScene, CatchDisplayScene],
+  scene: [BootScene, TitleScene, MapSelectScene, FishingScene, FishingCollectionScene, BaitSelectionScene, FloatSelectionScene, CatchDisplayScene],
 };
 
 const game = new Phaser.Game(config);

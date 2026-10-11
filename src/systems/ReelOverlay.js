@@ -14,18 +14,26 @@ import { TEX } from '../scenes/BootScene.js';
  *   const reel = new ReelOverlay(scene, {
  *     x, y,                  // canvas centre of the reel
  *     requiredTurns: 3,      // how many full 360° rotations to "land" the fish
+ *     decay: true,           // progress drains while the player lets go
  *     onComplete: () => ...
  *   });
+ *
+ * `decay: false` is for retrieving a lure: nothing is pulling back, so
+ * the line simply stays where the player left it.
  *   // When you want to cancel early:
  *   reel.destroy();
  */
 export class ReelOverlay {
-  constructor(scene, { x, y, requiredTurns = 3, onComplete = null }) {
+  constructor(scene, { x, y, requiredTurns = 3, onComplete = null, decay = true }) {
     this.scene = scene;
     this.x = x;
     this.y = y;
     this.requiredTurns = requiredTurns;
     this.onComplete = onComplete;
+    this.decay = decay;
+    // While paused, cranking moves the handle but reels nothing in (and
+    // nothing drains). Used for the moment a fish grabs the lure.
+    this.paused = false;
     // Total accumulated absolute angular delta (radians). Drains slowly
     // when not dragging so the player has to stay engaged.
     this.accumulatedRadians = 0;
@@ -113,6 +121,16 @@ export class ReelOverlay {
     return Math.atan2(p.y - this.pivotY, p.x - this.pivotX);
   }
 
+  /** How far the line has been reeled in, 0..1. */
+  get progress() {
+    return Math.min(1, Math.max(0, this.accumulatedRadians / this.requiredRadians));
+  }
+
+  /** Freeze / unfreeze reeling progress (the handle keeps following the finger). */
+  setPaused(paused) {
+    this.paused = !!paused;
+  }
+
   /**
    * Move the whole widget (used when the screen rotates / resizes while
    * the player is reeling).
@@ -135,22 +153,28 @@ export class ReelOverlay {
 
   _attachInputs() {
     // Capture handlers as bound fns so we can detach them on destroy.
+    // Only the finger that grabbed the reel cranks it. With a second
+    // finger on the screen (the other hand tapping to strike) its movement
+    // must not be read as a wild spin of the handle.
     this._onHandleDown = (pointer) => {
       if (this._destroyed) return;
       this.isDragging = true;
+      this._dragPointerId = pointer.id;
       this._lastPointerAngle = this._pointerAngle(pointer);
       // Snap handle to current pointer angle so it feels responsive.
       this.handle.rotation = this._lastPointerAngle;
       // Begin the looping reel-click sound while the player cranks.
       this.scene.audio?.startReelLoop();
     };
-    this._onPointerUp = () => {
+    this._onPointerUp = (pointer) => {
+      if (pointer && pointer.id !== this._dragPointerId) return;
       this.isDragging = false;
       this._lastPointerAngle = null;
       this.scene.audio?.stopReelLoop();
     };
     this._onPointerMove = (pointer) => {
       if (this._destroyed || !this.isDragging) return;
+      if (pointer.id !== this._dragPointerId) return;
       const ang = this._pointerAngle(pointer);
       if (this._lastPointerAngle !== null) {
         let delta = ang - this._lastPointerAngle;
@@ -158,12 +182,12 @@ export class ReelOverlay {
         // count as a huge spin.
         if (delta > Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
-        this.accumulatedRadians += Math.abs(delta);
+        if (!this.paused) this.accumulatedRadians += Math.abs(delta);
       }
       this._lastPointerAngle = ang;
       this.handle.rotation = ang;
       this._redrawProgress();
-      if (this.accumulatedRadians >= this.requiredRadians) this._complete();
+      if (!this.paused && this.accumulatedRadians >= this.requiredRadians) this._complete();
     };
 
     // Pointerdown on the wide hit zone -- starts dragging anywhere on/near
@@ -178,7 +202,7 @@ export class ReelOverlay {
       delay: 100,
       loop: true,
       callback: () => {
-        if (this._destroyed || this.isDragging) return;
+        if (this._destroyed || this.isDragging || !this.decay || this.paused) return;
         const drainPerTick = this.requiredRadians * 0.012;
         if (this.accumulatedRadians > 0) {
           this.accumulatedRadians = Math.max(0, this.accumulatedRadians - drainPerTick);

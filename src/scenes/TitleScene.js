@@ -189,7 +189,8 @@ export class TitleScene extends Phaser.Scene {
     this._teardownDomBackground();
     // Stop the title theme so it doesn't overlap with FishingScene ambient.
     if (this.audio) this.audio.stopMusic();
-    this.scene.start('FishingScene');
+    // Next stop: choose where to fish.
+    this.scene.start('MapSelectScene');
   }
 
   _setupDomBackground() {

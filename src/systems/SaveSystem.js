@@ -19,6 +19,12 @@ const BEST_CATCHES_KEY = 'bestCatches';
 // Running total of catches per (species,size) for the trophy "x N caught"
 // badge. Sums to fishCounts[species] across the size dimension.
 const CATCH_COUNTS_BY_SIZE_KEY = 'catchCountsBySize';
+// Which map (data/maps.js) the player was on last.
+const CURRENT_MAP_KEY = 'currentMap';
+
+function selectedBaitKey(mapId) {
+  return mapId === 'lake' ? SELECTED_BAIT_KEY : `${SELECTED_BAIT_KEY}_${mapId}`;
+}
 
 function namespaced(key) {
   // julian profile -> original key shape (no infix), preserves any data
@@ -47,52 +53,26 @@ function safeSet(key, value) {
   }
 }
 
-function safeRemove(key) {
-  try {
-    window.localStorage.removeItem(namespaced(key));
-  } catch (e) {
-    console.warn('[SaveSystem] remove failed', e);
-  }
-}
-
-// One-shot migration: on Julian's profile, drop every species except
-// pike (snoek) from the trophy/count tables, and clear lastCatch if it
-// wasn't a pike. Guarded by a sentinel key so it only ever runs once
-// per device. Triggered from setProfile() so it runs the moment Julian
-// taps START on the title screen.
-const KEEP_ONLY_PIKE_MIGRATION_KEY = 'migration_keep_only_pike_v1';
-const KEEP_SPECIES = 'pike';
-function _runMigrationsForActiveProfile() {
-  if (_activeProfile !== 'julian') return;
-  if (safeGet(KEEP_ONLY_PIKE_MIGRATION_KEY) === 'done') return;
-
-  // Per-species maps: keep only the pike entry if present.
-  for (const key of [FISH_COUNTS_KEY, CATCH_COUNTS_BY_SIZE_KEY, BEST_CATCHES_KEY]) {
-    const raw = safeGet(key);
-    if (raw == null) continue;
-    try {
-      const obj = JSON.parse(raw);
-      if (obj && typeof obj === 'object') {
-        const filtered = (obj[KEEP_SPECIES] !== undefined)
-          ? { [KEEP_SPECIES]: obj[KEEP_SPECIES] }
-          : {};
-        safeSet(key, JSON.stringify(filtered));
-      }
-    } catch { /* ignore corrupt entries */ }
-  }
-
-  // lastCatch: clear if it's not a pike (HUD icon would otherwise still
-  // show e.g. a roach as the most-recent fish).
-  const lastRaw = safeGet(LAST_CATCH_KEY);
-  if (lastRaw) {
-    try {
-      const last = JSON.parse(lastRaw);
-      if (!last || last.species !== KEEP_SPECIES) safeRemove(LAST_CATCH_KEY);
-    } catch { safeRemove(LAST_CATCH_KEY); }
-  }
-
-  safeSet(KEEP_ONLY_PIKE_MIGRATION_KEY, 'done');
-}
+// ---------------------------------------------------------------------------
+// Save-data compatibility -- read this before changing anything above.
+// ---------------------------------------------------------------------------
+// Players' catches live ONLY in their browser, under the keys above. A new
+// version of the game is loaded on top of whatever an older version wrote,
+// so:
+//
+//   * never rename or re-purpose an existing key, and never change the
+//     shape of what is stored under it -- only ADD keys or fields;
+//   * never rename a species, bait or float id (data/*.js): saved catches
+//     are filed under those ids;
+//   * this module never deletes anything. There is deliberately no
+//     removeItem here, and no start-up "migration" that rewrites old data.
+//     (One existed once: it wiped every catch except pike, on request, and
+//     stayed armed on every device that had not run it yet. It is gone.)
+//
+// scripts/test-save-compat.js loads saves written by the released game
+// (Julian's and the guest profile's) and checks every one of these
+// promises; `npm run build` runs it first, so a change that would lose
+// player data cannot be built or deployed.
 
 export const SaveSystem = {
   /**
@@ -102,7 +82,6 @@ export const SaveSystem = {
    */
   setProfile(name) {
     _activeProfile = name || 'julian';
-    _runMigrationsForActiveProfile();
   },
 
   /** Returns the currently active profile name. */
@@ -147,8 +126,17 @@ export const SaveSystem = {
 
   // ---------- Bait + Float selection ----------------------------------------
 
-  setSelectedBait(baitId) { this.save(SELECTED_BAIT_KEY, baitId); },
-  getSelectedBait()       { return this.load(SELECTED_BAIT_KEY); },
+  // The bait / lure choice is remembered per map: the lake keeps the
+  // original key (so existing saves carry over), every other map gets its
+  // own `selectedBait_<mapId>`.
+  setSelectedBait(baitId, mapId = 'lake') { this.save(selectedBaitKey(mapId), baitId); },
+  getSelectedBait(mapId = 'lake')         { return this.load(selectedBaitKey(mapId)); },
+
+  // ---------- Current map ---------------------------------------------------
+
+  /** Remember which map the player fished on last. */
+  setCurrentMap(mapId) { this.save(CURRENT_MAP_KEY, mapId); },
+  getCurrentMap()      { return this.load(CURRENT_MAP_KEY); },
 
   setSelectedFloat(floatId) { this.save(SELECTED_FLOAT_KEY, floatId); },
   getSelectedFloat()        { return this.load(SELECTED_FLOAT_KEY); },
