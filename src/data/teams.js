@@ -31,6 +31,20 @@ export const TEAMS = [
     angler: { who: 'james', height: 262 },
     buddy: { who: 'boaz', height: 196, dx: -68, dy: 6 },
   },
+  {
+    // The grey "Gast" button: for whoever wants to try the game, or to
+    // test something. NOTHING a visitor catches is kept -- SaveSystem holds
+    // this profile in memory only and empties it at every start. (Not to
+    // be confused with the profile 'guest' above, which is James's.)
+    id: 'visitor',
+    label: 'Gast',
+    collectionTitle: 'Vangst van de gast',
+    visitor: true,
+    // A visitor has no figures or paintings of his own: he borrows these.
+    lookOf: 'julian',
+    angler: { who: 'julian', height: 232 },
+    buddy: { who: 'dirk', height: 126, dx: -64, dy: 4 },
+  },
 ];
 
 export const TEAMS_BY_ID = Object.fromEntries(TEAMS.map((t) => [t.id, t]));
@@ -38,4 +52,14 @@ export const TEAMS_BY_ID = Object.fromEntries(TEAMS.map((t) => [t.id, t]));
 /** The team for a save profile; an unknown profile plays as the first team. */
 export function getTeam(profileId) {
   return TEAMS_BY_ID[profileId] || TEAMS[0];
+}
+
+/** Whose paintings a team is shown in (the catch screen): its own, or a borrowed one's. */
+export function lookTeamId(team) {
+  return team.lookOf || team.id;
+}
+
+/** Is this the profile of which nothing is kept? */
+export function isVisitorProfile(profileId) {
+  return !!(TEAMS_BY_ID[profileId] && TEAMS_BY_ID[profileId].visitor);
 }

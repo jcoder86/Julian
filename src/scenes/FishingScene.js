@@ -5,6 +5,7 @@ import {
 } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
 import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
+import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
 import { BAITS_BY_ID, baitSimpleTextureKey, isLure } from '../data/baits.js';
@@ -309,6 +310,9 @@ export class FishingScene extends Phaser.Scene {
     this.sound.stopByKey(MUSIC.AMBIENT);
     this.sound.stopByKey(MUSIC.SEA);
     this.audio.playMusic(this.cache.audio.exists(this.map.music) ? this.map.music : MUSIC.AMBIENT);
+    // ...and under it what the place itself sounds like: birds or waves,
+    // and now and then something passing. Ends with the scene.
+    this.ambience = new Ambience(this, this.map.ambience);
 
     // Timers and tweens we may need to cancel mid-flight.
     this.biteTimer = null;

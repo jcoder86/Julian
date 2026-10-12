@@ -96,6 +96,14 @@ function makeWaterTopAt(samples) {
 //                   is drawn smallest there, full size at the jetty)
 //   defaultBait     what is on the hook the first time you fish here
 //   music           ambient loop key; falls back to the lake's if missing
+//   ambience        what is heard here besides the music (systems/
+//                   Ambience.js): a `bed` that goes round and round, and
+//                   sounds that are `passing` now and then. `every` and
+//                   `first`: how many seconds until the next one and until
+//                   the first one, as [shortest, longest]; `volume` as
+//                   [softest, loudest] (the files all have the same
+//                   loudness, see scripts/make_ambience.py); `vary`: how far
+//                   its pitch may wander, as a share (0.07 = 7 % up or down)
 
 // The horizon of assets/raw/backdrop-sea.png lies 24.5% down the painting;
 // casting starts a hair below it, so a float never sits ON the line.
@@ -128,6 +136,15 @@ const MAP_DEFS = [
     depthFarY: 252,
     defaultBait: 'wormen',
     music: 'ambient',
+    ambience: {
+      bed: { name: 'lake-birds', volume: 0.5 },
+      passing: [
+        // A fish jumps somewhere on the moat.
+        { name: 'lake-plons', every: [25, 70], first: [12, 40], volume: [0.3, 0.6], vary: 0.06 },
+        // The bells of the Grote Kerk, across the water.
+        { name: 'lake-bells', every: [150, 330], first: [45, 120], volume: [0.3, 0.45] },
+      ],
+    },
   },
   {
     id: 'sea',
@@ -151,7 +168,15 @@ const MAP_DEFS = [
     waterline: flatHorizon(SEA_HORIZON),
     depthFarY: WORLD_TOP + SEA_HORIZON * WORLD_HEIGHT,
     defaultBait: 'zeepier',
-    music: 'sea',
+    music: 'relaxing',
+    ambience: {
+      bed: { name: 'sea-waves', volume: 0.6 },
+      passing: [
+        { name: 'sea-gulls', every: [22, 60], first: [8, 25], volume: [0.18, 0.38], vary: 0.07 },
+        // A ship far out.
+        { name: 'sea-horn', every: [140, 320], first: [50, 130], volume: [0.4, 0.55] },
+      ],
+    },
   },
 ];
 

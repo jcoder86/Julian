@@ -3,6 +3,7 @@ Turn the character paintings into what the game shows.
 
     python scripts/make_characters.py            # everything
     python scripts/make_characters.py julian     # one character
+    python scripts/make_characters.py badges     # only the round team pictures
 
 Input: one green-screen painting per pose (assets/raw/char-<who>-<pose>.png,
 from scripts/gen_art.py) and, for the dog, a short film of him on a green
@@ -12,8 +13,8 @@ Output, in assets/clean/:
     char_<who>_<pose>.png        one cut-out picture per pose
     dirk_<clip>.jpg + _alpha.png a film strip: all frames in one grid
     characters.json              how they fit together
-    team_<team>.png              the two faces of a team, for its START button
-    ui-continue-<team>.png       the team's angler in a rope frame: "go on fishing"
+    team_<team>.png              the faces of a team in rope frames: its button
+                                 on the title screen ("Spelen met:")
 
 What "fit together" means
   * Every pose of one boy is a separate painting, so he is never drawn at
@@ -268,21 +269,19 @@ def make_dirk(meta):
 
 # Round, rope-framed pictures made from the figures (the frame is
 # assets/clean/ui-ring.png, see scripts/make_ui.py):
-#   team_<team>.png          the faces of the two who fish together, for the
-#                            team's START button
-#   ui-continue-<team>.png   the team's angler, rod in hand: the button
-#                            that means "go on fishing"
+#   team_<team>.png   the faces of the two who fish together: the team's
+#                     button on the title screen
 # (who, pose or clip, share of the figure's height that is head)
 BADGES = {
     "julian": [("julian", "ready", 0.31), ("dirk", "idle", 0.47)],
     "guest": [("james", "ready", 0.31), ("boaz", "look", 0.30)],
 }
-FACE_PX = 150            # one framed face
-CONTINUE_PX = 420        # the "go on fishing" button
-CONTINUE_ZOOM = 1.45     # his height (seated) as a multiple of the picture's
-# What is behind the angler in that button: a piece of water of this
-# painting (left, top, right, bottom as shares of the painting).
-CONTINUE_VIEW = ("backdrop-naarden", (0.50, 0.30, 0.80, 0.70))
+# Whoever plays as a visitor ("Gast") has no face: one frame with a grey
+# silhouette (assets/raw/ui-guest.png), the whole badge drained of colour.
+VISITOR = "visitor"
+VISITOR_PICTURE = "ui-guest"
+FACE_PX = 240            # one framed face (the title screen shows it about 150 px
+                         # high, which is 240 on an iPad's screen)
 
 
 def figure_picture(meta, who, pose):
@@ -340,53 +339,47 @@ def face(img, share):
     return fill
 
 
-def angler_at_the_water(meta, who, pose, share):
-    """`fill` for framed(): the angler, rod in hand, with water behind him."""
-    entry = meta[who]
-    img = figure_picture(meta, who, pose)
-    painting, (left, top, right, bottom) = CONTINUE_VIEW
-    # Where his head is in the picture (as in face()).
-    alpha = np.asarray(img.getchannel("A"))
-    body = ndimage.binary_opening(alpha > 128, iterations=6)
-    rows = np.nonzero(body.any(axis=1))[0]
-    body_top, body_height = rows.min(), rows.max() - rows.min()
-    cols = np.nonzero(body[body_top:body_top + round(body_height * share)].any(axis=0))[0]
-    head = ((cols.min() + cols.max()) / 2, body_top + body_height * share * 0.5)
+def whole_picture(path):
+    """`fill` for framed(): a square picture as it is."""
+    img = Image.open(path).convert("RGB")
+    side = min(img.size)
+    left, top = (img.width - side) // 2, (img.height - side) // 2
+    img = img.crop((left, top, left + side, top + side))
+    return lambda size: img.resize((size, size), Image.LANCZOS).convert("RGBA")
 
-    def fill(side):
-        view = Image.open(RAW / f"{painting}.png").convert("RGB")
-        w, h = view.size
-        picture = view.crop((round(left * w), round(top * h), round(right * w), round(bottom * h)))
-        picture = picture.resize((side, side), Image.LANCZOS).convert("RGBA")
-        # Head and shoulders, hands and reel: big enough to know him by.
-        k = side * CONTINUE_ZOOM / entry["bodyHeight"]
-        boy = img.convert("RGBa").resize((round(img.width * k), round(img.height * k)),
-                                         Image.LANCZOS).convert("RGBA")
-        layer = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-        layer.paste(boy, (round(side * 0.40 - head[0] * k), round(side * 0.36 - head[1] * k)))
-        picture.alpha_composite(layer)
-        return picture
-    return fill
+
+def greyed(img):
+    """The picture without its colour (and a touch lighter): "nobody in particular"."""
+    alpha = img.getchannel("A")
+    grey = np.asarray(img.convert("L"), dtype=np.float64)
+    grey = np.clip(grey * 0.92 + 26, 0, 255).astype(np.uint8)
+    out = Image.merge("RGB", [Image.fromarray(grey)] * 3)
+    out.putalpha(alpha)
+    return out
 
 
 def make_badges(meta):
     if not (CLEAN / "ui-ring.png").exists():
         print("[skip] badges: assets/clean/ui-ring.png not found (python scripts/make_ui.py)")
         return
+    step = round(FACE_PX * 0.84)
     for team, faces in BADGES.items():
         if any(who not in meta for who, _, _ in faces):
             continue
         discs = [framed(FACE_PX, face(figure_picture(meta, who, pose), share)) for who, pose, share in faces]
-        step = round(FACE_PX * 0.84)
         badge = Image.new("RGBA", (FACE_PX + step * (len(discs) - 1), max(d.height for d in discs)), (0, 0, 0, 0))
         for i, disc in enumerate(discs):
             badge.alpha_composite(disc, (i * step, 0))
         badge.save(CLEAN / f"team_{team}.png", "PNG", optimize=True)
-        who, pose, share = faces[0]
-        button = framed(CONTINUE_PX, angler_at_the_water(meta, who, pose, share))
-        button.save(CLEAN / f"ui-continue-{team}.png", "PNG", optimize=True)
-        print(f"[ok]   team_{team}.png  {badge.width}x{badge.height}   "
-              f"ui-continue-{team}.png  {button.width}x{button.height}")
+        print(f"[ok]   team_{team}.png  {badge.width}x{badge.height}")
+
+    picture = RAW / f"{VISITOR_PICTURE}.png"
+    if picture.exists():
+        badge = greyed(framed(FACE_PX, whole_picture(picture)))
+        badge.save(CLEAN / f"team_{VISITOR}.png", "PNG", optimize=True)
+        print(f"[ok]   team_{VISITOR}.png  {badge.width}x{badge.height}")
+    else:
+        print(f"[skip] team_{VISITOR}.png: {picture.relative_to(ROOT)} not found")
 
 
 def check_sheet(name, tiles):
@@ -419,6 +412,8 @@ def check_sheet(name, tiles):
 def main():
     known = list(BOYS) + ["boaz", "dirk"]
     names = sys.argv[1:] or known
+    if names == ["badges"]:
+        names = []                       # only the pictures made from the figures
     if set(names) - set(known):
         sys.exit(f"unknown character(s): {', '.join(sorted(set(names) - set(known)))}  (known: {', '.join(known)})")
     out = CLEAN / "characters.json"

@@ -19,10 +19,13 @@ export const SFX = Object.freeze({
 // Music keys.
 export const MUSIC = Object.freeze({
   AMBIENT: 'ambient',      // relaxed background loop on FishingScene (the lake)
-  SEA:     'sea',          // sea ambience (waves, gulls). Optional file:
-                           // without audio/music/sea.mp3 the sea uses AMBIENT.
+  SEA:     'relaxing',     // the sea's own music (audio/music/relaxing.mp3);
+                           // without that file the sea uses AMBIENT.
   START:   'start',        // title-screen theme
 });
+
+// (The waves, birds and other sounds of a place are not music: see
+// systems/Ambience.js.)
 
 // Default music volume -- keeps the loop in the background.
 export const MUSIC_VOLUME = 0.35;

@@ -479,6 +479,57 @@ its edges. Solid flat pure green chroma-key background (#00FF00), no
 shadow, no text.
 """
 
+UI_CARD = """\
+A blank card of old, cream-coloured paper for a children's fishing game:
+a rectangle slightly wider than it is high, with softly worn edges and
+rounded corners, a faint paper texture, a little darker toward the edges,
+held by a brass drawing pin at each top corner. NOTHING is written or
+drawn on it.
+
+Seen straight from the front, filling the image almost to its edges.
+Solid flat pure green chroma-key background (#00FF00), no shadow on it,
+no text.
+"""
+
+UI_WALL = """\
+A background painting for a children's fishing game: the inside wall of a
+fishing cabin, made of wide, weathered, honey-coloured horizontal wooden
+planks, seen straight on. Plain and calm: NO decorations at all, nothing
+hanging on it -- just the planks, their grain, a few knots and nail
+heads. Evenly lit by warm afternoon light, slightly darker toward the
+corners. Rich, warm, detailed painting in the same style as the reference
+image. No text, no people, no objects. 4:3 landscape.
+"""
+
+UI_CONTINUE = """\
+A big round game button in exactly the same style as the reference icon:
+glossy, with a polished silver outer rim and a thin silver inner ring --
+but bright GREEN where the reference is blue. In its centre, in white with
+a soft dark outline: a fishing rod whose line ends in a red-and-white
+float, and next to it a bold arrow pointing to the right (it means "go on
+fishing"). Friendly, clear, readable for a four-year-old.
+
+Seen straight from the front, perfectly circular, filling the square image
+almost to its edges. Solid flat pure MAGENTA background (#FF00FF), no
+shadow on it, no text.
+"""
+
+# Whoever plays as a guest has no face of his own: the round frame of the
+# title screen shows this instead (scripts/make_characters.py turns the
+# whole badge grey).
+UI_GUEST = """\
+A portrait for the "guest" player of a children's fishing game, when
+nobody in particular is playing: the head and shoulders of a child wearing
+a floppy fisherman's bucket hat, seen from the front, as a friendly
+SILHOUETTE. One smooth, rounded, soft mid-grey shape with a slightly
+lighter grey edge on one side -- no eyes, no mouth, no face at all, no
+clothes details. Chunky and friendly like the reference picture's
+figures, but without any features. Behind it a plain, pale grey-blue sky.
+
+Square image, the head and hat filling most of it, the shoulders running
+off the bottom edge. No frame, no text.
+"""
+
 # ---------------------------------------------------------------------------
 # Tackle and icons
 # ---------------------------------------------------------------------------
@@ -575,6 +626,11 @@ for _team, (_who, _cast, _chars) in CATCH_WHO.items():
 _SIGN = "assets/raw/start-friends.png"
 JOBS["ui-start"] = dict(out="assets/raw/ui-start.png", refs=[_SIGN], brief=UI_START)
 JOBS["ui-ring"] = dict(out="assets/raw/ui-ring.png", refs=[_SIGN], brief=UI_RING)
+JOBS["ui-card"] = dict(out="assets/raw/ui-card.png", refs=[], brief=UI_CARD)
+JOBS["ui-continue"] = dict(out="assets/raw/ui-continue.png",
+                           refs=["assets/clean/icon-float.png"], brief=UI_CONTINUE)
+JOBS["ui-wall"] = dict(out="assets/raw/ui-wall.png", refs=["assets/raw/mapselect.png"], brief=UI_WALL)
+JOBS["ui-guest"] = dict(out="assets/raw/ui-guest.png", refs=[STYLE_REF], brief=UI_GUEST)
 for _map, _light in SKY_LIGHT.items():
     for _layer, _variants in SKY_LAYERS.items():
         for _n, _what in enumerate(_variants, start=1):

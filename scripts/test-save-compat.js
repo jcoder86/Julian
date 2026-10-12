@@ -423,10 +423,57 @@ async function runJamesScenarios() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The visitor (the grey "Gast" button): plays like anyone else, but nothing
+// of it reaches storage, and nobody else's save notices.
+// ---------------------------------------------------------------------------
+
+async function runVisitorScenario() {
+  console.log('- a visitor fishes: nothing is stored, nobody else is touched');
+  const store = releasedStorage({ wipeAlreadyRan: true });
+  const counters = { removals: 0 };
+  fakeStorage(store, counters);
+  const { SaveSystem } = await import('../src/systems/SaveSystem.js?scenario=visitor');
+  const { TEAMS } = await import('../src/data/teams.js');
+  const visitor = TEAMS.find((team) => team.visitor);
+  check(!!visitor, 'there is no visitor team any more');
+  check(visitor && !['julian', 'guest'].includes(visitor.id), "the visitor plays on somebody's real save");
+  if (!visitor) return;
+
+  SaveSystem.adoptJamesCatches(REQUEST_DAY);          // start-up
+  const before = new Map(store);
+
+  SaveSystem.setProfile(visitor.id);
+  check(same(SaveSystem.getFishCounts(), {}), 'a visitor does not start with an empty book');
+  SaveSystem.setCurrentMap('sea');
+  SaveSystem.setSelectedBait('pilker', 'sea');
+  SaveSystem.setSelectedFloat('float_02');
+  SaveSystem.recordCatch({ species: 'shark', size: 'large', lengthCm: 301 });
+  SaveSystem.recordCatch({ species: 'pike', size: 'small', lengthCm: 26 });
+  // Within his visit the game works as usual...
+  check(SaveSystem.getFishCounts().shark === 1 && SaveSystem.getBestCatches().pike?.small === 26,
+        'a visitor cannot see his own catches during his visit');
+  check(SaveSystem.getSelectedBait('sea') === 'pilker' && SaveSystem.getCurrentMap() === 'sea',
+        "a visitor's choices are not remembered during his visit");
+  // ...but none of it is written anywhere,
+  check(same([...store], [...before]), 'a visitor wrote to storage');
+  check(counters.removals === 0, 'a visitor deleted from storage');
+  // the next visitor starts from nothing,
+  SaveSystem.setProfile(visitor.id);
+  check(same(SaveSystem.getFishCounts(), {}) && SaveSystem.getLastCatch() === null,
+        "the next visitor sees the previous visitor's catches");
+  // and the others are as they were.
+  SaveSystem.setProfile('julian');
+  check(same(SaveSystem.getFishCounts(), JULIAN.fishCounts), "a visitor's play changed Julian's catches");
+  SaveSystem.setProfile('guest');
+  check(same(SaveSystem.getFishCounts(), GUEST.fishCounts), "a visitor's play changed the catches of James & Boaz");
+}
+
 await runScenario('device where the old pike-only wipe already ran', { wipeAlreadyRan: true });
 await runScenario('device where that wipe never ran', { wipeAlreadyRan: false });
 await runReleasedWriterScenario();
 await runJamesScenarios();
+await runVisitorScenario();
 
 // Both released saves must still be reachable from the title screen: each
 // START button there is a team, and a team plays on the save profile of

@@ -18,7 +18,10 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | De jongens, per houding | `char-<wie>-<houding>.png` | `char-julian-bite` enz. |
 | Dirk (basis voor zijn filmpje) | `char-dirk.png` | `char-dirk` |
 | Wolken, per kaart 2 stroken dichtbij + 2 ver weg | `clouds-<kaart>-front-1..2.png`, `clouds-<kaart>-back-1..2.png` | `clouds-lake-front-1` enz. |
-| START-bord en de ronde touwlijst | `ui-start.png`, `ui-ring.png` | `ui-start`, `ui-ring` |
+| Houten bord (voor de lege borden) en de ronde touwlijst | `ui-start.png`, `ui-ring.png` | `ui-start`, `ui-ring` |
+| Groene ronde knop "verder vissen" | `ui-continue.png` | `ui-continue` |
+| Papieren kaartje (vissenboek) en de kale houten wand erachter | `ui-card.png`, `ui-wall.png` | `ui-card`, `ui-wall` |
+| Grijs silhouet voor de Gast | `ui-guest.png` | `ui-guest` |
 
 De opdracht per plaatje (wat er geschilderd moet worden, en welk bestaand
 plaatje het model als voorbeeld voor opzet en stijl meekrijgt) staat in
@@ -88,20 +91,27 @@ schilderij van een kaart vervangen, maak dan eerst de lege lucht opnieuw
 met `python scripts/make_clouds.py plates` en laat de wolken opnieuw
 schilderen.
 
-**Het START-bord of de touwlijst:**
+**Het houten bord, de touwlijst, de groene knop, het kaartje of het
+Gast-silhouet:**
 
 ```bash
 python scripts/make_ui.py
 ```
 
 ```bash
-python scripts/make_characters.py
+python scripts/make_characters.py badges
 ```
 
-Het eerste commando snijdt bord en lijst uit en maakt van het bord ook de
-lege houten borden voor het vissenboek en de menu's. Het tweede zet de
-gezichtjes in de lijst (voor de START-knoppen en de ronde knop "verder
-vissen").
+Het eerste commando snijdt lijst, knop en kaartje uit en maakt van het
+houten bord de lege borden voor de menu's. Het tweede zet de gezichtjes in
+de lijst: de spelersplaatjes van het startscherm, en het grijze plaatje
+van de Gast.
+
+**De houten wand van het vissenboek:**
+
+```bash
+python scripts/make_paintings.py ui-wall
+```
 
 **Is het een nieuwe achtergrond van een kaart** (zee of Naarden), dan
 moeten er nog drie dingen kloppen:
@@ -229,10 +239,36 @@ klinken. Voor nieuwe vissen maak je een nieuwe opname erbij:
 De opname van de zeevissen (11 oktober 2026, 727 tekens) staat in
 `work/voice/` en in de geschiedenis van ElevenLabs.
 
-## Wat er nog niet is
+## Achtergrondgeluiden
 
-- **Zee-geluid.** `assets/audio/music/sea.mp3` (golven, meeuwen, in een
-  lus). Zolang dat bestand ontbreekt klinkt op zee het geluid van het meer.
+Naast de muziek heeft elke kaart haar eigen geluiden
+(`assets/audio/ambience/`, ingesteld in `src/data/maps.js` onder
+`ambience`):
+
+| Kaart | Altijd (in een lus) | Af en toe |
+|---|---|---|
+| Naarden-Vesting | vogels (`lake-birds`) | een plons (`lake-plons`), kerkklokken in de verte (`lake-bells`) |
+| Zee | golven (`sea-waves`) | meeuwen (`sea-gulls`), een scheepshoorn in de verte (`sea-horn`) |
+
+De muziek van de zee is `assets/audio/music/relaxing.mp3`.
+
+De geluiden komen van ElevenLabs (elevenlabs.io, Sound Effects): je
+beschrijft een geluid, kiest de duur (en voor een lus "Looping") en krijgt
+vier varianten. Zo maak je er een bij of vervang je er een:
+
+1. In ElevenLabs, Sound Effects: beschrijf het geluid in het Engels
+   (de gebruikte beschrijvingen staan bovenin `scripts/make_ambience.py`),
+   genereer, en download de beste variant als WAV naar `work/audio/`.
+2. In `scripts/make_ambience.py`: zet het bestand in de lijst `SOUNDS`
+   (met `far` voor iets dat van ver moet klinken).
+3. In een terminal in de Julian-map: `python scripts/make_ambience.py`.
+4. In `src/data/maps.js`: zet het geluid bij de kaart, met hoe vaak
+   (`every`, in seconden) en hoe hard (`volume`).
+
+Te hard, te zacht of te vaak? Dat zijn alleen de getallen in `maps.js`.
+Wie het geluid niet zelf kan beluisteren: `python scripts/listen.py
+<bestand> --blind` laat Gemini beschrijven wat het hoort (handig, maar
+het zit er soms naast, vooral bij lage tonen).
 
 ## De zeevissen
 

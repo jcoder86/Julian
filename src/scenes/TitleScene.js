@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import {
-  GAME_HEIGHT,
   WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP,
 } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
@@ -15,22 +14,32 @@ import { UI, COLOR, lettering, addGlow, pressable } from '../systems/Ui.js';
 // background's object-position so the two always show the same slice.
 const VIEW_ALIGN_Y = 0.1;
 
-// Button block (design px): one START sign per team, stacked. The first
-// sign's centre is the container origin.
-const START_W = 400;
-const START_H = 92;                // the sign's picture is 800 x 184
-const START_MARGIN_RIGHT = 36;
-const START_Y = Math.round(GAME_HEIGHT * 0.63);
-const START_STEP = 156;            // from one sign's centre to the next
-// The team's two faces sit on the plain left end of the sign and stick out
-// a little beyond it.
-const BADGE_HEIGHT = 108;
-const BADGE_CENTER_X = -START_W / 2 + 60;
-// Room the block needs between the first sign's centre and the bottom of
-// the screen.
-const START_MIN_BOTTOM_GAP = START_STEP * (TEAMS.length - 1) + 100;
+// "Who is playing?" -- a block on the right of the painting, under the logo:
+//
+//            [ Spelen met: ]          a wooden plate, not a button
+//      (o)(o)            (o)(o)       the teams: big, and what you tap
+//   Julian & Dirk     James & Boaz
+//                (o) Gast             the visitor: grey and smaller
+//
+// All sizes in design px; the block's origin is the middle of its top edge.
+const HEADER_W = 312;              // the plate's picture is 600 x 200
+const HEADER_H = 104;
+const TEAM_FACES_H = 156;          // a team's picture is 442 x 236: two faces
+const TEAM_GAP = 40;               // between the teams
+const TEAM_TOP = HEADER_H + 14;    // top of the faces
+const NAME_DROP = 24;              // from the faces' lower edge to the name's middle
+const VISITOR_FACE_H = 100;
+const VISITOR_TOP = TEAM_TOP + TEAM_FACES_H + NAME_DROP + 34;
+const BLOCK_H = VISITOR_TOP + VISITOR_FACE_H + 8;
+// Where the block sits: below the logo, clear of the screen's right edge,
+// and never wider than the part of the painting right of the children.
+const BLOCK_TOP = 268;
+const BLOCK_MARGIN = 26;
+const BLOCK_MAX_WIDTH_SHARE = 0.5;
+// The visitor's name, in the grey of his picture.
+const VISITOR_INK = '#d8d8d8';
 
-/** Texture key of a team's badge: its two faces (scripts/make_characters.py). */
+/** Texture key of a team's badge: its faces (scripts/make_characters.py). */
 export function teamBadgeKey(teamId) {
   return `team-${teamId}`;
 }
@@ -38,9 +47,10 @@ export function teamBadgeKey(teamId) {
 /**
  * Title screen with the painted friends as its background.
  *
- * One START button per team (data/teams.js), each showing the faces of
- * the two who fish together -- a child taps his own face. A team is also
- * a save profile: its catches are its own.
+ * Under "Spelen met:" every team (data/teams.js) has its own big picture --
+ * the faces of the two who fish together -- and a child taps his own face.
+ * A team is also a save profile: its catches are its own. The grey one is
+ * the visitor: for trying out, nothing of it is kept.
  */
 export class TitleScene extends Phaser.Scene {
   constructor() { super('TitleScene'); }
@@ -75,23 +85,22 @@ export class TitleScene extends Phaser.Scene {
       this.sound.stopByKey(MUSIC.START);
     });
 
-    // Camera + screen-anchored pieces (background box, button block).
+    // Camera + screen-anchored pieces (background box, the block of teams).
     bindLayout(this, { alignY: VIEW_ALIGN_Y }, (layout) => this._applyLayout(layout));
 
     // === Invisible tap-to-start overlay ===
-    // Show ONLY the painted scene at first. The START buttons are
-    // deliberately hidden until any tap lands on the page. That tap
-    // serves two purposes:
+    // Show ONLY the painted scene at first. The teams are deliberately
+    // hidden until any tap lands on the page. That tap serves two purposes:
     //   1. It unlocks WebAudio on iOS Safari so the title theme starts.
-    //   2. It reveals the buttons, so a child doesn't waste their first
-    //      tap on a visible button that wouldn't have triggered audio
-    //      anyway (we want the audio to be heard, not skipped past).
+    //   2. It reveals the teams, so a child doesn't waste their first tap
+    //      on a visible button that wouldn't have triggered audio anyway
+    //      (we want the audio to be heard, not skipped past).
     // We use a world-sized invisible Phaser zone (the visible screen is
     // always a slice of the world) so we don't need an extra DOM listener;
     // pointerdown on a Phaser Zone has the same gesture-credibility for
     // iOS' audio unlock as any other tap.
     //
-    // Back from the map screen there is nothing left to unlock: the buttons
+    // Back from the map screen there is nothing left to unlock: the teams
     // are simply there.
     if (data && data.showButtons) {
       this._revealStartUI();
@@ -108,11 +117,22 @@ export class TitleScene extends Phaser.Scene {
     if (this._tapZone) { this._tapZone.destroy(); this._tapZone = null; }
     if (this._startUi) return;
 
-    // One container for the whole button block so a resize / rotation
-    // only has to move a single object.
+    // One container for the whole block so a resize / rotation only has to
+    // move (and scale) a single object.
     const ui = this.add.container(0, 0);
     ui.setDepth(10);
-    TEAMS.forEach((team, i) => this._buildTeamButton(ui, team, i * START_STEP));
+    this._buildHeader(ui);
+
+    const players = TEAMS.filter((team) => !team.visitor);
+    const widths = players.map((team) => this._badgeWidth(team, TEAM_FACES_H));
+    this._blockWidth = widths.reduce((a, b) => a + b, 0) + TEAM_GAP * (players.length - 1);
+    let x = -this._blockWidth / 2;
+    players.forEach((team, i) => {
+      this._buildTeam(ui, team, x + widths[i] / 2, widths[i]);
+      x += widths[i] + TEAM_GAP;
+    });
+    for (const team of TEAMS.filter((t) => t.visitor)) this._buildVisitor(ui, team);
+
     this._startUi = ui;
     this._applyLayout(this.layout);
   }
@@ -133,49 +153,76 @@ export class TitleScene extends Phaser.Scene {
       this._domBgEl.style.height = `${c.height}px`;
     }
 
-    // Buttons: pinned to the right edge of the screen (inside the safe
-    // area). Vertically they keep their spot in the design frame, unless
-    // the screen is too short for that -- then they move up to stay fully
-    // visible.
+    // The block: against the right edge of the screen (inside the safe
+    // area), under the logo. Where the screen is too low or too narrow for
+    // it at full size, it shrinks -- and moves up as far as it then can.
     if (this._startUi) {
       const safe = layout.safe;
-      this._startUi.setPosition(
-        safe.right - START_MARGIN_RIGHT - START_W / 2,
-        Math.min(START_Y, safe.bottom - START_MIN_BOTTOM_GAP),
-      );
+      const roomH = safe.bottom - BLOCK_MARGIN - BLOCK_TOP;
+      const roomW = safe.width * BLOCK_MAX_WIDTH_SHARE - BLOCK_MARGIN;
+      const scale = Phaser.Math.Clamp(Math.min(roomH / BLOCK_H, roomW / this._blockWidth), 0.45, 1);
+      const top = Math.min(BLOCK_TOP, safe.bottom - BLOCK_MARGIN - BLOCK_H * scale);
+      this._startUi.setScale(scale);
+      this._startUi.setPosition(safe.right - BLOCK_MARGIN - (this._blockWidth / 2) * scale, top);
     }
   }
 
-  _buildTeamButton(ui, team, y) {
+  /** How wide a team's picture is when it is `height` high. */
+  _badgeWidth(team, height) {
+    const key = teamBadgeKey(team.id);
+    if (!this.textures.exists(key)) return height * 1.8;
+    const picture = this.textures.get(key).getSourceImage();
+    return height * picture.width / picture.height;
+  }
+
+  /** "Spelen met:" on a wooden plate. It says what the pictures are; it is not a button. */
+  _buildHeader(ui) {
+    if (this.textures.exists(UI.BOARD_LABEL)) {
+      ui.add(this.add.image(0, HEADER_H / 2, UI.BOARD_LABEL).setDisplaySize(HEADER_W, HEADER_H));
+    }
+    ui.add(this.add.text(0, HEADER_H / 2, 'Spelen met:', lettering(36, COLOR.GOLD)).setOrigin(0.5));
+  }
+
+  /** A team: its two faces, big, with the names under them. The whole of it is the button. */
+  _buildTeam(ui, team, x, width) {
+    const y = TEAM_TOP + TEAM_FACES_H / 2;
     // The glow is not part of the button: it breathes, the button only
     // dips when pressed.
-    ui.add(addGlow(this, 0, y, { w: START_W - 10, h: START_H - 10, radius: 34 }));
+    ui.add(addGlow(this, x, y, { w: width - 18, h: TEAM_FACES_H - 18, radius: TEAM_FACES_H / 2 }));
 
-    const button = this.add.container(0, y);
+    const button = this.add.container(x, y);
     ui.add(button);
-
-    if (this.textures.exists(UI.START)) {
-      const sign = this.add.image(0, 0, UI.START);
-      sign.setScale(START_W / sign.width);
-      button.add(sign);
-    } else {
-      // No picture: a plain board with the word on it.
-      button.add(this.add.rectangle(0, 0, START_W, START_H, 0x8a4f1d).setStrokeStyle(4, 0x3a1d06));
-      button.add(this.add.text(START_W * 0.2, 0, 'START', lettering(46, COLOR.GOLD)).setOrigin(0.5));
-    }
-
-    // The two who fish together: a child taps his own face.
     if (this.textures.exists(teamBadgeKey(team.id))) {
-      const badge = this.add.image(BADGE_CENTER_X, 0, teamBadgeKey(team.id));
-      badge.setScale(BADGE_HEIGHT / badge.height);
-      button.add(badge);
+      button.add(this.add.image(0, 0, teamBadgeKey(team.id)).setDisplaySize(width, TEAM_FACES_H));
+    } else {
+      // No picture: a plain board.
+      button.add(this.add.rectangle(0, 0, width, TEAM_FACES_H, 0x8a4f1d).setStrokeStyle(4, 0x3a1d06));
     }
-
     // Their names, for whoever can read.
-    button.add(this.add.text(0, START_H / 2 + 22, team.label, lettering(25)).setOrigin(0.5));
+    button.add(this.add.text(0, TEAM_FACES_H / 2 + NAME_DROP, team.label, lettering(27)).setOrigin(0.5));
 
-    // One tap target for the whole of it, faces and names included.
-    button.setSize(START_W + 100, START_H + 56);
+    // One tap target for faces and names together.
+    button.setSize(width + 16, TEAM_FACES_H + (NAME_DROP + 20) * 2);
+    pressable(this, button, () => this._enterGame(team.id));
+  }
+
+  /** The visitor: one grey face and "Gast" beside it, smaller than the teams, centred under them. */
+  _buildVisitor(ui, team) {
+    const faceW = this._badgeWidth(team, VISITOR_FACE_H);
+    const label = this.add.text(0, 0, team.label, lettering(27, VISITOR_INK)).setOrigin(0, 0.5);
+    const gap = 12;
+    const width = faceW + gap + label.width;
+
+    const button = this.add.container(0, VISITOR_TOP + VISITOR_FACE_H / 2);
+    ui.add(button);
+    if (this.textures.exists(teamBadgeKey(team.id))) {
+      button.add(this.add.image(-width / 2 + faceW / 2, 0, teamBadgeKey(team.id))
+        .setDisplaySize(faceW, VISITOR_FACE_H));
+    }
+    label.setX(-width / 2 + faceW + gap);
+    button.add(label);
+
+    button.setSize(width + 36, VISITOR_FACE_H + 12);
     pressable(this, button, () => this._enterGame(team.id));
   }
 

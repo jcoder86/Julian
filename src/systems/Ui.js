@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 
 /**
  * The look of the game's menus: carved wood, rope and chunky lettering,
- * after the title sign. Shared by every scene that shows text or a button,
- * so they all change together.
+ * after the title sign -- and paper pinned to that wood, for what is
+ * written down. Shared by every scene that shows text or a button, so they
+ * all change together.
  *
  * The pictures (assets/clean/ui-*.png) are cut by scripts/make_ui.py and
  * scripts/make_characters.py; BootScene loads them under the keys below.
@@ -16,17 +17,12 @@ export const UI_FONT =
   '"Arial Rounded MT Bold", "Baloo 2", "Fredoka", "Nunito", "Trebuchet MS", "Segoe UI", sans-serif';
 
 export const UI = Object.freeze({
-  START: 'ui-start',             // the START sign: plain wood left, lettering right
-  // Blank boards cut from that sign, in three shapes:
-  BOARD_CARD: 'ui-board-card',   // a species in the collection
+  // Blank boards cut from the wood of the title sign:
   BOARD_PANEL: 'ui-board-panel', // behind a menu's row of choices
-  BOARD_LABEL: 'ui-board-label', // under a caught fish
+  BOARD_LABEL: 'ui-board-label', // a name plate: under a caught fish, "Spelen met:"
+  CONTINUE: 'ui-continue',       // the round green button: "go on fishing"
+  CARD: 'ui-card',               // a paper card pinned up: a species in the collection
 });
-
-/** A team's "go on fishing" button: its angler in a rope frame. */
-export function continueKey(teamId) {
-  return `ui-continue-${teamId}`;
-}
 
 // Colours of the lettering.
 const INK = '#3a1d06';           // dark brown outline, as carved
@@ -35,7 +31,10 @@ export const COLOR = Object.freeze({
   CREAM: '#fff3d6',              // everything else on wood
   FADED: '#c9a878',              // "nothing here yet"
   GLOW: 0xffd24a,                // highlight behind what is selected
-  INSET: 0x2b1505,               // darker slot let into a board
+  // On paper:
+  INK,                           // what is written
+  INK_RED: '#a33a12',            // a number worth noticing
+  INK_FADED: '#a08a68',          // "nothing here yet"
 });
 
 /**
@@ -52,6 +51,19 @@ export function lettering(size, color = COLOR.CREAM) {
     stroke: INK,
     strokeThickness: Math.max(3, Math.round(size * 0.16)),
     shadow: { offsetX: 0, offsetY: Math.max(1, Math.round(size * 0.06)), color: '#000000', blur: 4, fill: true, stroke: true },
+  };
+}
+
+/**
+ * Text style for writing on paper: the same face, in ink, with nothing
+ * around it.
+ */
+export function written(size, color = COLOR.INK) {
+  return {
+    fontFamily: UI_FONT,
+    fontSize: `${size}px`,
+    fontStyle: 'bold',
+    color,
   };
 }
 
@@ -133,16 +145,6 @@ export function pressable(scene, target, onTap, hit = target) {
     scene.tweens.add({ targets: target, scale: base * 0.94, duration: 70, yoyo: true });
     scene.time.delayedCall(110, onTap);
   });
-}
-
-/** A darker slot let into a board: a rounded, see-through brown box. */
-export function addInset(scene, x, y, w, h, alpha = 0.5) {
-  const g = scene.add.graphics({ x, y });
-  g.fillStyle(COLOR.INSET, alpha);
-  g.fillRoundedRect(-w / 2, -h / 2, w, h, Math.min(12, h / 2));
-  g.lineStyle(2, 0x1a0c02, Math.min(1, alpha + 0.2));
-  g.strokeRoundedRect(-w / 2, -h / 2, w, h, Math.min(12, h / 2));
-  return g;
 }
 
 // ---------------------------------------------------------------------------

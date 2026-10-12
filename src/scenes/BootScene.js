@@ -3,14 +3,15 @@ import {
   SFX, MUSIC, sfxPath, musicPath, voiceKey, voicePath,
   VOICE_ATLASES, voiceAtlasMetaKey, voiceAtlasPath, voiceAtlasMetaPath,
 } from '../systems/AudioManager.js';
+import { ambienceKey, ambienceNames, ambiencePath } from '../systems/Ambience.js';
 import { FISH_SPECIES, FISH_SIZES, fishTextureKey } from '../data/fish.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { BAITS, baitFullTextureKey, baitSimpleTextureKey } from '../data/baits.js';
 import { FLOATS, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
 import { MAPS, catchBgKey, catchBgImage } from '../data/maps.js';
-import { TEAMS } from '../data/teams.js';
+import { TEAMS, lookTeamId } from '../data/teams.js';
 import { CHARACTERS_KEY, crewTextureKey, buildClipTexture } from '../systems/Crew.js';
-import { UI, continueKey } from '../systems/Ui.js';
+import { UI } from '../systems/Ui.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
@@ -23,6 +24,7 @@ export const TEX = Object.freeze({
   ICON_BAIT:  'icon-bait',
   ICON_MAP:   'icon-map',                        // back to the map-select screen
   MAPSELECT_BG: 'mapselect-bg',                  // cabin wall behind the map-select cards
+  COLLECTION_WALL: 'ui-wall',                    // the bare wall the collection's cards are pinned to
   // Title-screen background
   START_BG:   'start-bg',
   // Reel mechanic (Phase 7) -- the fishing reel ("molen") and its loose
@@ -66,10 +68,12 @@ export class BootScene extends Phaser.Scene {
     //
     // One painting per map, plus the catch-screen painting of every team
     // on that map (the children are in it).
+    // (A visitor is shown in a painting he borrows: see lookTeamId.)
+    const painted = [...new Set(TEAMS.map(lookTeamId))];
     for (const map of MAPS) {
       this.load.image(map.backdropKey, map.backdropImage);
-      for (const team of TEAMS) {
-        this.load.image(catchBgKey(team.id, map.id), catchBgImage(team.id, map.id));
+      for (const teamId of painted) {
+        this.load.image(catchBgKey(teamId, map.id), catchBgImage(teamId, map.id));
       }
     }
     // Each map's cloud layers are shown by the browser itself (DOM strips
@@ -103,13 +107,13 @@ export class BootScene extends Phaser.Scene {
     this.load.image(TEX.ICON_MAP,   'clean/icon-map.png');
     this.load.image(TEX.START_BG,   'clean/start-friends.jpg');
     this.load.image(TEX.MAPSELECT_BG, 'clean/mapselect.jpg');
-    // Menus: the START sign and the blank boards...
+    this.load.image(TEX.COLLECTION_WALL, 'clean/ui-wall.jpg');
+    // Menus: boards, the paper card, the green "go on fishing" button...
     for (const key of Object.values(UI)) this.load.image(key, `clean/${key}.png`);
-    // ...and per team its two faces (for its START button; same key as
-    // teamBadgeKey() in TitleScene) and its "go on fishing" button.
+    // ...and per team its faces (its button on the title screen; same key
+    // as teamBadgeKey() in TitleScene).
     for (const team of TEAMS) {
       this.load.image(`team-${team.id}`, `clean/team_${team.id}.png`);
-      this.load.image(continueKey(team.id), `clean/${continueKey(team.id)}.png`);
     }
 
     // Reel + handle for the Phase 7 reeling-in mechanic.
@@ -150,6 +154,10 @@ export class BootScene extends Phaser.Scene {
     }
     for (const key of Object.values(MUSIC)) {
       this.load.audio(key, musicPath(key));
+    }
+    // What each place sounds like: birds, waves, bells, gulls...
+    for (const name of ambienceNames(MAPS)) {
+      this.load.audio(ambienceKey(name), ambiencePath(name));
     }
     // Voice atlases (preferred): a few mp3s that each hold many phrases.
     // The companion JSON gives us seek + duration per (species, size).

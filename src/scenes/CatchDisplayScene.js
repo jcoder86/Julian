@@ -7,9 +7,9 @@ import { TEX } from './BootScene.js';
 import { fishTextureKey, speciesNlName } from '../data/fish.js';
 import { AudioManager, SFX } from '../systems/AudioManager.js';
 import { getMap, catchBgKey } from '../data/maps.js';
-import { getTeam } from '../data/teams.js';
+import { getTeam, lookTeamId } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { UI, COLOR, continueKey, lettering, addGlow, addHalo, pressable } from '../systems/Ui.js';
+import { UI, COLOR, lettering, addGlow, addHalo, pressable } from '../systems/Ui.js';
 
 /**
  * Catch display: shown when a fish is caught. Renders catch.png full-screen
@@ -69,7 +69,7 @@ const BOARD_GAP = 26;
 const CATCH_EDGE_MARGIN = 14;
 
 // The "go on fishing" button (bottom-right).
-const PLAY_BTN_SIZE   = 236;
+const PLAY_BTN_SIZE   = 210;
 const PLAY_BTN_MARGIN = 30;
 
 export class CatchDisplayScene extends Phaser.Scene {
@@ -104,7 +104,7 @@ export class CatchDisplayScene extends Phaser.Scene {
     // The painting shows whoever is fishing, where they are fishing.
     const map = getMap(this.catchData.mapId);
     const team = getTeam(SaveSystem.getProfile());
-    const bgKey = catchBgKey(team.id, map.id);
+    const bgKey = catchBgKey(lookTeamId(team), map.id);
     if (this.textures.exists(bgKey)) {
       const bg = this.add.image(worldCx, worldCy, bgKey);
       bg.setOrigin(0.5);
@@ -245,16 +245,15 @@ export class CatchDisplayScene extends Phaser.Scene {
   }
 
   _buildPlayButton() {
-    // "Go on fishing": the team's own angler, rod in hand, in a round
-    // rope frame. The picture stays still (a scaled picture shimmers); a
-    // glow breathes behind it for the "tap me" cue. Both sit in one
-    // container that _applyLayout pins to the screen corner.
+    // "Go on fishing": the round green button with the rod and the arrow.
+    // The picture stays still (a scaled picture shimmers); a glow breathes
+    // behind it for the "tap me" cue. Both sit in one container that
+    // _applyLayout pins to the screen corner.
     const group = this.add.container(0, 0);
     group.setDepth(40);
     group.add(addGlow(this, 0, 0, { r: PLAY_BTN_SIZE / 2 - 6 }));
 
-    const team = getTeam(SaveSystem.getProfile());
-    const key = this.textures.exists(continueKey(team.id)) ? continueKey(team.id) : TEX.PLAY;
+    const key = this.textures.exists(UI.CONTINUE) ? UI.CONTINUE : TEX.PLAY;
     const btn = this.add.image(0, 0, key);
     btn.setScale(PLAY_BTN_SIZE / Math.max(btn.width, btn.height));
     group.add(btn);

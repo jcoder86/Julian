@@ -3,6 +3,7 @@
 
 import { speciesForMap } from '../data/fish.js';
 import { JAMES_CATCHES } from '../data/jamesCatches.js';
+import { isVisitorProfile } from '../data/teams.js';
 
 const KEY_PREFIX = 'julians_game_';
 
@@ -37,9 +38,17 @@ function namespaced(key) {
   return KEY_PREFIX + _activeProfile + '_' + key;
 }
 
+// The visitor (the grey "Gast" button, data/teams.js) is for trying the game
+// out: nothing he catches is kept. His "storage" is this Map -- gone when
+// the page closes, and emptied every time a visitor starts.
+const _visitorStore = new Map();
+
 // localStorage is available in any modern browser, but we still guard against
 // hostile environments (private-mode quotas, embedded webviews) by catching.
 function safeGet(key) {
+  if (isVisitorProfile(_activeProfile)) {
+    return _visitorStore.has(key) ? _visitorStore.get(key) : null;
+  }
   try {
     return window.localStorage.getItem(namespaced(key));
   } catch (e) {
@@ -49,6 +58,10 @@ function safeGet(key) {
 }
 
 function safeSet(key, value) {
+  if (isVisitorProfile(_activeProfile)) {
+    _visitorStore.set(key, value);
+    return;
+  }
   try {
     window.localStorage.setItem(namespaced(key), value);
   } catch (e) {
@@ -166,10 +179,13 @@ export const SaveSystem = {
   /**
    * Switch the active profile. All subsequent reads/writes use the new
    * namespace. 'julian' = Julian's main save; any other string = isolated
-   * profile (typically 'guest').
+   * profile ('guest' is James & Boaz). The visitor's profile is not stored
+   * at all.
    */
   setProfile(name) {
     _activeProfile = name || 'julian';
+    // A visitor always starts with an empty book.
+    if (isVisitorProfile(_activeProfile)) _visitorStore.clear();
   },
 
   /** Returns the currently active profile name. */

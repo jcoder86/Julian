@@ -34,6 +34,7 @@ PAINTINGS = {
     "backdrop-naarden": "the moat of Naarden-Vesting (map 'lake')",
     "backdrop-sea":     "the sea from the stone harbour pier (map 'sea')",
     "mapselect":        "the wall behind the 'where shall we fish?' screen",
+    "ui-wall":          "the bare cabin wall behind the fish collection",
     "start-friends":    "the title screen: the three friends and the dog",
     # The catch screen, per team (save profile) and map:
     "catch-julian-lake": "Julian and Dirk on the jetty",

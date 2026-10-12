@@ -23,7 +23,7 @@ src/
   constants.js                # the design frame and the 4:3 world (no other imports!)
   scenes/
     BootScene.js              # loads everything, then the title
-    TitleScene.js             # one START sign per team
+    TitleScene.js             # "Spelen met:" -- a picture per team, and the visitor
     MapSelectScene.js         # where shall we fish?
     FishingScene.js           # the game itself
     CatchDisplayScene.js      # "look what we caught"
@@ -134,11 +134,18 @@ largest) but never endless.
 
 ## Teams and characters
 
-The title screen has one START button per **team** (`src/data/teams.js`):
-*Julian & Dirk* and *James & Boaz*. A team is a save profile -- its
+Under "Spelen met:" the title screen shows one big picture per **team**
+(`src/data/teams.js`), its two faces in rope frames: *Julian & Dirk* and
+*James & Boaz*. The picture is the button. A team is a save profile -- its
 catches are its own -- plus the two figures on the jetty: the boy with the
 rod and his buddy. (The second team's profile id is `guest`: that is what
 the button was called when James started saving his catches under it.)
+
+Below them, grey and smaller, is **Gast**: the visitor, for trying the game
+or testing something. A visitor plays with Julian and Dirk's figures, and
+nothing he catches is kept: his profile (`visitor`) lives in memory only,
+is empty at every start and never reaches the browser's storage
+(`SaveSystem.js`; the save test checks it).
 
 The boys are not animated film but **poses**: nine paintings each of the
 boy with the rod (ready, wind-up, cast, two ways of waiting, bite, two of
@@ -197,7 +204,9 @@ makes of it:
 | `mapselect-bg`, `start`, `catch-<team>-<map>` | `python scripts/make_paintings.py` | `clean/mapselect.jpg`, `clean/start-friends.jpg`, `clean/catch-<team>-<map>.jpg` |
 | `char-<who>-<pose>`, `char-dirk` | `python scripts/make_characters.py` | `clean/char_<who>_<pose>.png`, `clean/characters.json` |
 | `clouds-<map>-front-1..2`, `clouds-<map>-back-1..2` | `python scripts/make_clouds.py` | `clean/clouds-<map>-front.png`, `clean/clouds-<map>-back.png` |
-| `ui-start`, `ui-ring` | `python scripts/make_ui.py`, then `python scripts/make_characters.py` | `clean/ui-start.png`, the boards `clean/ui-board-*.png`, `clean/team_<team>.png`, `clean/ui-continue-<team>.png` |
+| `ui-start`, `ui-ring`, `ui-guest` | `python scripts/make_ui.py`, then `python scripts/make_characters.py badges` | the boards `clean/ui-board-*.png`, `clean/team_<team>.png` |
+| `ui-continue`, `ui-card` | `python scripts/make_ui.py` | `clean/ui-continue.png`, `clean/ui-card.png` |
+| `ui-wall` | `python scripts/make_paintings.py ui-wall` | `clean/ui-wall.jpg` |
 
 A new backdrop also needs its numbers checked in `src/data/maps.js`: the
 waterline (press `W` in the fishing scene to see it drawn over the
@@ -467,29 +476,57 @@ the PATH). If the mask is missing the clouds simply render unmasked.
 ## Menus and buttons
 
 Everything one taps outside the fishing itself is carved wood and rope,
-after the title sign; `src/systems/Ui.js` holds the shared pieces (the
-lettering, the breathing glow, the press-dip, the menu of choices).
+after the title sign -- and paper pinned to that wood, for what is written
+down. `src/systems/Ui.js` holds the shared pieces (the lettering, the
+breathing glow, the press-dip, the menu of choices).
 
 The map screen has a third, small framed picture in its top-left corner:
 the title painting, with "Startmenu" on a plate under it. It leads back to
 the title screen, where the other team can take over.
 
-* **START** (`ui-start`): one generated wooden sign, plain on the left
-  and with the word on the right. Each team's two faces, in rope frames,
-  sit on the plain part.
-* **Go on fishing**: a round rope frame (`ui-ring`) with the team's own
-  angler in it, rod in hand. It closes the catch screen and the
-  collection.
-* **Boards**: the blank boards behind the collection's species, the bait
-  and float menus and a caught fish's name are all cut from the START
-  sign itself -- its plain left part plus its mirror image, as long as
-  the shape asks for -- so they are the same wood.
+* **The teams** on the title screen: each face in a round rope frame
+  (`ui-ring`), two to a picture. The visitor's is one frame with a grey
+  silhouette (`ui-guest`), the whole of it drained of colour.
+* **Go on fishing** (`ui-continue`): a round green button with a rod, a
+  float and an arrow, in the style of the icons in the fishing screen. It
+  closes the catch screen and the collection.
+* **The collection**: a paper card per species (`ui-card`, with a brass
+  pin in each top corner) on the bare plank wall of the cabin (`ui-wall`).
+  What is on a card is written in ink (`written()` in `Ui.js`).
+* **Boards**: the blank boards behind the bait and float menus, under a
+  caught fish and behind "Spelen met:" are all cut from one generated
+  wooden sign (`assets/raw/ui-start.png`) -- its plain left part plus its
+  mirror image, as long as the shape asks for -- so they are the same wood.
 
-`scripts/make_ui.py` cuts the sign and the ring out and makes the boards;
-`scripts/make_characters.py` then puts the faces in the ring.
+`scripts/make_ui.py` cuts out the ring, the button and the card and makes
+the boards; `scripts/make_characters.py badges` then puts the faces in the
+ring.
 
 Lettering uses "Arial Rounded MT Bold", which ships with iPadOS; on other
 systems the next rounded or plain font in `UI_FONT` is used.
+
+## Sound
+
+Three layers, loudest last: the **music** of the map (`music` in
+`src/data/maps.js`: `ambient.mp3` at the moat, `relaxing.mp3` at sea), the
+**ambience** of the place, and the game's own sounds (the plop of the
+float, the reel, applause, the voice).
+
+The ambience (`src/systems/Ambience.js`, a map's `ambience`) is a *bed*
+that goes round and round -- birdsong at the moat, waves at the pier -- and
+sounds that *pass* now and then, each after a random wait: a fish jumping
+and the church bells across the water; gulls and a ship's horn far out.
+How often and how loud is in `maps.js`; each passing sound also comes from
+a slightly different side and at a slightly different volume every time.
+The bed is cross-faded into itself rather than looped, so the sliver of
+silence at the ends of an mp3 never ticks.
+
+The sounds were made with ElevenLabs' Sound Effects and are prepared by
+`scripts/make_ambience.py` (which also lists the descriptions they were
+generated from): trimmed, soft-edged, the far-away ones dulled, all brought
+to one loudness. `scripts/listen.py <files> --blind` has Gemini describe a
+sound file -- useful when whoever makes the sounds cannot hear them, but it
+is confidently wrong at times, low drones especially: ask it twice.
 
 ## Where things are on a painting
 
@@ -538,6 +575,4 @@ Object.keys(localStorage)
 
 ## Not there yet
 
-* Sea ambience (`assets/audio/music/sea.mp3`); on the sea the lake's
-  ambience plays.
 * The children are posed, not filmed (see "Teams and characters").

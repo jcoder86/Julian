@@ -4,16 +4,19 @@ Cut the generated buttons, frames and panels out of their screens.
     assets/raw/ui-<name>.png  ->  assets/clean/ui-<name>.png
 
     python scripts/make_ui.py            # all of them
-    python scripts/make_ui.py ui-start   # just one
+    python scripts/make_ui.py ui-card    # just one
 
 Each is keyed (scripts/chroma.py), cropped to what is left and scaled to
 the size the game shows it at -- a button a few hundred pixels wide has no
 use for 1500. The frame ring keeps its hole: the green inside it goes like
 the green around it. scripts/make_characters.py puts faces in that ring
-(the START buttons' badges, the "go on fishing" button), so run this first.
+(the badges of the teams on the title screen), so run this first.
 
-BOARDS. Menus and cards need blank wooden boards in several shapes, in
-exactly the wood of the START sign. They are made from that sign: its
+The green "go on fishing" button stands on a MAGENTA screen (it is green
+itself); the key works out which of the two screens a picture has.
+
+BOARDS. Menus need blank wooden boards in several shapes, in exactly the
+wood of the START sign. They are made from that sign: its
 left part, up to where the lettering starts, is plain wood with a rounded
 end, a rope and two nails. A board is that part plus its own mirror image
 -- as wide as the shape asks for:
@@ -36,14 +39,14 @@ CLEAN = ROOT / "assets" / "clean"
 
 # name -> the longest side it is stored at, in px
 UI = {
-    "ui-start": 800,       # the title screen's START sign
-    "ui-ring": 440,        # round rope frame: around a face, and around "go on fishing"
+    "ui-ring": 440,        # round rope frame around a face
+    "ui-continue": 420,    # the round green "go on fishing" button
+    "ui-card": 480,        # a paper card pinned to the wall: a species in the collection
 }
 
 # Blank boards cut from the START sign: shape -> (width, height) in px.
 # The sizes are 1.5x what the game shows, so they stay crisp on an iPad.
 BOARDS = {
-    "card": (420, 285),      # a species in the collection
     "panel": (1500, 594),    # behind a menu's row of choices
     "label": (600, 200),     # under a caught fish: its name and length
 }
