@@ -269,16 +269,17 @@ def make_dirk(meta):
 
 # Round, rope-framed pictures made from the figures (the frame is
 # assets/clean/ui-ring.png, see scripts/make_ui.py):
-#   team_<team>.png   the two who fish together, heads close, in ONE frame:
-#                     the team's button on the title screen
+#   team_<team>.png   the two who fish together, side by side in ONE frame
+#                     (shoulder to shoulder: the faces do not overlap): the
+#                     team's button on the title screen
 # Per head: who, pose or clip, the share of the figure's height that is
 # head, and where it goes in the picture -- centre x, centre y and size, as
 # shares of the picture's side. The first is behind, the last in front.
 BADGES = {
-    "julian": [("julian", "ready", 0.31, 0.37, 0.45, 0.76),
-               ("dirk", "idle", 0.47, 0.71, 0.63, 0.58)],
-    "guest": [("james", "ready", 0.31, 0.36, 0.44, 0.76),
-              ("boaz", "look", 0.30, 0.70, 0.59, 0.64)],
+    "julian": [("julian", "ready", 0.31, 0.30, 0.46, 0.60),
+               ("dirk", "idle", 0.47, 0.73, 0.52, 0.52)],
+    "guest": [("james", "ready", 0.31, 0.29, 0.45, 0.60),
+              ("boaz", "look", 0.30, 0.72, 0.50, 0.56)],
 }
 # Whoever plays as a visitor ("Gast") has no face: one frame with a grey
 # silhouette (assets/raw/ui-guest.png), the whole badge drained of colour.

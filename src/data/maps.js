@@ -174,8 +174,9 @@ const MAP_DEFS = [
       { src: 'clean/clouds-france-back.png',  height: 0.28 * WORLD_HEIGHT, speed: 1.3, alpha: 0.95 },
       { src: 'clean/clouds-france-front.png', height: 0.28 * WORLD_HEIGHT, speed: 3.4, alpha: 1 },
     ],
-    // On the planks of the pontoon, between its two mooring poles.
-    seat: { x: 262, y: 628 },
+    // In the middle of the pontoon's planks, between its two mooring poles
+    // and well back from its front edge.
+    seat: { x: 196, y: 598 },
     landing: { x: 640, y: 648 },
     // Deck, barrels and both poles.
     dry: [

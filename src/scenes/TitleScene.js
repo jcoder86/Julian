@@ -6,7 +6,7 @@ import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { AudioManager, MUSIC } from '../systems/AudioManager.js';
 import { TEAMS } from '../data/teams.js';
-import { UI, COLOR, lettering, addGlow, pressable } from '../systems/Ui.js';
+import { lettering, addGlow, pressable } from '../systems/Ui.js';
 
 // When a screen wider than 4:3 has to crop the painting top and bottom,
 // keep the top: that is where the logo and Julian's face are. 0 = keep the
@@ -14,29 +14,29 @@ import { UI, COLOR, lettering, addGlow, pressable } from '../systems/Ui.js';
 // background's object-position so the two always show the same slice.
 const VIEW_ALIGN_Y = 0.1;
 
-// "Who is playing?" -- a block on the right of the painting, under the logo:
+// "Who is playing?" -- a block under the painted logo, its middle under the
+// logo's middle:
 //
-//            [ Spelen met: ]          a wooden plate, not a button
-//       ( oo )            ( oo )      the teams, each two faces in one frame:
-//                                     big, and what you tap
-//   Julian & Dirk     James & Boaz
-//                (o) Gast             the visitor: grey and smaller
+//        ( oo )            ( oo )      the teams, each two faces in one frame:
+//     Julian & Dirk     James & Boaz   big, and what you tap
+//                 (o) Gast             the visitor: grey and smaller
 //
 // All sizes in design px; the block's origin is the middle of its top edge.
-const HEADER_W = 312;              // the plate's picture is 600 x 200
-const HEADER_H = 104;
-const TEAM_FACES_H = 200;          // a team's picture is round: its two faces in one frame
-const TEAM_GAP = 56;               // between the teams
-const TEAM_TOP = HEADER_H + 14;    // top of the faces
-const NAME_DROP = 24;              // from the faces' lower edge to the name's middle
+const TEAM_FACES_H = 236;          // a team's picture is round: its two faces in one frame
+const TEAM_GAP = 44;               // between the teams
+const TEAM_TOP = 0;                // top of the faces
+const NAME_DROP = 26;              // from the faces' lower edge to the name's middle
 const VISITOR_FACE_H = 100;
-const VISITOR_TOP = TEAM_TOP + TEAM_FACES_H + NAME_DROP + 34;
+const VISITOR_TOP = TEAM_TOP + TEAM_FACES_H + NAME_DROP + 36;
 const BLOCK_H = VISITOR_TOP + VISITOR_FACE_H + 8;
-// Where the block sits: below the logo, clear of the screen's right edge,
-// and never wider than the part of the painting right of the children.
-const BLOCK_TOP = 268;
-const BLOCK_MARGIN = 26;
-const BLOCK_MAX_WIDTH_SHARE = 0.5;
+// Where the block sits. The logo is part of the painting, so its place is
+// given in design coordinates: the block hangs centred under the logo's
+// middle, just below it -- but never over the children (left of
+// BLOCK_LEFT_LIMIT) and never off the screen.
+const BLOCK_CENTER_X = 915;
+const BLOCK_TOP = 282;
+const BLOCK_LEFT_LIMIT = 640;
+const BLOCK_MARGIN = 22;
 // The visitor's name, in the grey of his picture.
 const VISITOR_INK = '#d8d8d8';
 
@@ -48,8 +48,9 @@ export function teamBadgeKey(teamId) {
 /**
  * Title screen with the painted friends as its background.
  *
- * Under "Spelen met:" every team (data/teams.js) has its own big picture --
- * the faces of the two who fish together -- and a child taps his own face.
+ * Under the logo every team (data/teams.js) has its own big round picture
+ * -- the two who fish together, side by side -- and a child taps his own
+ * face.
  * A team is also a save profile: its catches are its own. The grey one is
  * the visitor: for trying out, nothing of it is kept.
  */
@@ -122,7 +123,6 @@ export class TitleScene extends Phaser.Scene {
     // move (and scale) a single object.
     const ui = this.add.container(0, 0);
     ui.setDepth(10);
-    this._buildHeader(ui);
 
     const players = TEAMS.filter((team) => !team.visitor);
     const widths = players.map((team) => this._badgeWidth(team, TEAM_FACES_H));
@@ -154,17 +154,21 @@ export class TitleScene extends Phaser.Scene {
       this._domBgEl.style.height = `${c.height}px`;
     }
 
-    // The block: against the right edge of the screen (inside the safe
-    // area), under the logo. Where the screen is too low or too narrow for
-    // it at full size, it shrinks -- and moves up as far as it then can.
+    // The block: centred under the logo. Where the screen is too low or too
+    // narrow for it at full size, it shrinks -- and moves up, or sideways
+    // into view, as far as it then can.
     if (this._startUi) {
       const safe = layout.safe;
+      const left = Math.max(BLOCK_LEFT_LIMIT, safe.left + BLOCK_MARGIN);
+      const right = safe.right - BLOCK_MARGIN;
       const roomH = safe.bottom - BLOCK_MARGIN - BLOCK_TOP;
-      const roomW = safe.width * BLOCK_MAX_WIDTH_SHARE - BLOCK_MARGIN;
-      const scale = Phaser.Math.Clamp(Math.min(roomH / BLOCK_H, roomW / this._blockWidth), 0.45, 1);
+      const scale = Phaser.Math.Clamp(
+        Math.min(roomH / BLOCK_H, (right - left) / this._blockWidth), 0.45, 1);
+      const half = (this._blockWidth / 2) * scale;
       const top = Math.min(BLOCK_TOP, safe.bottom - BLOCK_MARGIN - BLOCK_H * scale);
       this._startUi.setScale(scale);
-      this._startUi.setPosition(safe.right - BLOCK_MARGIN - (this._blockWidth / 2) * scale, top);
+      this._startUi.setPosition(
+        Phaser.Math.Clamp(BLOCK_CENTER_X, Math.min(left + half, right - half), right - half), top);
     }
   }
 
@@ -174,14 +178,6 @@ export class TitleScene extends Phaser.Scene {
     if (!this.textures.exists(key)) return height * 1.8;
     const picture = this.textures.get(key).getSourceImage();
     return height * picture.width / picture.height;
-  }
-
-  /** "Spelen met:" on a wooden plate. It says what the pictures are; it is not a button. */
-  _buildHeader(ui) {
-    if (this.textures.exists(UI.BOARD_LABEL)) {
-      ui.add(this.add.image(0, HEADER_H / 2, UI.BOARD_LABEL).setDisplaySize(HEADER_W, HEADER_H));
-    }
-    ui.add(this.add.text(0, HEADER_H / 2, 'Spelen met:', lettering(36, COLOR.GOLD)).setOrigin(0.5));
   }
 
   /** A team: its two faces, big, with the names under them. The whole of it is the button. */
@@ -200,7 +196,7 @@ export class TitleScene extends Phaser.Scene {
       button.add(this.add.rectangle(0, 0, width, TEAM_FACES_H, 0x8a4f1d).setStrokeStyle(4, 0x3a1d06));
     }
     // Their names, for whoever can read.
-    button.add(this.add.text(0, TEAM_FACES_H / 2 + NAME_DROP, team.label, lettering(27)).setOrigin(0.5));
+    button.add(this.add.text(0, TEAM_FACES_H / 2 + NAME_DROP, team.label, lettering(29)).setOrigin(0.5));
 
     // One tap target for faces and names together.
     button.setSize(width + 16, TEAM_FACES_H + (NAME_DROP + 20) * 2);
