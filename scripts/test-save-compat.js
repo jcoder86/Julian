@@ -10,6 +10,11 @@
 // catch is still there and still shown. `npm run build` runs it first: if it
 // fails, nothing gets built and nothing gets deployed.
 //
+// Two things were taken out of saves ON REQUEST, each once and each fenced
+// in (see SaveSystem.js): the sea book of James & Boaz (2026-10-11) and the
+// French lake's book of both teams (2026-10-12). The scenarios below check
+// that exactly that goes, that it is kept in a note, and nothing else.
+//
 //   node scripts/test-save-compat.js
 
 import { readFileSync } from 'node:fs';
@@ -84,6 +89,20 @@ function releasedStorage({ wipeAlreadyRan }) {
 // emptied (once) on devices that start this version within days of it.
 const REQUEST_DAY = Date.UTC(2026, 9, 11, 18, 0, 0);
 
+// The French lake's book is emptied once, for both teams, on devices that
+// start this version through 19 October 2026. Three species of the released
+// lake are on that page now: their old catches are what goes (into a note).
+// Written out here, not looked up: any OTHER species going is a failure.
+const MOVED_TO_FRANCE = ['bass', 'chub', 'trout'];
+const AFTER_FRANCE_CUTOFF = Date.UTC(2026, 9, 20, 0, 0, 1);
+const FRENCH_TABLES = ['fishCounts', 'catchCountsBySize', 'bestCatches'];
+
+/** What the game does with saves when it starts (BootScene). */
+function startUp(SaveSystem, now) {
+  SaveSystem.adoptJamesCatches(now);
+  SaveSystem.emptyFrenchBooks(now);
+}
+
 let failures = 0;
 function check(condition, message) {
   if (condition) return;
@@ -91,6 +110,18 @@ function check(condition, message) {
   console.error(`  FAIL: ${message}`);
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// The same, whatever order the keys are in.
+const sorted = (value) => (value && typeof value === 'object' && !Array.isArray(value)
+  ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sorted(value[key])]))
+  : value);
+const sameContent = (a, b) => same(sorted(a), sorted(b));
+const without = (table, ids) => Object.fromEntries(Object.entries(table).filter(([id]) => !ids.includes(id)));
+const only = (table, ids) => Object.fromEntries(Object.entries(table).filter(([id]) => ids.includes(id)));
+/** A save (see snapshot) without the catches of some species. */
+const withoutCatchesOf = (save, ids) => ({
+  ...save,
+  ...Object.fromEntries(FRENCH_TABLES.map((table) => [table, without(save[table], ids)])),
+});
 
 async function runScenario(label, options) {
   console.log(`- ${label}`);
@@ -114,19 +145,38 @@ async function runScenario(label, options) {
 
   // --- 1. Start the game as Julian, the way START does -------------------
   // (Start-up first offers James & Boaz James's collection. This guest
-  // profile has lake fish of its own, so nothing may come of it.)
-  SaveSystem.adoptJamesCatches(REQUEST_DAY);
+  // profile has lake fish of its own, so nothing may come of it. Then the
+  // French lake's book is emptied -- on a device that starts in time.)
+  const startedAt = options.startedAt ?? REQUEST_DAY;
+  const gone = startedAt < AFTER_FRANCE_CUTOFF ? MOVED_TO_FRANCE : [];
+  const expected = withoutCatchesOf(JULIAN, gone);
+  startUp(SaveSystem, startedAt);
   check(SaveSystem.getProfile() === 'julian', 'start-up left another profile active');
   SaveSystem.setProfile('julian');
-  check(same(SaveSystem.getFishCounts(), JULIAN.fishCounts), 'fishCounts changed on load');
-  check(same(SaveSystem.getCatchCountsBySize(), JULIAN.catchCountsBySize), 'catchCountsBySize changed on load');
-  check(same(SaveSystem.getBestCatches(), JULIAN.bestCatches), 'bestCatches changed on load');
+  check(same(SaveSystem.getFishCounts(), expected.fishCounts), 'fishCounts changed on load');
+  check(same(SaveSystem.getCatchCountsBySize(), expected.catchCountsBySize), 'catchCountsBySize changed on load');
+  check(same(SaveSystem.getBestCatches(), expected.bestCatches), 'bestCatches changed on load');
   check(same(SaveSystem.getLastCatch(), JULIAN.lastCatch), 'lastCatch changed on load');
   check(SaveSystem.getSelectedBait('lake') === JULIAN.selectedBait, 'the lake no longer finds the saved bait');
   check(SaveSystem.getSelectedBait() === JULIAN.selectedBait, 'getSelectedBait() without a map must still mean the lake');
   check(SaveSystem.getSelectedFloat() === JULIAN.selectedFloat, 'saved float not found');
+  // Only the three tables of Julian's book may have been rewritten, and
+  // only when the French page was emptied (their content is checked above).
+  const rewritten = gone.length ? FRENCH_TABLES.map((table) => `julians_game_${table}`) : [];
   for (const [key, value] of before) {
+    if (rewritten.includes(key)) continue;
     check(store.get(key) === value, `loading the save rewrote "${key}"`);
+  }
+  // What was taken off the French page is kept, to the last centimetre.
+  const frenchNote = SaveSystem.load('franceEmptied');
+  check(frenchNote?.emptied === (gone.length > 0), 'the note about the French book says the wrong thing');
+  if (gone.length) {
+    for (const table of FRENCH_TABLES) {
+      check(sameContent(frenchNote?.removed?.[table], only(JULIAN[table], gone)),
+            `what was taken out of ${table} was not kept in the note`);
+    }
+  } else {
+    check(frenchNote?.removed === undefined, 'the note claims French catches were taken out');
   }
 
   // --- 2. Everything saved is still a known id, and still shown -----------
@@ -150,23 +200,33 @@ async function runScenario(label, options) {
   }
 
   // --- 3. Play the new content: it may only ADD ---------------------------
+  // (Catches are recorded the way the fishing screen does: with the map.)
   SaveSystem.setCurrentMap('sea');
   SaveSystem.setSelectedBait('pilker', 'sea');
-  SaveSystem.recordCatch({ species: 'shark', size: 'small', lengthCm: 95 });
-  SaveSystem.recordCatch({ species: 'mackerel', size: 'medium', lengthCm: 31 });
+  SaveSystem.recordCatch({ species: 'shark', size: 'small', lengthCm: 95, mapId: 'sea' });
+  SaveSystem.recordCatch({ species: 'mackerel', size: 'medium', lengthCm: 31, mapId: 'sea' });
   SaveSystem.setCurrentMap('lake');
-  SaveSystem.recordCatch({ species: 'pike', size: 'medium', lengthCm: 60 });   // smaller than his best
+  SaveSystem.recordCatch({ species: 'pike', size: 'medium', lengthCm: 60, mapId: 'lake' });   // smaller than his best
+  // A catfish from the French lake is not one from the moat.
+  SaveSystem.recordCatch({ species: 'catfish', size: 'large', lengthCm: 231, mapId: 'france' });
 
   const counts = SaveSystem.getFishCounts();
   const best = SaveSystem.getBestCatches();
   const bySize = SaveSystem.getCatchCountsBySize();
   for (const id of RELEASED_LAKE_SPECIES) {
-    const expected = JULIAN.fishCounts[id] + (id === 'pike' ? 1 : 0);
-    check(counts[id] === expected, `count for "${id}" is ${counts[id]}, expected ${expected}`);
+    if (gone.includes(id)) {
+      check(counts[id] === undefined && best[id] === undefined && bySize[id] === undefined,
+            `"${id}" is on the emptied French page, but has catches`);
+      continue;
+    }
+    const count = JULIAN.fishCounts[id] + (id === 'pike' ? 1 : 0);
+    check(counts[id] === count, `count for "${id}" is ${counts[id]}, expected ${count}`);
     check(same(best[id], JULIAN.bestCatches[id]), `best catches for "${id}" changed`);
     if (id !== 'pike') check(same(bySize[id], JULIAN.catchCountsBySize[id]), `size counts for "${id}" changed`);
   }
   check(counts.shark === 1 && best.shark?.small === 95, 'a sea catch was not recorded');
+  check(counts['catfish@france'] === 1 && best['catfish@france']?.large === 231,
+        'a French catfish was not kept apart from the catfish of the moat');
   check(SaveSystem.getSelectedBait('lake') === JULIAN.selectedBait, 'choosing a sea lure changed the lake bait');
   check(SaveSystem.getSelectedBait('sea') === 'pilker', 'the sea lure was not remembered');
 
@@ -258,9 +318,12 @@ async function runReleasedWriterScenario() {
   // --- the update arrives: the current code runs on that device -----------
   const { SaveSystem } = await import('../src/systems/SaveSystem.js?scenario=released-writer');
   const { mapsOfSpecies } = await import('../src/data/fish.js');
-  SaveSystem.adoptJamesCatches(REQUEST_DAY);   // start-up; this guest has lake fish
+  startUp(SaveSystem, REQUEST_DAY);   // this guest has lake fish; the French page is emptied
 
-  for (const [profile, before] of [['julian', julianBefore], ['guest', guestBefore]]) {
+  // Julian caught every species of the released lake, so three of them are
+  // on the French page now; this guest caught none of those.
+  const julianNow = withoutCatchesOf(julianBefore, MOVED_TO_FRANCE);
+  for (const [profile, before] of [['julian', julianNow], ['guest', guestBefore]]) {
     SaveSystem.setProfile(profile);
     const now = snapshot(SaveSystem);
     for (const part of Object.keys(before)) {
@@ -270,17 +333,24 @@ async function runReleasedWriterScenario() {
       check(mapsOfSpecies(species).length > 0, `${profile}: "${species}" is on no map's collection page`);
     }
   }
+  SaveSystem.setProfile('julian');
+  for (const table of FRENCH_TABLES) {
+    check(sameContent(SaveSystem.load('franceEmptied')?.removed?.[table], only(julianBefore[table], MOVED_TO_FRANCE)),
+          `julian: what was taken out of ${table} was not kept in the note`);
+  }
+  const rewritten = FRENCH_TABLES.map((table) => `julians_game_${table}`);
   for (const [key, value] of written) {
+    if (rewritten.includes(key)) continue;
     check(store.get(key) === value, `the update changed "${key}"`);
   }
   check(removals === 0, `the update deleted from storage ${removals} time(s)`);
 
   // Playing on does not mix the two up.
   SaveSystem.setProfile('guest');
-  SaveSystem.recordCatch({ species: 'shark', size: 'small', lengthCm: 90 });
+  SaveSystem.recordCatch({ species: 'shark', size: 'small', lengthCm: 90, mapId: 'sea' });
   check(SaveSystem.getFishCounts().roach === guestBefore.fishCounts.roach, "guest: an old count changed after a new catch");
   SaveSystem.setProfile('julian');
-  check(same(snapshot(SaveSystem), julianBefore), "Julian's save changed when the guest caught a fish");
+  check(same(snapshot(SaveSystem), julianNow), "Julian's save changed when the guest caught a fish");
 }
 
 // ---------------------------------------------------------------------------
@@ -308,8 +378,11 @@ const notGuest = (store) => [...store].filter(([key]) => !key.startsWith(GUEST_P
 async function runJamesScenarios() {
   const { JAMES_CATCHES } = await import('../src/data/jamesCatches.js');
   const { speciesForMap, mapsOfSpecies } = await import('../src/data/fish.js');
-  // His twelve species: the first map's, as it was when he caught them.
-  const lake = Object.keys(JAMES_CATCHES.fishCounts);
+  // His twelve species are the first map's, as it was when he caught them.
+  // Three of those live in the French lake now, and that book starts empty:
+  // they are not put in (176 - 6 chub - 7 bass - 10 trout = 153 fish).
+  const JAMES = withoutCatchesOf(JAMES_CATCHES, MOVED_TO_FRANCE);
+  const lake = Object.keys(JAMES.fishCounts);
   const sea = speciesForMap('sea').map((s) => s.id);
   let scenario = 0;
   const fresh = async () =>
@@ -327,6 +400,9 @@ async function runJamesScenarios() {
           `James: "${id}" has a best catch for a size he never caught, or the other way round`);
   }
   check(total === 176, `James's collection is ${total} fish, the photo shows 176`);
+  check(lake.length === 9 && Object.values(JAMES.fishCounts).reduce((a, b) => a + b, 0) === 153,
+        'what is put in for James & Boaz is not his collection minus chub, bass and trout');
+  check(!MOVED_TO_FRANCE.includes(JAMES_CATCHES.lastCatch.species), "James's last catch is a fish that is not put in");
 
   // --- the device the request came from ------------------------------------
   console.log('- James & Boaz with an empty lake book and a stray sea fish: lake filled, sea emptied');
@@ -350,9 +426,9 @@ async function runJamesScenarios() {
     check(same(notGuest(store), othersBefore), "Julian's save (or another app's data) was touched");
 
     SaveSystem.setProfile('guest');
-    check(same(SaveSystem.getFishCounts(), JAMES_CATCHES.fishCounts), "James & Boaz did not get exactly James's counts");
-    check(same(SaveSystem.getCatchCountsBySize(), JAMES_CATCHES.catchCountsBySize), "James & Boaz did not get exactly James's size counts");
-    check(same(SaveSystem.getBestCatches(), JAMES_CATCHES.bestCatches), "James & Boaz did not get exactly James's best catches");
+    check(same(SaveSystem.getFishCounts(), JAMES.fishCounts), "James & Boaz did not get exactly James's counts");
+    check(same(SaveSystem.getCatchCountsBySize(), JAMES.catchCountsBySize), "James & Boaz did not get exactly James's size counts");
+    check(same(SaveSystem.getBestCatches(), JAMES.bestCatches), "James & Boaz did not get exactly James's best catches");
     check(same(SaveSystem.getLastCatch(), JAMES_CATCHES.lastCatch), 'the last catch still points at a fish that is gone');
     check(sea.every((id) => !(id in SaveSystem.getFishCounts())), 'a sea fish is still in the book of James & Boaz');
     check(SaveSystem.getSelectedBait('sea') === 'veren' && SaveSystem.getCurrentMap() === 'sea',
@@ -392,7 +468,8 @@ async function runJamesScenarios() {
     const counts = SaveSystem.getFishCounts();
     check(counts.cod === 1 && SaveSystem.getBestCatches().cod?.large === 104, 'a sea catch was taken away after the cut-off date');
     check(SaveSystem.getLastCatch()?.species === 'cod', 'the last catch was replaced although its fish is still there');
-    check(lake.every((id) => counts[id] === JAMES_CATCHES.fishCounts[id]), "the lake book was not filled with James's fish");
+    check(lake.every((id) => counts[id] === JAMES.fishCounts[id]), "the lake book was not filled with James's fish");
+    check(MOVED_TO_FRANCE.every((id) => !(id in counts)), 'a fish of the French lake was put in');
     check(SaveSystem.load('jamesCatchesAdopted')?.removedSea === undefined, 'the note claims something was taken out');
   }
 
@@ -406,7 +483,7 @@ async function runJamesScenarios() {
     SaveSystem.adoptJamesCatches(REQUEST_DAY);
     check(same(notGuest(store), [['some_other_app_setting', 'untouched']]), 'something was written outside the guest profile');
     SaveSystem.setProfile('guest');
-    check(same(SaveSystem.getFishCounts(), JAMES_CATCHES.fishCounts), "a new device did not get James's collection");
+    check(same(SaveSystem.getFishCounts(), JAMES.fishCounts), "a new device did not get James's collection");
     SaveSystem.setProfile('julian');
     check(same(SaveSystem.getFishCounts(), {}), 'Julian got fish he did not catch');
   }
@@ -432,6 +509,197 @@ async function runJamesScenarios() {
 }
 
 // ---------------------------------------------------------------------------
+// The French lake's book starts empty (SaveSystem.emptyFrenchBooks), and a
+// fish that lives on two maps is counted per map (catchKey).
+//
+// The second place where the game takes something out of a save by itself.
+// ---------------------------------------------------------------------------
+
+const JULIAN_PREFIX = 'julians_game_';
+const ofJulian = (store) => [...store].filter(([key]) => key.startsWith(JULIAN_PREFIX) && !key.startsWith(GUEST_PREFIX));
+const ofGuest = (store) => [...store].filter(([key]) => key.startsWith(GUEST_PREFIX));
+
+async function runFranceScenarios() {
+  const { JAMES_CATCHES } = await import('../src/data/jamesCatches.js');
+  const { MAP_SPECIES, catchKey, mapsOfSpecies } = await import('../src/data/fish.js');
+  let scenario = 0;
+  const fresh = async () =>
+    (await import(`../src/systems/SaveSystem.js?scenario=france-${scenario++}`)).SaveSystem;
+
+  console.log('- every card of the fish book has catches of its own');
+  {
+    const keys = Object.entries(MAP_SPECIES).flatMap(([mapId, ids]) => ids.map((id) => catchKey(id, mapId)));
+    check(new Set(keys).size === keys.length, 'two cards of the fish book share their catches');
+    check(catchKey('catfish', 'lake') === 'catfish' && catchKey('catfish', 'france') === 'catfish@france',
+          'the catfish of the moat and of the French lake are not kept apart');
+    // Whatever was caught before there were maps is still on a page.
+    for (const id of RELEASED_LAKE_SPECIES) {
+      check(catchKey(id, mapsOfSpecies(id)[0]) === id && catchKey(id) === id,
+            `the catches the released game stored for "${id}" are on no card any more`);
+    }
+  }
+
+  // --- the family's own devices: yesterday's version put ALL of James's fish in ---
+  console.log("- James & Boaz with James's whole collection already loaded: chub, bass and trout go, the rest stays");
+  {
+    const store = new Map([['some_other_app_setting', 'untouched']]);
+    for (const [key, value] of Object.entries(JULIAN)) store.set(`${JULIAN_PREFIX}${key}`, JSON.stringify(value));
+    for (const table of [...FRENCH_TABLES, 'lastCatch']) {
+      store.set(`${GUEST_PREFIX}${table}`, JSON.stringify(JAMES_CATCHES[table]));
+    }
+    store.set(`${GUEST_PREFIX}jamesCatchesAdopted`, JSON.stringify({ at: '2026-10-11T18:00:00.000Z', loaded: true }));
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+
+    startUp(SaveSystem, REQUEST_DAY + 86_400_000);
+    SaveSystem.setProfile('guest');
+    for (const table of FRENCH_TABLES) {
+      const now = SaveSystem.load(table);
+      check(same(now, without(JAMES_CATCHES[table], MOVED_TO_FRANCE)), `James & Boaz: ${table} is not James's minus the French fish`);
+      check(sameContent(SaveSystem.load('franceEmptied')?.removed?.[table], only(JAMES_CATCHES[table], MOVED_TO_FRANCE)),
+            `James & Boaz: what was taken out of ${table} was not kept in the note`);
+    }
+    check(SaveSystem.getFishCounts().catfish === JAMES_CATCHES.fishCounts.catfish, "James's catfish from the moat were taken for French ones");
+    check(same(SaveSystem.getLastCatch(), JAMES_CATCHES.lastCatch), 'their last catch (a catfish from the moat) was taken away');
+    SaveSystem.setProfile('julian');
+    check(same(SaveSystem.getFishCounts(), without(JULIAN.fishCounts, MOVED_TO_FRANCE)), "Julian's French page was not emptied, or more than that");
+    check(store.get('some_other_app_setting') === 'untouched', "another app's data was touched");
+    check(counters.removals === 0, 'something was deleted from storage outright');
+  }
+
+  // --- both teams tried the French lake out -------------------------------------------
+  console.log('- both teams have fish on the French page: it is emptied once, everything else stays');
+  {
+    const store = new Map([['some_other_app_setting', 'untouched']]);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+    // As the version before this one stored them: by species only.
+    SaveSystem.setProfile('julian');
+    SaveSystem.setCurrentMap('france');
+    SaveSystem.setSelectedBait('vlieg', 'france');
+    SaveSystem.recordCatch({ species: 'trout', size: 'large', lengthCm: 57 });
+    SaveSystem.recordCatch({ species: 'salmon', size: 'medium', lengthCm: 81 });
+    SaveSystem.recordCatch({ species: 'salmon', size: 'medium', lengthCm: 77 });
+    SaveSystem.recordCatch({ species: 'catfish', size: 'small', lengthCm: 61 });
+    SaveSystem.recordCatch({ species: 'pike', size: 'large', lengthCm: 124 });
+    SaveSystem.recordCatch({ species: 'mackerel', size: 'medium', lengthCm: 33 });   // his last catch: not French
+    SaveSystem.setProfile('guest');
+    SaveSystem.recordCatch({ species: 'roach', size: 'small', lengthCm: 12 });
+    SaveSystem.recordCatch({ species: 'chub', size: 'medium', lengthCm: 35 });
+    SaveSystem.recordCatch({ species: 'sturgeon', size: 'large', lengthCm: 310 });   // their last catch: French
+    SaveSystem.setProfile('julian');
+
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY);
+    check(SaveSystem.getProfile() === 'julian', 'emptying left another profile active');
+    check(same(SaveSystem.getFishCounts(), { catfish: 1, pike: 1, mackerel: 1 }), "Julian's book is not what it was minus the French page");
+    check(same(SaveSystem.getBestCatches(), { catfish: { small: 61 }, pike: { large: 124 }, mackerel: { medium: 33 } }),
+          "Julian's best catches are not what they were minus the French page");
+    check(same(SaveSystem.getCatchCountsBySize(), { catfish: { small: 1 }, pike: { large: 1 }, mackerel: { medium: 1 } }),
+          "Julian's size counts are not what they were minus the French page");
+    check(SaveSystem.getLastCatch()?.species === 'mackerel', "Julian's last catch was taken away although its fish is still there");
+    check(SaveSystem.getCurrentMap() === 'france' && SaveSystem.getSelectedBait('france') === 'vlieg', 'his chosen map or lure was changed');
+    const julianNote = SaveSystem.load('franceEmptied');
+    check(julianNote?.emptied === true
+          && sameContent(julianNote?.removed?.fishCounts, { trout: 1, salmon: 2 })
+          && sameContent(julianNote?.removed?.bestCatches, { trout: { large: 57 }, salmon: { medium: 81 } })
+          && sameContent(julianNote?.removed?.catchCountsBySize, { trout: { large: 1 }, salmon: { medium: 2 } })
+          && julianNote?.removed?.lastCatch === undefined,
+          "what was taken out of Julian's book was not kept in the note");
+
+    SaveSystem.setProfile('guest');
+    check(same(SaveSystem.getFishCounts(), { roach: 1 }) && same(SaveSystem.getBestCatches(), { roach: { small: 12 } }),
+          'the book of James & Boaz is not what it was minus the French page');
+    check(SaveSystem.getLastCatch() === null, 'the last catch still points at a fish that is gone');
+    const guestNote = SaveSystem.load('franceEmptied');
+    check(sameContent(guestNote?.removed?.fishCounts, { chub: 1, sturgeon: 1 })
+          && guestNote?.removed?.bestCatches?.sturgeon?.large === 310
+          && guestNote?.removed?.lastCatch?.species === 'sturgeon',
+          'what was taken out of the book of James & Boaz was not kept in the note');
+    check(store.get('some_other_app_setting') === 'untouched', "another app's data was touched");
+
+    // Once means once: starting again changes nothing, and what they catch
+    // in France from now on stays -- the catfish on its own card.
+    const afterFirst = new Map(store);
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY + 60_000);
+    check(same([...store], [...afterFirst]), 'a second start changed the save again');
+    SaveSystem.recordCatch({ species: 'trout', size: 'small', lengthCm: 22, mapId: 'france' });
+    SaveSystem.recordCatch({ species: 'catfish', size: 'medium', lengthCm: 140, mapId: 'france' });
+    SaveSystem.setProfile('julian');
+    SaveSystem.recordCatch({ species: 'catfish', size: 'medium', lengthCm: 118, mapId: 'lake' });
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY + 120_000);
+    check(same(SaveSystem.getFishCounts(), { catfish: 2, pike: 1, mackerel: 1 }), "a catfish from the moat did not join Julian's other one");
+    check(same(SaveSystem.getLastCatch(), { species: 'catfish', size: 'medium', lengthCm: 118, mapId: 'lake' }),
+          'the last catch does not say where it was caught');
+    SaveSystem.setProfile('guest');
+    check(same(SaveSystem.getFishCounts(), { roach: 1, trout: 1, 'catfish@france': 1 }),
+          'a French catch made after the change was taken away, or not kept apart');
+    check(SaveSystem.getBestCatches()['catfish@france']?.medium === 140, 'the French catfish has no best catch of its own');
+    check(counters.removals === 0, 'something was deleted from storage outright');
+  }
+
+  // --- the update only arrives after the cut-off ---------------------------------------
+  console.log('- first run after the cut-off date: French catches are kept, also when the clock is set back');
+  {
+    const store = new Map();
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const SaveSystem = await fresh();
+    SaveSystem.setProfile('guest');
+    SaveSystem.recordCatch({ species: 'salmon', size: 'large', lengthCm: 121, mapId: 'france' });
+    SaveSystem.setProfile('julian');
+    SaveSystem.recordCatch({ species: 'char', size: 'small', lengthCm: 19, mapId: 'france' });
+    const tables = (s) => [...s].filter(([key]) => !key.endsWith('franceEmptied'));
+    const before = tables(store);
+
+    SaveSystem.emptyFrenchBooks(AFTER_FRANCE_CUTOFF);
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY);
+    check(same(tables(store), before), 'French catches were taken away after the cut-off date');
+    for (const profile of ['julian', 'guest']) {
+      SaveSystem.setProfile(profile);
+      const note = SaveSystem.load('franceEmptied');
+      check(note?.emptied === false && note?.removed === undefined, `${profile}: the note claims something was taken out`);
+    }
+  }
+
+  // --- a save that cannot be read is not an empty save ------------------------------------
+  console.log("- a damaged or unreadable save: left alone, and the other team's is still done");
+  {
+    const store = new Map([
+      [`${JULIAN_PREFIX}fishCounts`, '{"trout": 3, "pik'],
+      [`${JULIAN_PREFIX}bestCatches`, JSON.stringify({ trout: { small: 21 } })],
+      [`${GUEST_PREFIX}fishCounts`, JSON.stringify({ trout: 2, roach: 4 })],
+    ]);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    const julianBefore = ofJulian(store);
+    const SaveSystem = await fresh();
+    const warn = console.warn;
+    console.warn = () => {};
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY);
+    console.warn = warn;
+    check(same(ofJulian(store), julianBefore), "a damaged save was written to (Julian's)");
+    SaveSystem.setProfile('guest');
+    check(same(SaveSystem.getFishCounts(), { roach: 4 }), "the other team's French page was not emptied");
+  }
+  {
+    const store = new Map([[`${GUEST_PREFIX}fishCounts`, JSON.stringify({ trout: 2, roach: 4 })]]);
+    const counters = { removals: 0 };
+    fakeStorage(store, counters);
+    globalThis.window.localStorage.getItem = () => { throw new Error('storage is off'); };
+    const before = new Map(store);
+    const SaveSystem = await fresh();
+    const warn = console.warn;
+    console.warn = () => {};
+    SaveSystem.emptyFrenchBooks(REQUEST_DAY);
+    console.warn = warn;
+    check(same([...store], [...before]), 'an unreadable save was written to');
+    check(ofGuest(store).length === 1, 'an unreadable save got a note saying it was done');
+  }
+}
+
+// ---------------------------------------------------------------------------
 // The visitor (the grey "Gast" button): plays like anyone else, but nothing
 // of it reaches storage, and nobody else's save notices.
 // ---------------------------------------------------------------------------
@@ -448,7 +716,7 @@ async function runVisitorScenario() {
   check(visitor && !['julian', 'guest'].includes(visitor.id), "the visitor plays on somebody's real save");
   if (!visitor) return;
 
-  SaveSystem.adoptJamesCatches(REQUEST_DAY);          // start-up
+  startUp(SaveSystem, AFTER_FRANCE_CUTOFF);            // (late: this scenario is about the visitor)
   const before = new Map(store);
 
   SaveSystem.setProfile(visitor.id);
@@ -456,8 +724,13 @@ async function runVisitorScenario() {
   SaveSystem.setCurrentMap('sea');
   SaveSystem.setSelectedBait('pilker', 'sea');
   SaveSystem.setSelectedFloat('float_02');
-  SaveSystem.recordCatch({ species: 'shark', size: 'large', lengthCm: 301 });
-  SaveSystem.recordCatch({ species: 'pike', size: 'small', lengthCm: 26 });
+  SaveSystem.recordCatch({ species: 'shark', size: 'large', lengthCm: 301, mapId: 'sea' });
+  SaveSystem.recordCatch({ species: 'pike', size: 'small', lengthCm: 26, mapId: 'lake' });
+  SaveSystem.recordCatch({ species: 'salmon', size: 'small', lengthCm: 48, mapId: 'france' });
+  // (Start-up empties the French book of the two teams. Not his.)
+  SaveSystem.emptyFrenchBooks(REQUEST_DAY);
+  check(SaveSystem.getProfile() === visitor.id && SaveSystem.getFishCounts().salmon === 1,
+        "start-up took a visitor's French fish away");
   // Within his visit the game works as usual...
   check(SaveSystem.getFishCounts().shark === 1 && SaveSystem.getBestCatches().pike?.small === 26,
         'a visitor cannot see his own catches during his visit');
@@ -479,8 +752,11 @@ async function runVisitorScenario() {
 
 await runScenario('device where the old pike-only wipe already ran', { wipeAlreadyRan: true });
 await runScenario('device where that wipe never ran', { wipeAlreadyRan: false });
+await runScenario('device that gets this version only after 19 October: nothing at all is taken out',
+                  { wipeAlreadyRan: true, startedAt: AFTER_FRANCE_CUTOFF });
 await runReleasedWriterScenario();
 await runJamesScenarios();
+await runFranceScenarios();
 await runVisitorScenario();
 
 // Both released saves must still be reachable from the title screen: each

@@ -4,6 +4,7 @@ import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { MAPS } from '../data/maps.js';
 import { AudioManager } from '../systems/AudioManager.js';
+import { fishTextureKey } from '../data/fish.js';
 import { TEX } from './BootScene.js';
 import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
 
@@ -15,8 +16,10 @@ import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
  * also SAYS the name, for whoever cannot read yet. The card of the map the
  * player fished on last gets a soft pulsing glow.
  *
- * A third, small picture hangs in the top-left corner: the title painting.
- * It leads back to the start menu, where the other team can take over.
+ * Two small things hang in the top corners. Left: the title painting, which
+ * leads back to the start menu, where the other team can take over. Right:
+ * a card from the fish book, which opens the whole book -- every map's
+ * catches, one page under the other.
  *
  * Reached from the title screen and from the map button in the fishing HUD.
  */
@@ -54,6 +57,9 @@ const HOME_MIN_SCALE = 0.5;      // on a low screen it shrinks, but not to nothi
 // From the top of its frame to the bottom of its name plate.
 const HOME_TOP = (HOME_H + HOME_BORDER * 2) / 2;
 const HOME_FULL_H = HOME_TOP + HOME_PLATE_Y + HOME_PLATE_H / 2;
+// The way into the whole fish book hangs opposite it, as large: a card
+// from the book, with this fish on it.
+const BOOK_FISH = { species: 'perch', size: 'large' };
 
 export class MapSelectScene extends Phaser.Scene {
   constructor() { super('MapSelectScene'); }
@@ -75,6 +81,7 @@ export class MapSelectScene extends Phaser.Scene {
       this._buildCard(map, x, GAME_HEIGHT / 2, map.id === lastMapId);
     });
     const home = this._buildHomeButton();
+    const book = this._buildBookButton();
 
     // Camera: keep both cards (plus breathing room) on screen, zooming out
     // only on screens too small for them.
@@ -88,6 +95,10 @@ export class MapSelectScene extends Phaser.Scene {
       const scale = Phaser.Math.Clamp(room / HOME_FULL_H, HOME_MIN_SCALE, 1);
       home.setScale(scale);
       home.setPosition(safe.left + HOME_MARGIN + (HOME_W / 2 + HOME_BORDER) * scale,
+                       safe.top + HOME_MARGIN + HOME_TOP * scale);
+      // The fish book mirrors it in the top-right corner.
+      book.setScale(scale);
+      book.setPosition(safe.right - HOME_MARGIN - (HOME_W / 2 + HOME_BORDER) * scale,
                        safe.top + HOME_MARGIN + HOME_TOP * scale);
 
       if (!wall) return;
@@ -157,6 +168,30 @@ export class MapSelectScene extends Phaser.Scene {
     pressable(this, picture, () => this._enter(map));
   }
 
+  /** A card from the fish book, with a fish on it: tap to see everything that was caught. */
+  _buildBookButton() {
+    const book = this.add.container(0, 0);
+    if (this.textures.exists(UI.CARD)) {
+      book.add(this.add.image(0, 0, UI.CARD).setDisplaySize(HOME_W + HOME_BORDER * 2, HOME_H + HOME_BORDER * 2));
+    } else {
+      book.add(this.add.rectangle(0, 0, HOME_W, HOME_H, 0xf1dfb8).setStrokeStyle(3, 0x3a1d06));
+    }
+    const fishKey = fishTextureKey(BOOK_FISH.species, BOOK_FISH.size);
+    if (this.textures.exists(fishKey)) {
+      const fish = this.add.image(0, 6, fishKey);
+      fish.setScale(Math.min((HOME_W - 44) / fish.width, (HOME_H - 60) / fish.height));
+      book.add(fish);
+    }
+    if (this.textures.exists(UI.BOARD_LABEL)) {
+      book.add(this.add.image(0, HOME_PLATE_Y, UI.BOARD_LABEL).setDisplaySize(HOME_PLATE_W, HOME_PLATE_H));
+    }
+    book.add(this.add.text(0, HOME_PLATE_Y, 'Alle vissen', lettering(22)).setOrigin(0.5));
+
+    book.setSize(HOME_W + 40, (HOME_PLATE_Y + HOME_PLATE_H / 2) * 2 + 12);
+    pressable(this, book, () => this._toBook());
+    return book;
+  }
+
   _enter(map) {
     if (this._leaving) return;
     this._leaving = true;
@@ -166,6 +201,14 @@ export class MapSelectScene extends Phaser.Scene {
     // there can lose the transition -- see CatchDisplayScene.)
     this.time.delayedCall(ENTER_DELAY_MS, () => {
       this.scene.start('FishingScene', { mapId: map.id });
+    });
+  }
+
+  _toBook() {
+    if (this._leaving) return;
+    this._leaving = true;
+    this.time.delayedCall(0, () => {
+      this.scene.start('FishingCollectionScene', { all: true, returnTo: 'MapSelectScene' });
     });
   }
 

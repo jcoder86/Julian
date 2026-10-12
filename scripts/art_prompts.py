@@ -107,15 +107,18 @@ FISH = {
                  "back, around the pointed tail and under the belly", SIDE,
                  "\nThe body is drawn almost straight and horizontal, with only a gentle S-curve."),
     # The pike: the small and the medium one are slim, but a pike of over a
-    # metre is a fat old female, not a long thin one.
+    # metre is a heavy old female, not a long thin one. (The first attempt
+    # at that came out as round as a carp: "about five times as long as it
+    # is deep" keeps it a pike.)
     "pike":     ("a northern pike (Esox lucius): olive-green body with rows of pale yellow "
                  "oval spots, a long flat duck-bill snout, dorsal and anal fins set far back "
                  "near the tail, reddish-brown dark-barred fins", SIDE,
                  "\nIMPORTANT -- the three differ in BUILD as well as in size. The small and "
-                 "the medium one are slim. The large trophy specimen is a huge old female of "
-                 "well over a metre: very thick-bodied and heavy, with a deep, full belly, a "
-                 "massive broad head and a thick back -- about twice as deep-bodied for its "
-                 "length as the small one."),
+                 "the medium one are slim. The large trophy specimen is a big old female of "
+                 "well over a metre: noticeably heavier than the others, with a deeper belly "
+                 "and a broader head and back -- but still plainly a long, torpedo-shaped "
+                 "pike, about five times as long as it is deep. Solid, not round and not "
+                 "pot-bellied."),
 
     # --- The mountain lake in France -------------------------------------------
     "gudgeon":  ("a gudgeon (Gobio gobio): a small, slender, cylindrical bottom fish, "

@@ -1937,7 +1937,7 @@ export class FishingScene extends Phaser.Scene {
     // Splash fires at the START of the leap -- the fish breaks the water.
     // Applause + voice follow once the catch display opens.
     this.audio.playSfx(SFX.SPLASH);
-    SaveSystem.recordCatch(pick);
+    SaveSystem.recordCatch({ ...pick, mapId: this.map.id });
 
     this._setRigInAir(true);
 

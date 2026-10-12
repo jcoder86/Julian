@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 // Phaser is bundled via vite; ensure side-effect import for BlendModes etc.
-import { FISH_SIZES, fishTextureKey, speciesForMap } from '../data/fish.js';
+import { FISH_SIZES, catchKey, fishTextureKey, speciesForMap } from '../data/fish.js';
 import { MAPS, getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
@@ -19,9 +19,14 @@ import { UI, COLOR, lettering, written, addGlow, pressable } from '../systems/Ui
  * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
  *
- * Each map has its own page of 12. The scene opens on the page of the map
- * it was launched from ({ mapId }); the little painting in the top-right
- * corner flips to the other map's page.
+ * Each map has its own page of 12. Opened from the fishing screen the scene
+ * shows the page of that map ({ mapId }); the little painting in the
+ * top-right corner flips to the next map's page.
+ *
+ * Opened from the map screen ({ all: true, returnTo }) it is the whole
+ * book: every map's page under the other, each under its name, and the
+ * player scrolls through them with a finger. A fish that lives on two maps
+ * has a card on both pages, each with its own catches (catchKey).
  */
 
 // The bare wall of the fishing cabin, toned down a touch so the cards on it
@@ -52,6 +57,30 @@ const BACK_MARGIN  = 18;
 const SWITCH_W = 112;
 const SWITCH_H = 84;
 
+// The whole book starts a little lower than a single page, clear of the
+// back button: the cards slide away under one straight edge. A page is its
+// name plate plus its grid, with some wall between pages -- on a 4:3 screen
+// exactly one page fits. (The name plate's picture is 600 x 200.)
+const BOOK_TOP = 112;
+const PAGE_PLATE_W = 300;
+const PAGE_PLATE_H = 100;
+const PAGE_HEADER_H = 104;
+const PAGE_GAP = 30;
+const GRID_H = ROWS * CARD_H + (ROWS - 1) * CARD_GAP;
+const PAGE_H = PAGE_HEADER_H + GRID_H + PAGE_GAP;
+// Scrolling: how fast a flick dies out (share of its speed kept per
+// 1/60 s), and below which speed (px/s) it stops.
+const FLICK_KEEP = 0.94;
+const FLICK_STOP = 12;
+// Where in the book we are: a bar in the wall's right margin, and under it
+// an arrow that bobs for as long as there is more below.
+const BAR_X = GAME_WIDTH - 40;
+const BAR_W = 12;
+const BAR_MIN_THUMB = 48;
+const BAR_COLOR = 0x3a1d06;
+const THUMB_COLOR = 0xffd24a;
+const MORE_ROOM = 58;            // kept free under the bar for the arrow
+
 // The background is drawn far larger than the design frame: on screens
 // that aren't 16:9 the camera shows more than the frame, and it should
 // all be "trophy hall", never a gap.
@@ -64,6 +93,19 @@ export class FishingCollectionScene extends Phaser.Scene {
 
   init(data) {
     this.map = getMap((data && data.mapId) || SaveSystem.getCurrentMap());
+    // The whole book (every map's page) or one page; and where "back" goes
+    // (a scene to start; without one, the fishing scene is woken).
+    this.showAll = !!(data && data.all);
+    this.returnTo = (data && data.returnTo) || null;
+    this._content = null;
+    this._scroll = 0;
+    this._maxScroll = 0;
+    this._flick = 0;
+    this._drag = null;
+    this._switchGroup = null;
+    this._bar = null;
+    this._more = null;
+    this._view = null;
   }
 
   create() {
@@ -95,8 +137,15 @@ export class FishingCollectionScene extends Phaser.Scene {
     pressable(this, back, () => this._close());
     this._backGroup = backGroup;
 
-    this._buildMapSwitch();
-    this._buildCards();
+    // The cards live in one container: the whole book is moved by moving it.
+    this._content = this.add.container(0, 0).setDepth(2);
+    if (this.showAll) {
+      MAPS.forEach((map, i) => this._buildPage(map, i * PAGE_H, true));
+      this._enableScrolling();
+    } else {
+      this._buildMapSwitch();
+      this._buildPage(this.map, 0, false);
+    }
 
     // Camera: zoom out just enough that the whole design frame (title +
     // 4x3 card grid) is on screen, whatever the aspect ratio. On a 4:3
@@ -128,6 +177,86 @@ export class FishingCollectionScene extends Phaser.Scene {
     if (this._switchGroup) {
       this._switchGroup.setPosition(layout.safe.right - BACK_MARGIN - SWITCH_W / 2, rowY);
     }
+    // The whole book: how far it can be scrolled on this screen.
+    if (this.showAll) {
+      this._view = layout.view;
+      const bookBottom = BOOK_TOP + MAPS.length * PAGE_H;
+      this._maxScroll = Math.max(0, bookBottom - layout.view.bottom);
+      this._scrollTo(this._scroll);
+    }
+  }
+
+  /** Drag to scroll, flick to keep going, or turn the mouse wheel. */
+  _enableScrolling() {
+    // Cards disappear under the title row instead of sliding over it.
+    const window = this.make.graphics();
+    window.fillRect(-BG_OVERSIZE, BOOK_TOP - 4, BG_OVERSIZE * 2, BG_OVERSIZE);
+    this._content.setMask(window.createGeometryMask());
+    // (It is on no display list, so the scene does not clear it away itself.)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.destroy());
+
+    this._bar = this.add.graphics().setDepth(9);
+    this._more = this.add.triangle(BAR_X, 0, 0, 0, 30, 0, 15, 20, THUMB_COLOR)
+      .setStrokeStyle(3, BAR_COLOR).setDepth(9);
+
+    const zoom = () => this.cameras.main.zoom || 1;
+    this.input.on('pointerdown', (pointer) => {
+      this._drag = { y: pointer.y, scroll: this._scroll, last: this._scroll, time: this.time.now };
+      this._flick = 0;
+    });
+    this.input.on('pointermove', (pointer) => {
+      if (!this._drag || !pointer.isDown) return;
+      this._scrollTo(this._drag.scroll - (pointer.y - this._drag.y) / zoom());
+      const dt = Math.max(1, this.time.now - this._drag.time);
+      this._flick = (this._scroll - this._drag.last) / dt * 1000;
+      this._drag.last = this._scroll;
+      this._drag.time = this.time.now;
+    });
+    this.input.on('pointerup', () => { this._drag = null; });
+    this.input.on('wheel', (_pointer, _over, _dx, dy) => {
+      this._flick = 0;
+      this._scrollTo(this._scroll + dy * 0.8);
+    });
+  }
+
+  _scrollTo(y) {
+    this._scroll = Phaser.Math.Clamp(y, 0, this._maxScroll);
+    if (this._content) this._content.y = -this._scroll;
+    this._drawBar();
+  }
+
+  /** The bar's thumb is as long as the share of the book that is on screen. */
+  _drawBar() {
+    if (!this._bar || !this._view) return;
+    const canScroll = this._maxScroll > 0;
+    this._bar.clear();
+    this._more.setVisible(canScroll && this._scroll < this._maxScroll - 4);
+    if (!canScroll) return;
+
+    const top = BOOK_TOP + 8;
+    const length = this._view.bottom - MORE_ROOM - top;
+    const onScreen = this._view.bottom - BOOK_TOP;
+    const thumb = Math.max(BAR_MIN_THUMB, length * onScreen / (onScreen + this._maxScroll));
+    const at = top + (length - thumb) * this._scroll / this._maxScroll;
+    this._bar.fillStyle(BAR_COLOR, 0.35);
+    this._bar.fillRoundedRect(BAR_X - BAR_W / 2, top, BAR_W, length, BAR_W / 2);
+    this._bar.fillStyle(THUMB_COLOR, 0.95);
+    this._bar.fillRoundedRect(BAR_X - BAR_W / 2, at, BAR_W, thumb, BAR_W / 2);
+    this._bar.lineStyle(2, BAR_COLOR, 0.9);
+    this._bar.strokeRoundedRect(BAR_X - BAR_W / 2, at, BAR_W, thumb, BAR_W / 2);
+  }
+
+  update(time, delta) {
+    if (!this.showAll) return;
+    if (this._more && this._more.visible && this._view) {
+      this._more.y = this._view.bottom - MORE_ROOM / 2 + Math.sin(time / 260) * 5;
+    }
+    // A flick carries the book on for a moment.
+    if (this._drag || Math.abs(this._flick) < FLICK_STOP) return;
+    const before = this._scroll;
+    this._scrollTo(this._scroll + this._flick * delta / 1000);
+    this._flick *= FLICK_KEEP ** (delta / (1000 / 60));
+    if (this._scroll === before) this._flick = 0;       // against the top or the bottom
   }
 
   /**
@@ -161,6 +290,11 @@ export class FishingCollectionScene extends Phaser.Scene {
 
   _close() {
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = '';
+    if (this.returnTo) {
+      // (Not from inside the pointerdown pass: see CatchDisplayScene.)
+      this.time.delayedCall(0, () => this.scene.start(this.returnTo));
+      return;
+    }
     this.scene.stop();
     this.scene.wake('FishingScene');
   }
@@ -177,33 +311,55 @@ export class FishingCollectionScene extends Phaser.Scene {
       .setDepth(0);
   }
 
-  _buildCards() {
-    const fishCounts = SaveSystem.getFishCounts();          // { species: n }
-    const sizeCounts = SaveSystem.getCatchCountsBySize();   // { species: { size: n } }
-    const best       = SaveSystem.getBestCatches();         // { species: { size: cm } }
-    const lastCatch  = SaveSystem.getLastCatch();           // { species, size, lengthCm } | null
+  /** Add something to the book (it scrolls with it) and hand it back. */
+  _put(object) {
+    this._content.add(object);
+    return object;
+  }
 
-    // Grid origin: centred horizontally, starting just below the title bar.
+  /**
+   * One map's twelve cards, `top` px down the book; with its name on a
+   * plate above them when the book shows more than one page.
+   */
+  _buildPage(map, top, withName) {
+    const fishCounts = SaveSystem.getFishCounts();          // { key: n }
+    const sizeCounts = SaveSystem.getCatchCountsBySize();   // { key: { size: n } }
+    const best       = SaveSystem.getBestCatches();         // { key: { size: cm } }
+    const lastCatch  = SaveSystem.getLastCatch();           // { species, size, lengthCm, mapId } | null
+    const lastKey    = lastCatch ? catchKey(lastCatch.species, lastCatch.mapId) : null;
+
+    let gridTop = top + (withName ? BOOK_TOP : TITLE_BAR_H);
+    if (withName) {
+      const plateY = gridTop + PAGE_HEADER_H / 2 - 4;
+      if (this.textures.exists(UI.BOARD_LABEL)) {
+        this._put(this.add.image(GAME_WIDTH / 2, plateY, UI.BOARD_LABEL)
+          .setDisplaySize(PAGE_PLATE_W, PAGE_PLATE_H));
+      }
+      this._put(this.add.text(GAME_WIDTH / 2, plateY, map.nlName || map.id, lettering(30, COLOR.GOLD))
+        .setOrigin(0.5));
+      gridTop += PAGE_HEADER_H;
+    } else {
+      // One page alone is centred in the room under the title.
+      gridTop += (GAME_HEIGHT - TITLE_BAR_H - GRID_H) / 2;
+    }
+
     const totalGridW = COLS * CARD_W + (COLS - 1) * CARD_GAP;
-    const totalGridH = ROWS * CARD_H + (ROWS - 1) * CARD_GAP;
-    const startX = (GAME_WIDTH  - totalGridW) / 2 + CARD_W / 2;
-    const startY = TITLE_BAR_H + (GAME_HEIGHT - TITLE_BAR_H - totalGridH) / 2 + CARD_H / 2;
+    const startX = (GAME_WIDTH - totalGridW) / 2 + CARD_W / 2;
+    const startY = gridTop + CARD_H / 2;
 
-    speciesForMap(this.map.id).forEach((species, idx) => {
+    speciesForMap(map.id).forEach((species, idx) => {
       const col = idx % COLS;
       const row = Math.floor(idx / COLS);
       const cx = startX + col * (CARD_W + CARD_GAP);
       const cy = startY + row * (CARD_H + CARD_GAP);
-
-      const totalCount = fishCounts[species.id] || 0;
-      const speciesBest = best[species.id] || {};
-      const speciesSizeCounts = sizeCounts[species.id] || {};
-      const isLast = lastCatch && lastCatch.species === species.id;
+      // A fish that lives on two maps is kept apart per map.
+      const key = catchKey(species.id, map.id);
+      const isLast = key === lastKey;
 
       this._buildCard(cx, cy, species, {
-        totalCount,
-        speciesBest,
-        speciesSizeCounts,
+        totalCount: fishCounts[key] || 0,
+        speciesBest: best[key] || {},
+        speciesSizeCounts: sizeCounts[key] || {},
         isLast,
         lastCaughtSize: isLast ? lastCatch.size : null,
       });
@@ -214,23 +370,23 @@ export class FishingCollectionScene extends Phaser.Scene {
     // A glow behind the card of the species caught last, so the eye goes
     // to "what I just caught".
     if (info.isLast) {
-      addGlow(this, cx, cy, { w: CARD_W - 4, h: CARD_H - 4, radius: 16 }).setDepth(1);
+      this._put(addGlow(this, cx, cy, { w: CARD_W - 4, h: CARD_H - 4, radius: 16 }));
     }
 
     // The card.
     if (this.textures.exists(UI.CARD)) {
-      this.add.image(cx, cy, UI.CARD).setDisplaySize(CARD_W, CARD_H).setDepth(2);
+      this._put(this.add.image(cx, cy, UI.CARD).setDisplaySize(CARD_W, CARD_H));
     } else {
-      this.add.rectangle(cx, cy, CARD_W, CARD_H, 0xf1dfb8).setStrokeStyle(2, 0x7a6140).setDepth(2);
+      this._put(this.add.rectangle(cx, cy, CARD_W, CARD_H, 0xf1dfb8).setStrokeStyle(2, 0x7a6140));
     }
 
     // Top line, between the two pins: the name and how many were caught,
     // centred together.
     const y = cy - CARD_H / 2 + 31;
-    const name = this.add.text(0, y, species.nlName, written(20)).setOrigin(0, 0.5).setDepth(3);
-    const count = this.add.text(0, y, `\u00d7 ${info.totalCount}`,
-                                written(19, info.totalCount > 0 ? COLOR.INK_RED : COLOR.INK_FADED))
-      .setOrigin(0, 0.5).setDepth(3);
+    const name = this._put(this.add.text(0, y, species.nlName, written(20)).setOrigin(0, 0.5));
+    const count = this._put(this.add.text(0, y, `\u00d7 ${info.totalCount}`,
+                                          written(19, info.totalCount > 0 ? COLOR.INK_RED : COLOR.INK_FADED))
+      .setOrigin(0, 0.5));
     const gap = 9;
     name.x = cx - (name.width + gap + count.width) / 2;
     count.x = name.x + name.width + gap;
@@ -265,13 +421,11 @@ export class FishingCollectionScene extends Phaser.Scene {
     const key = fishTextureKey(species.id, renderSize);
     if (!this.textures.exists(key)) return;
 
-    const fish = this.add.image(cx, cy, key);
+    const fish = this._put(this.add.image(cx, cy, key));
     // Available footprint on the card for the fish image.
     const targetW = CARD_W - 64;
     const targetH = CARD_H - 112;
-    const scale = Math.min(targetW / fish.width, targetH / fish.height);
-    fish.setScale(scale);
-    fish.setDepth(3);
+    fish.setScale(Math.min(targetW / fish.width, targetH / fish.height));
 
     if (bestSize === null) {
       fish.setTintFill(UNCAUGHT_TINT);
@@ -294,7 +448,7 @@ export class FishingCollectionScene extends Phaser.Scene {
       const haveCount = info.speciesSizeCounts[size] || 0;
       const filled = typeof cm === 'number';
 
-      const box = this.add.graphics({ x, y: cy }).setDepth(3);
+      const box = this._put(this.add.graphics({ x, y: cy }));
       box.fillStyle(CELL_COLOR, filled ? 0.5 : 0.22);
       box.fillRoundedRect(-(cellW - 5) / 2, -cellH / 2, cellW - 5, cellH, 8);
       box.lineStyle(1.5, CELL_EDGE, filled ? 0.7 : 0.35);
@@ -302,8 +456,8 @@ export class FishingCollectionScene extends Phaser.Scene {
       const label = filled
         ? `${cm} cm${haveCount > 1 ? ` \u00b7${haveCount}` : ''}`
         : '\u2014';
-      this.add.text(x, cy, label, written(15, filled ? COLOR.INK : COLOR.INK_FADED))
-        .setOrigin(0.5).setDepth(4);
+      this._put(this.add.text(x, cy, label, written(15, filled ? COLOR.INK : COLOR.INK_FADED))
+        .setOrigin(0.5));
     });
   }
 }

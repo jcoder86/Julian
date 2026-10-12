@@ -1,7 +1,7 @@
 // Thin localStorage wrapper. Keys are namespaced under julians_game_ so we can
 // coexist with other apps on the same origin.
 
-import { speciesForMap } from '../data/fish.js';
+import { catchKey, speciesForMap } from '../data/fish.js';
 import { JAMES_CATCHES } from '../data/jamesCatches.js';
 import { isVisitorProfile } from '../data/teams.js';
 
@@ -168,13 +168,79 @@ function adoptJamesCatches(now) {
   }
 
   note.loaded = true;
+  // His chub, bass and trout are not put in: those fish live in the French
+  // lake now, and that book starts empty for everyone (see below).
+  const french = frenchBook();
+  const seed = (table) => Object.fromEntries(
+    Object.entries(table).filter(([id]) => !french.includes(id)));
   // The note first: it holds what was taken out.
   SaveSystem.save(JAMES_ADOPTED_KEY, note);
-  SaveSystem.save(FISH_COUNTS_KEY, { ...tables[FISH_COUNTS_KEY], ...JAMES_CATCHES.fishCounts });
+  SaveSystem.save(FISH_COUNTS_KEY, { ...tables[FISH_COUNTS_KEY], ...seed(JAMES_CATCHES.fishCounts) });
   SaveSystem.save(CATCH_COUNTS_BY_SIZE_KEY,
-                  { ...tables[CATCH_COUNTS_BY_SIZE_KEY], ...JAMES_CATCHES.catchCountsBySize });
-  SaveSystem.save(BEST_CATCHES_KEY, { ...tables[BEST_CATCHES_KEY], ...JAMES_CATCHES.bestCatches });
+                  { ...tables[CATCH_COUNTS_BY_SIZE_KEY], ...seed(JAMES_CATCHES.catchCountsBySize) });
+  SaveSystem.save(BEST_CATCHES_KEY, { ...tables[BEST_CATCHES_KEY], ...seed(JAMES_CATCHES.bestCatches) });
   if (!keepLastCatch) SaveSystem.save(LAST_CATCH_KEY, JAMES_CATCHES.lastCatch);
+}
+
+// ---------------------------------------------------------------------------
+// The French book starts empty (requested 2026-10-12)
+// ---------------------------------------------------------------------------
+// When the French lake opened, three fish of the first lake moved there with
+// their old catches (chub, bass, trout), and people had tried the new map
+// out. On request, the collection of the French lake is emptied once, for
+// both teams. Fenced in like the change above:
+//   * only what is on the French page is taken out -- under the names that
+//     page uses (catchKey), so a catfish from the moat is not one of them;
+//   * once per team per device, and only until FRANCE_EMPTY_UNTIL: a device
+//     that first runs this later keeps its French catches, which by then
+//     are real ones;
+//   * what is taken out is kept in the note it leaves (key franceEmptied);
+//   * an unreadable save is left alone, to be tried again at the next start.
+const FRANCE_EMPTIED_KEY = 'franceEmptied';
+const FRANCE_EMPTY_UNTIL = Date.UTC(2026, 9, 20);   // through 19 October 2026
+const FRANCE_TEAMS = ['julian', 'guest'];
+
+/** The names under which the French lake's catches are kept. */
+function frenchBook() {
+  return speciesForMap('france').map((species) => catchKey(species.id, 'france'));
+}
+
+/** Runs with one team's profile active. */
+function emptyFrenchBook(now) {
+  if (readStrict(FRANCE_EMPTIED_KEY) !== undefined) return;
+  const note = { at: new Date(now).toISOString(), emptied: false };
+  if (now >= FRANCE_EMPTY_UNTIL) {
+    SaveSystem.save(FRANCE_EMPTIED_KEY, note);
+    return;
+  }
+
+  const tables = {
+    [FISH_COUNTS_KEY]: readStrict(FISH_COUNTS_KEY) || {},
+    [CATCH_COUNTS_BY_SIZE_KEY]: readStrict(CATCH_COUNTS_BY_SIZE_KEY) || {},
+    [BEST_CATCHES_KEY]: readStrict(BEST_CATCHES_KEY) || {},
+  };
+  const lastCatch = readStrict(LAST_CATCH_KEY);
+  const french = frenchBook();
+  const removed = {};
+  const changed = new Set();
+  for (const id of french) {
+    for (const [key, table] of Object.entries(tables)) {
+      if (!(id in table)) continue;
+      removed[key] = removed[key] || {};
+      removed[key][id] = table[id];
+      delete table[id];
+      changed.add(key);
+    }
+  }
+  const lastWasFrench = !!lastCatch && french.includes(catchKey(lastCatch.species, lastCatch.mapId));
+  if (lastWasFrench) removed[LAST_CATCH_KEY] = lastCatch;
+
+  note.emptied = true;
+  if (Object.keys(removed).length) note.removed = removed;
+  // The note first: it holds what is taken out.
+  SaveSystem.save(FRANCE_EMPTIED_KEY, note);
+  for (const key of changed) SaveSystem.save(key, tables[key]);
+  if (lastWasFrench) SaveSystem.save(LAST_CATCH_KEY, null);
 }
 
 export const SaveSystem = {
@@ -224,6 +290,24 @@ export const SaveSystem = {
       console.warn('[SaveSystem] could not parse', key, e);
       return null;
     }
+  },
+
+  /**
+   * Start the French lake's collection empty for both teams, once per
+   * device -- see the long comment above. Call at start-up, after
+   * adoptJamesCatches.
+   */
+  emptyFrenchBooks(now = Date.now()) {
+    const active = _activeProfile;
+    for (const team of FRANCE_TEAMS) {
+      _activeProfile = team;
+      try {
+        emptyFrenchBook(now);
+      } catch (e) {
+        console.warn(`[SaveSystem] the save of "${team}" could not be read: its French book is left alone`, e);
+      }
+    }
+    _activeProfile = active;
   },
 
   /**
@@ -277,6 +361,9 @@ export const SaveSystem = {
       species: fish.species,
       size: fish.size,
       lengthCm: fish.lengthCm,
+      // Where it was caught (absent in saves from before there were maps
+      // that share a species: then it is the species' first map).
+      mapId: fish.mapId,
     });
   },
 
@@ -288,29 +375,33 @@ export const SaveSystem = {
   // ---------- Trophy table --------------------------------------------------
 
   /**
-   * Atomically record a full catch: bumps fishCounts[species], increments
-   * catchCountsBySize[species][size], updates bestCatches[species][size]
+   * Atomically record a full catch (`mapId`: where it was caught): bumps
+   * fishCounts[key], increments catchCountsBySize[key][size], updates
+   * bestCatches[key][size]
    * when the new length is bigger, and sets lastCatch. Single entry point
    * for FishingScene._performCatchLeap so save state can never drift.
    */
-  recordCatch({ species, size, lengthCm }) {
-    this.incrementFishCount(species);
+  recordCatch({ species, size, lengthCm, mapId }) {
+    // The tables are keyed by species -- and, for a species that lives on
+    // more than one map, by the map it was caught on (catchKey in fish.js).
+    const key = catchKey(species, mapId);
+    this.incrementFishCount(key);
 
     const sizeCounts = this.load(CATCH_COUNTS_BY_SIZE_KEY) || {};
-    sizeCounts[species] = sizeCounts[species] || {};
-    sizeCounts[species][size] = (sizeCounts[species][size] || 0) + 1;
+    sizeCounts[key] = sizeCounts[key] || {};
+    sizeCounts[key][size] = (sizeCounts[key][size] || 0) + 1;
     this.save(CATCH_COUNTS_BY_SIZE_KEY, sizeCounts);
 
     if (typeof lengthCm === 'number') {
       const best = this.load(BEST_CATCHES_KEY) || {};
-      best[species] = best[species] || {};
-      if (!best[species][size] || lengthCm > best[species][size]) {
-        best[species][size] = lengthCm;
+      best[key] = best[key] || {};
+      if (!best[key][size] || lengthCm > best[key][size]) {
+        best[key][size] = lengthCm;
         this.save(BEST_CATCHES_KEY, best);
       }
     }
 
-    this.setLastCatch({ species, size, lengthCm });
+    this.setLastCatch({ species, size, lengthCm, mapId });
   },
 
   /**

@@ -7,8 +7,7 @@
 //
 // Which species live where -- and in what order they are shown in a map's
 // collection -- is MAP_SPECIES below. A species can live in more than one
-// place (the catfish does); its catches are one and the same wherever it
-// was caught.
+// place (the catfish does); its catches are counted per place (catchKey).
 //
 // A species id is for ever: catches are saved under it. The NAME can change
 // (the "Karper" became the "Schubkarper" when the mirror carp joined it),
@@ -214,6 +213,19 @@ export function speciesForMap(mapId) {
 /** The maps a species lives on. */
 export function mapsOfSpecies(speciesId) {
   return Object.keys(MAP_SPECIES).filter((mapId) => MAP_SPECIES[mapId].includes(speciesId));
+}
+
+/**
+ * Under which name a catch is kept in the save tables (fishCounts,
+ * catchCountsBySize, bestCatches). A species that lives on one map: its id,
+ * as always. A species that lives on more than one keeps its plain id on
+ * its first map and gets `<id>@<map>` on the others -- so a catfish from
+ * the French lake is counted apart from a catfish from the moat, and every
+ * catch made before there was a second map stays where it was.
+ */
+export function catchKey(speciesId, mapId) {
+  const home = mapsOfSpecies(speciesId)[0];
+  return !mapId || !home || mapId === home ? speciesId : `${speciesId}@${mapId}`;
 }
 
 /** How common a species is on a map (it may be rarer in one place than in another). */

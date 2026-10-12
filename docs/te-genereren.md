@@ -21,7 +21,7 @@ Alles hieronder is op 12 oktober 2026 gemaakt en zit in het spel.
 | Schubkarper (de oude karper leek een graskarper) | `fish-carp` | ja |
 | Spiegelkarper | `fish-mirrorcarp` | ja |
 | Paling | `fish-eel` | ja |
-| Snoek (de grote is nu een dik bakbeest) | `fish-pike` | ja |
+| Snoek (de grote is zwaarder gebouwd dan de kleine, maar blijft een lange snoek; de eerste poging was te dik) | `fish-pike` | ja |
 | Riviergrondel | `fish-gudgeon` | ja |
 | Elrits | `fish-minnow` | ja |
 | Barbeel | `fish-barbel` | ja |

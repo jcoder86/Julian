@@ -181,6 +181,8 @@ export class BootScene extends Phaser.Scene {
     }
     // Once per device: James's collection for James & Boaz (SaveSystem.js).
     SaveSystem.adoptJamesCatches();
+    // Once per device: the French lake's collection starts empty.
+    SaveSystem.emptyFrenchBooks();
     this.scene.start('TitleScene');
   }
 }

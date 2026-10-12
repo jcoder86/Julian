@@ -27,7 +27,7 @@ src/
     MapSelectScene.js         # where shall we fish?
     FishingScene.js           # the game itself
     CatchDisplayScene.js      # "look what we caught"
-    FishingCollectionScene.js # the book of catches, one page per map
+    FishingCollectionScene.js # the book of catches: one map's page, or all of them
     BaitSelectionScene.js, FloatSelectionScene.js
   systems/
     Layout.js                 # one camera transform for every screen shape
@@ -81,7 +81,9 @@ specifics of any spot itself.
 **Which fish live where** is `MAP_SPECIES` in `src/data/fish.js`: twelve per
 map, in the order of that map's page in the collection. A species can live
 on more than one map (the catfish does, and is rarer in France: `weightOn`);
-its catches are the same wherever it was caught. A bait says on which maps
+its catches are then kept per map -- under its plain id on its first map,
+under `<id>@<map>` on the others (`catchKey`), so the French catfish has a
+card and a record of its own. A bait says on which maps
 it is fished (`maps` in `src/data/baits.js`): the five fresh-water baits and
 the spinner serve the moat and the French lake alike; the shad is the
 moat's own lure, the fly the French lake's. A lure is only taken by the
@@ -393,7 +395,9 @@ of a tuna or shark of over two metres. Run it after changing a weight.
 
 The collection screen is a 4 x 3 grid per map and each map currently has
 exactly 12 species; a 13th on one map needs a layout change in
-`FishingCollectionScene.js`.
+`FishingCollectionScene.js`. From the fishing screen it opens on that map's
+page; the card "Alle vissen" on the map screen opens the whole book, every
+map's page under the other, to scroll through (drag, flick or mouse wheel).
 
 ## Moving water
 
@@ -605,6 +609,16 @@ until 14 October 2026 only -- empties their sea book at that same moment
 opened, a device where James & Boaz already have lake fish is left as it
 is, and what was taken out is kept under `julians_game_guest_jamesCatchesAdopted`.
 The test covers each of these.
+
+One more thing was taken out on request. When the French lake opened, the
+chub, bass and trout of the first lake moved there with their old catches,
+and both teams had tried the new map out. `SaveSystem.emptyFrenchBooks()`
+empties the French page once per team per device -- on devices that start
+this version through 19 October 2026 only; after that French catches are
+real ones and stay. Only what is on that page goes (a catfish from the moat
+is not), and it is kept under `julians_game_franceEmptied` and
+`julians_game_guest_franceEmptied`. For the same reason James's chub, bass
+and trout are no longer put in on a new device.
 
 To start from an empty collection **on a test machine** (this deletes
 every catch stored in that browser):
