@@ -313,8 +313,27 @@ FISH_STRIPS = [
     ("fish-cod", "cod"),             # kabeljauw
     ("fish-ray", "ray"),             # rog
     ("fish-conger", "conger"),       # zeepaling
-    ("fish-tuna", "tuna"),           # tonijn
-    ("fish-shark", "shark"),         # haai
+    ("fish-tuna", "tuna"),           # blauwvintonijn
+    ("fish-shark", "shark"),         # haringhaai
+    # The moat of Naarden-Vesting. The carp and pike strips replace those
+    # fish of the first atlas: its carp was built like a grass carp, and
+    # its large pike was as thin as a small one -- a pike of over a metre is
+    # a fat fish. (A strip can also be cut in part: a third element like
+    # ("large",) names the sizes to take.)
+    ("fish-goby", "goby"),           # zwartbekgrondel
+    ("fish-carp", "carp"),           # schubkarper
+    ("fish-mirrorcarp", "mirrorcarp"),   # spiegelkarper
+    ("fish-eel", "eel"),             # paling
+    ("fish-pike", "pike"),           # snoek
+    # The mountain lake in France.
+    ("fish-gudgeon", "gudgeon"),     # riviergrondel
+    ("fish-minnow", "minnow"),       # elrits
+    ("fish-barbel", "barbel"),       # barbeel
+    ("fish-grayling", "grayling"),   # vlagzalm
+    ("fish-rainbowtrout", "rainbowtrout"),   # regenboogforel
+    ("fish-char", "char"),           # beekridder
+    ("fish-salmon", "salmon"),       # zalm
+    ("fish-sturgeon", "sturgeon"),   # steur
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 
@@ -396,9 +415,10 @@ def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3) -> I
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), mode="RGBA")
 
 
-def process_fish_strip(atlas_path: Path, species: str) -> int:
+def process_fish_strip(atlas_path: Path, species: str, only=None) -> int:
     """
-    Cut a three-box species strip into small / medium / large sprites.
+    Cut a three-box species strip into small / medium / large sprites
+    (or, with `only`, just the sizes named in it).
 
     The boxes are found from the white lines themselves, and each fish is
     cropped from INSIDE its box. The lines are never removed by colour:
@@ -420,6 +440,8 @@ def process_fish_strip(atlas_path: Path, species: str) -> int:
     y1 = h_lines[1][0] - BOX_INSET
     saved = 0
     for i, size in enumerate(FISH_SIZES):
+        if only and size not in only:
+            continue
         x0 = v_lines[i][1] + 1 + BOX_INSET
         x1 = v_lines[i + 1][0] - BOX_INSET
         box = img.crop((x0, y0, x1, y1))
@@ -655,7 +677,7 @@ def main():
     # sources, so one new image can be cut without touching the rest.
     only = set(sys.argv[1:])
     known = ({Path(fname).stem for fname, _ in atlases}
-             | {stem for stem, _ in FISH_STRIPS} | set(ICONS) | {"play"})
+             | {strip[0] for strip in FISH_STRIPS} | set(ICONS) | {"play"})
     if only - known:
         sys.exit(f"unknown name(s): {', '.join(sorted(only - known))}\n"
                  f"known: {', '.join(sorted(known))}")
@@ -675,7 +697,7 @@ def main():
         print(f"[ok]   {fname} -> {count} cells")
         total += count
 
-    for stem, species in FISH_STRIPS:
+    for stem, species, *sizes in FISH_STRIPS:
         if not wanted(stem):
             continue
         path = next((RAW_DIR / f"{stem}{ext}" for ext in STRIP_EXTENSIONS
@@ -683,7 +705,7 @@ def main():
         if path is None:
             print(f"[skip] {stem} not found in raw/")
             continue
-        count = process_fish_strip(path, species)
+        count = process_fish_strip(path, species, *sizes)
         print(f"[ok]   {path.name} -> {count} cells")
         total += count
 

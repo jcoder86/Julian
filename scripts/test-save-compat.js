@@ -108,8 +108,8 @@ async function runScenario(label, options) {
 
   // A fresh copy of the module per scenario (it keeps the active profile).
   const { SaveSystem } = await import(`../src/systems/SaveSystem.js?scenario=${encodeURIComponent(label)}`);
-  const { FISH_BY_ID, speciesForMap } = await import('../src/data/fish.js');
-  const { BAITS_BY_ID } = await import('../src/data/baits.js');
+  const { FISH_BY_ID, MAP_SPECIES, mapsOfSpecies } = await import('../src/data/fish.js');
+  const { baitOnMap } = await import('../src/data/baits.js');
   const { FLOATS_BY_ID } = await import('../src/data/floats.js');
 
   // --- 1. Start the game as Julian, the way START does -------------------
@@ -129,14 +129,21 @@ async function runScenario(label, options) {
     check(store.get(key) === value, `loading the save rewrote "${key}"`);
   }
 
-  // --- 2. Everything saved is still a known id, shown on the lake page ---
-  const lakePage = speciesForMap('lake').map((s) => s.id);
+  // --- 2. Everything saved is still a known id, and still shown -----------
+  // A species may move to another map (the first lake's trout, chub and
+  // bass now live in the French lake): what counts is that it is on SOME
+  // map's collection page, so no catch drops out of sight -- and that a
+  // page still holds exactly twelve.
   for (const id of RELEASED_LAKE_SPECIES) {
     check(!!FISH_BY_ID[id], `species "${id}" no longer exists: its catches would vanish`);
-    check(lakePage.includes(id), `species "${id}" is no longer on the lake's collection page`);
+    check(mapsOfSpecies(id).length > 0, `species "${id}" is on no map's collection page any more`);
+  }
+  for (const [mapId, ids] of Object.entries(MAP_SPECIES)) {
+    check(ids.length === 12 && new Set(ids).size === 12, `the collection page of "${mapId}" does not hold twelve species`);
+    check(ids.every((id) => !!FISH_BY_ID[id]), `the collection page of "${mapId}" lists an unknown species`);
   }
   for (const id of RELEASED_BAITS) {
-    check(BAITS_BY_ID[id]?.map === 'lake', `bait "${id}" is no longer a lake bait`);
+    check(baitOnMap(id, 'lake'), `bait "${id}" is no longer a lake bait`);
   }
   for (const id of RELEASED_FLOATS) {
     check(!!FLOATS_BY_ID[id], `float "${id}" no longer exists`);
@@ -250,8 +257,7 @@ async function runReleasedWriterScenario() {
 
   // --- the update arrives: the current code runs on that device -----------
   const { SaveSystem } = await import('../src/systems/SaveSystem.js?scenario=released-writer');
-  const { speciesForMap } = await import('../src/data/fish.js');
-  const lakePage = speciesForMap('lake').map((s) => s.id);
+  const { mapsOfSpecies } = await import('../src/data/fish.js');
   SaveSystem.adoptJamesCatches(REQUEST_DAY);   // start-up; this guest has lake fish
 
   for (const [profile, before] of [['julian', julianBefore], ['guest', guestBefore]]) {
@@ -261,7 +267,7 @@ async function runReleasedWriterScenario() {
       check(same(now[part], before[part]), `${profile}: ${part} differs from what the released game stored`);
     }
     for (const species of Object.keys(before.fishCounts)) {
-      check(lakePage.includes(species), `${profile}: "${species}" is not on the first map's collection page`);
+      check(mapsOfSpecies(species).length > 0, `${profile}: "${species}" is on no map's collection page`);
     }
   }
   for (const [key, value] of written) {
@@ -301,8 +307,9 @@ const notGuest = (store) => [...store].filter(([key]) => !key.startsWith(GUEST_P
 
 async function runJamesScenarios() {
   const { JAMES_CATCHES } = await import('../src/data/jamesCatches.js');
-  const { speciesForMap } = await import('../src/data/fish.js');
-  const lake = speciesForMap('lake').map((s) => s.id);
+  const { speciesForMap, mapsOfSpecies } = await import('../src/data/fish.js');
+  // His twelve species: the first map's, as it was when he caught them.
+  const lake = Object.keys(JAMES_CATCHES.fishCounts);
   const sea = speciesForMap('sea').map((s) => s.id);
   let scenario = 0;
   const fresh = async () =>
@@ -312,7 +319,8 @@ async function runJamesScenarios() {
   let total = 0;
   for (const [id, count] of Object.entries(JAMES_CATCHES.fishCounts)) {
     total += count;
-    check(lake.includes(id), `James's collection holds "${id}", which is not a fish of the first map`);
+    check(mapsOfSpecies(id).length > 0 && !sea.includes(id),
+          `James's collection holds "${id}", which is not a fresh-water fish on any map`);
     const bySize = JAMES_CATCHES.catchCountsBySize[id] || {};
     check(Object.values(bySize).reduce((a, b) => a + b, 0) === count, `James: sizes of "${id}" do not add up to ${count}`);
     check(same(Object.keys(bySize), Object.keys(JAMES_CATCHES.bestCatches[id] || {})),

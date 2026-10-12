@@ -214,6 +214,10 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 |---|---|
 | `assets/audio/sfx/vissen.mp3` + `.json` | de eerste elf vissen van het meer |
 | `assets/audio/sfx/vissen-zee.mp3` + `.json` | de twaalf zeevissen en de meerval |
+| `assets/audio/sfx/vissen-3.mp3` + `.json` | de nieuwe vissen van Naarden-Vesting en Frankrijk, de vijf vissen met een preciezere naam, en de namen van de kaarten |
+
+Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
+gebruikt het spel de nieuwste.
 
 De stem komt van ElevenLabs (elevenlabs.io, Text to Speech): stem
 **Hugo V - Enthusiastic and Professional**, model **Eleven Multilingual

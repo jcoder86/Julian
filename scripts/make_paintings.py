@@ -32,6 +32,7 @@ QUALITY = 90
 # MapSelectScene point at).
 PAINTINGS = {
     "backdrop-naarden": "the moat of Naarden-Vesting (map 'lake')",
+    "backdrop-france":  "the mountain lake in France, from the pontoon (map 'france')",
     "backdrop-sea":     "the sea from the stone harbour pier (map 'sea')",
     "mapselect":        "the wall behind the 'where shall we fish?' screen",
     "ui-wall":          "the bare cabin wall behind the fish collection",
@@ -41,6 +42,8 @@ PAINTINGS = {
     "catch-julian-sea":  "Julian and Dirk on the stone quay",
     "catch-guest-lake":  "James and Boaz on the jetty",
     "catch-guest-sea":   "James and Boaz on the stone quay",
+    "catch-julian-france": "Julian and Dirk on the pontoon",
+    "catch-guest-france":  "James and Boaz on the pontoon",
 }
 
 

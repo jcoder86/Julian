@@ -55,6 +55,7 @@ MIN_ALPHA = 0.07              # below this it is the sky's own unevenness
 SKIES = {
     "lake": dict(painting="backdrop-naarden", mask="sky-mask-naarden", bottom=0.28),
     "sea":  dict(painting="backdrop-sea", mask="sky-mask-sea", bottom=0.245),
+    "france": dict(painting="backdrop-france", mask="sky-mask-france", bottom=0.28),
 }
 SKY_MASK_FRACTION = 320 / 720     # the masks cover this share of a painting's height
 

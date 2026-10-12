@@ -13,8 +13,8 @@ Output, in assets/clean/:
     char_<who>_<pose>.png        one cut-out picture per pose
     dirk_<clip>.jpg + _alpha.png a film strip: all frames in one grid
     characters.json              how they fit together
-    team_<team>.png              the faces of a team in rope frames: its button
-                                 on the title screen ("Spelen met:")
+    team_<team>.png              the two of a team together in one rope frame:
+                                 its button on the title screen ("Spelen met:")
 
 What "fit together" means
   * Every pose of one boy is a separate painting, so he is never drawn at
@@ -269,19 +269,24 @@ def make_dirk(meta):
 
 # Round, rope-framed pictures made from the figures (the frame is
 # assets/clean/ui-ring.png, see scripts/make_ui.py):
-#   team_<team>.png   the faces of the two who fish together: the team's
-#                     button on the title screen
-# (who, pose or clip, share of the figure's height that is head)
+#   team_<team>.png   the two who fish together, heads close, in ONE frame:
+#                     the team's button on the title screen
+# Per head: who, pose or clip, the share of the figure's height that is
+# head, and where it goes in the picture -- centre x, centre y and size, as
+# shares of the picture's side. The first is behind, the last in front.
 BADGES = {
-    "julian": [("julian", "ready", 0.31), ("dirk", "idle", 0.47)],
-    "guest": [("james", "ready", 0.31), ("boaz", "look", 0.30)],
+    "julian": [("julian", "ready", 0.31, 0.37, 0.45, 0.76),
+               ("dirk", "idle", 0.47, 0.71, 0.63, 0.58)],
+    "guest": [("james", "ready", 0.31, 0.36, 0.44, 0.76),
+              ("boaz", "look", 0.30, 0.70, 0.59, 0.64)],
 }
 # Whoever plays as a visitor ("Gast") has no face: one frame with a grey
 # silhouette (assets/raw/ui-guest.png), the whole badge drained of colour.
 VISITOR = "visitor"
 VISITOR_PICTURE = "ui-guest"
-FACE_PX = 240            # one framed face (the title screen shows it about 150 px
-                         # high, which is 240 on an iPad's screen)
+BELOW_HEAD = 0.6         # how much more than the head is shown, as a share of its height
+FACE_PX = 300            # a framed picture (the title screen shows a team's about
+                         # 180 px high, which is 290 on an iPad's screen)
 
 
 def figure_picture(meta, who, pose):
@@ -320,8 +325,8 @@ def framed(size, fill):
     return out
 
 
-def face(img, share):
-    """`fill` for framed(): the head of a figure against a summer sky."""
+def head_box(img, share):
+    """The square around a figure's head: (left, top, right, bottom) in its picture."""
     alpha = np.asarray(img.getchannel("A"))
     body = ndimage.binary_opening(alpha > 128, iterations=6)      # without the rod
     rows = np.nonzero(body.any(axis=1))[0]
@@ -329,12 +334,27 @@ def face(img, share):
     cols = np.nonzero(body[top:top + round(height * share)].any(axis=0))[0]
     size = max(cols.max() - cols.min(), height * share) * 1.12
     cx, cy = (cols.min() + cols.max()) / 2, top + height * share * 0.5
-    box = [round(v) for v in (cx - size / 2, cy - size / 2, cx + size / 2, cy + size / 2)]
+    return [round(v) for v in (cx - size / 2, cy - size / 2, cx + size / 2, cy + size / 2)]
 
+
+def together(heads):
+    """
+    `fill` for framed(): heads close together against a summer sky.
+    `heads`: [(picture, share, x, y, size)], see BADGES.
+    """
     def fill(side):
         picture = Image.new("RGBA", (side, side), (150, 205, 240, 255))
-        head = img.crop(box).resize((side, side), Image.LANCZOS)
-        picture.alpha_composite(head)
+        for img, share, cx, cy, size in heads:
+            width = round(side * size)
+            # The head, and below it as much of the shoulders and chest as
+            # it takes to run off the bottom of the frame.
+            left, top, right, bottom = head_box(img, share)
+            bottom += round((bottom - top) * BELOW_HEAD)
+            head = img.crop((left, top, right, bottom)).convert("RGBa").resize(
+                (width, round(width * (1 + BELOW_HEAD))), Image.LANCZOS)
+            layer = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            layer.paste(head.convert("RGBA"), (round(side * cx - width / 2), round(side * cy - width / 2)))
+            picture.alpha_composite(layer)
         return picture
     return fill
 
@@ -362,14 +382,11 @@ def make_badges(meta):
     if not (CLEAN / "ui-ring.png").exists():
         print("[skip] badges: assets/clean/ui-ring.png not found (python scripts/make_ui.py)")
         return
-    step = round(FACE_PX * 0.84)
-    for team, faces in BADGES.items():
-        if any(who not in meta for who, _, _ in faces):
+    for team, heads in BADGES.items():
+        if any(who not in meta for who, *_ in heads):
             continue
-        discs = [framed(FACE_PX, face(figure_picture(meta, who, pose), share)) for who, pose, share in faces]
-        badge = Image.new("RGBA", (FACE_PX + step * (len(discs) - 1), max(d.height for d in discs)), (0, 0, 0, 0))
-        for i, disc in enumerate(discs):
-            badge.alpha_composite(disc, (i * step, 0))
+        badge = framed(FACE_PX, together(
+            [(figure_picture(meta, who, pose), share, x, y, size) for who, pose, share, x, y, size in heads]))
         badge.save(CLEAN / f"team_{team}.png", "PNG", optimize=True)
         print(f"[ok]   team_{team}.png  {badge.width}x{badge.height}")
 

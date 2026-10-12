@@ -66,12 +66,16 @@ export function voicePath(species, size) {
 // Voice atlases: audio files that each hold many voice phrases in a row
 // with silent gaps. A companion JSON describes the start time + duration
 // of each phrase, keyed by `${size}_${species}`. AudioManager.playVoice()
-// looks a phrase up in all of them, in this order:
-//   vissen      the first eleven fish of the lake
-//   vissen-zee  the twelve sea fish, and the lake's catfish
-// A new one is made by scripts/make_voice_atlas.py and listed here. The
-// atlas name is also its audio cache key.
-export const VOICE_ATLASES = ['vissen', 'vissen-zee'];
+// looks a phrase up in all of them, the NEWEST first -- so a fish whose
+// name became more exact (the Karper is the Schubkarper now) is called by
+// its new name, while the old recording stays as it is:
+//   vissen      the first eleven fish of the first lake
+//   vissen-zee  the twelve sea fish, and the catfish
+//   vissen-3    the newcomers of the moat and of the French lake, the five
+//               renamed fish, and the names of the maps (`map_<id>`)
+// A new one is made by scripts/make_voice_atlas.py and added at the END of
+// this list. The atlas name is also its audio cache key.
+export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3'];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
 }
@@ -115,23 +119,7 @@ export class AudioManager {
    */
   playVoice(species, size) {
     // Path 1: an atlas (preferred), using markers for hard start+duration.
-    const markerName = `${size}_${species}`;
-    for (const atlas of VOICE_ATLASES) {
-      if (!this.scene.cache.audio.exists(atlas)) continue;
-      const meta = this.scene.cache.json.get(voiceAtlasMetaKey(atlas));
-      if (!meta?.phrases?.[markerName]) continue;
-      try {
-        const sound = this._voiceSound(atlas, meta);
-        // Stop any in-progress voice so consecutive catches don't stack.
-        for (const other of Object.values(this._voiceSounds)) {
-          if (other.isPlaying) other.stop();
-        }
-        sound.play(markerName);
-        return;
-      } catch (e) {
-        console.warn(`[VOICE atlas] play failed for ${markerName}`, e);
-      }
-    }
+    if (this.playPhrase(`${size}_${species}`)) return;
     // Path 2: per-clip file fallback.
     const key = voiceKey(species, size);
     if (this.scene.cache.audio.exists(key)) {
@@ -143,6 +131,30 @@ export class AudioManager {
       }
     }
     console.log(`[VOICE] ${size}_${species} (no audio)`);
+  }
+
+  /**
+   * Say one phrase of a voice atlas by its key: a fish (`large_pike`) or
+   * anything else an atlas holds (`map_sea`). Returns whether it was found.
+   */
+  playPhrase(markerName) {
+    for (const atlas of [...VOICE_ATLASES].reverse()) {
+      if (!this.scene.cache.audio.exists(atlas)) continue;
+      const meta = this.scene.cache.json.get(voiceAtlasMetaKey(atlas));
+      if (!meta?.phrases?.[markerName]) continue;
+      try {
+        const sound = this._voiceSound(atlas, meta);
+        // Stop any in-progress voice so consecutive phrases don't stack.
+        for (const other of Object.values(this._voiceSounds)) {
+          if (other.isPlaying) other.stop();
+        }
+        sound.play(markerName);
+        return true;
+      } catch (e) {
+        console.warn(`[VOICE atlas] play failed for ${markerName}`, e);
+      }
+    }
+    return false;
   }
 
   /**

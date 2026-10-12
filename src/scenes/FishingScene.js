@@ -8,7 +8,7 @@ import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
 import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
-import { BAITS_BY_ID, baitSimpleTextureKey, isLure } from '../data/baits.js';
+import { baitOnMap, baitSimpleTextureKey, isLure } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
@@ -375,8 +375,7 @@ export class FishingScene extends Phaser.Scene {
   /** The bait or lure on the line: the saved choice for this map, if valid. */
   _currentBaitId() {
     const saved = SaveSystem.getSelectedBait(this.map.id);
-    const bait = BAITS_BY_ID[saved];
-    return bait && bait.map === this.map.id ? saved : this.map.defaultBait;
+    return baitOnMap(saved, this.map.id) ? saved : this.map.defaultBait;
   }
 
   /** True when the player is fishing with a lure (no float). */
@@ -1603,7 +1602,8 @@ export class FishingScene extends Phaser.Scene {
    * reel fight, the catch display and SaveSystem.
    */
   _pickFish() {
-    return weightedPick(this._currentBaitId()) || weightedPick(this.map.defaultBait);
+    return weightedPick(this._currentBaitId(), this.map.id)
+      || weightedPick(this.map.defaultBait, this.map.id);
   }
 
   // ---------------------------------------------------------------------------

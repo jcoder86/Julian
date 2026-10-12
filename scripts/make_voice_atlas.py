@@ -17,7 +17,8 @@ go for the whole atlas so every phrase has the same tone:
    full stop in between -- that makes the pause the phrases are cut at.
 2. Generate, download, and keep the download in work/voice/ (git-ignored).
 3. `python scripts/make_voice_atlas.py <name> <download.mp3>` finds the
-   phrases (anything between two silences), checks that there are exactly
+   phrases (anything between two silences; two that the voice ran together
+   are cut apart at the pause between them), checks that there are exactly
    as many as were asked for, brings them to the loudness of the first
    atlas, and writes them out with half a second of silence in between.
 4. `... --check` afterwards has Google's Gemini write down what it hears
@@ -25,6 +26,9 @@ go for the whole atlas so every phrase has the same tone:
    of scripts/gen_video.py). A machine's ears, but better than none.
 
 A new atlas also has to be listed in VOICE_ATLASES in AudioManager.js.
+
+Besides fish an atlas can hold other phrases (EXTRA): the names of the maps,
+spoken when one is chosen.
 
 Usage (from the project root):
     python scripts/make_voice_atlas.py vissen-zee --text
@@ -46,29 +50,44 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "assets" / "audio" / "sfx"
 RATE = 44100
 
-# What the voice calls each species (the roach is just "voorn").
-SPOKEN = {
-    "roach": "voorn", "rudd": "ruisvoorn", "perch": "baars", "bream": "brasem",
-    "tench": "zeelt", "carp": "karper", "pike": "snoek", "zander": "snoekbaars",
-    "chub": "kopvoorn", "bass": "forelbaars", "trout": "forel",
-    "catfish": "meerval",
-    "herring": "haring", "whiting": "wijting", "mackerel": "makreel",
-    "flounder": "bot", "plaice": "schol", "garfish": "geep",
-    "seabass": "zeebaars", "cod": "kabeljauw", "ray": "rog",
-    "conger": "zeepaling", "tuna": "tonijn", "shark": "haai",
-}
-
-# atlas name -> the species in it, in the order they are read out. All the
-# small ones come first, then the medium ones, then the large ones.
+# atlas name -> what is in it: each species and what the voice calls it, in
+# the order they are read out. All the small ones come first, then the
+# medium ones, then the large ones. A species can be in more than one atlas
+# (when its name changed): the game takes the phrase from the newest.
 ATLASES = {
-    # The first recording (June 2026). Its files were made by hand; listed
-    # here for --text and --check only.
-    "vissen": ["roach", "rudd", "perch", "bream", "tench", "carp", "pike",
-               "zander", "chub", "bass", "trout"],
-    # The twelve sea fish, and the lake's catfish, which had no voice yet.
-    "vissen-zee": ["herring", "whiting", "mackerel", "flounder", "plaice",
-                   "garfish", "seabass", "cod", "ray", "conger", "tuna",
-                   "shark", "catfish"],
+    # The first recording (June 2026): the first lake's fish. Its files were
+    # made by hand; listed here for --text and --check only.
+    "vissen": {
+        "roach": "voorn", "rudd": "ruisvoorn", "perch": "baars", "bream": "brasem",
+        "tench": "zeelt", "carp": "karper", "pike": "snoek", "zander": "snoekbaars",
+        "chub": "kopvoorn", "bass": "forelbaars", "trout": "forel",
+    },
+    # The twelve sea fish, and the catfish, which had no voice yet.
+    "vissen-zee": {
+        "herring": "haring", "whiting": "wijting", "mackerel": "makreel",
+        "flounder": "bot", "plaice": "schol", "garfish": "geep",
+        "seabass": "zeebaars", "cod": "kabeljauw", "ray": "rog",
+        "conger": "zeepaling", "tuna": "tonijn", "shark": "haai",
+        "catfish": "meerval",
+    },
+    # October 2026, with the map of France: the fish that are new in the moat
+    # and in the French lake, the five whose name became more exact
+    # (karper, forelbaars, forel, tonijn, haai) -- and the names of the maps.
+    "vissen-3": {
+        "goby": "zwartbekgrondel", "carp": "schubkarper", "mirrorcarp": "spiegelkarper",
+        "eel": "paling",
+        "gudgeon": "riviergrondel", "minnow": "elrits", "barbel": "barbeel",
+        "bass": "grootbekbaars", "grayling": "vlagzalm", "trout": "bruine forel",
+        "rainbowtrout": "regenboogforel", "char": "beekridder", "salmon": "zalm",
+        "sturgeon": "steur",
+        "tuna": "blauwvintonijn", "shark": "haringhaai",
+    },
+}
+# Phrases that are not a fish: (key, text), read out after the fish. The
+# map names are spoken when a map is chosen (key `map_<id>`).
+EXTRA = {
+    "vissen-3": [("map_lake", "Naarden-Vesting!"), ("map_france", "Frankrijk!"),
+                 ("map_sea", "Noordzee!")],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}
@@ -92,8 +111,9 @@ REFERENCE = "vissen"
 
 def phrases_of(name):
     """[(key, text)] in reading order."""
-    return [(f"{size}_{species}", PHRASE[size].format(SPOKEN[species]))
-            for size in SIZES for species in ATLASES[name]]
+    fish = [(f"{size}_{species}", PHRASE[size].format(spoken))
+            for size in SIZES for species, spoken in ATLASES[name].items()]
+    return fish + EXTRA.get(name, [])
 
 
 def decode(path):
@@ -137,6 +157,43 @@ def find_phrases(samples):
     return found
 
 
+def quietest_run(samples, a, b):
+    """The longest stretch of silence inside samples[a:b]: (length, start, end) in samples."""
+    win = int(RATE * WINDOW_S)
+    n = (b - a) // win
+    rms = np.sqrt((samples[a:a + n * win].reshape(n, win) ** 2).mean(axis=1))
+    quiet = rms <= 10 ** (SILENCE_DB / 20)
+    best, start = (0, a, a), None
+    for i, q in enumerate(list(quiet) + [False]):
+        if q and start is None:
+            start = i
+        elif not q and start is not None:
+            if i - start > best[0]:
+                best = (i - start, a + start * win, a + i * win)
+            start = None
+    return best
+
+
+def split_merged(samples, spans, expected):
+    """
+    Two phrases the voice ran together (a pause shorter than MIN_GAP_S) come
+    out as one. While there are too few phrases, cut the one with the
+    longest silence inside it at that silence.
+    """
+    spans = list(spans)
+    while len(spans) < expected:
+        runs = [quietest_run(samples, a, b) for a, b in spans]
+        i = max(range(len(spans)), key=lambda k: runs[k][0])
+        length, start, end = runs[i]
+        if length < 3:                       # 30 ms: not a pause, a consonant
+            break
+        a, b = spans[i]
+        print(f"  (phrases {i + 1} and {i + 2} ran together: cut at a pause of "
+              f"{length * WINDOW_S:.2f} s, {start / RATE:.2f} s into the recording)")
+        spans[i:i + 1] = [(a, start), (end, b)]
+    return spans
+
+
 def speech_rms(samples, spans):
     """Loudness of the speech alone: the silences in between do not count."""
     spoken = np.concatenate([samples[a:b] for a, b in spans])
@@ -157,7 +214,7 @@ def reference_rms():
 def build(name, source):
     wanted = phrases_of(name)
     samples = decode(source)
-    spans = find_phrases(samples)
+    spans = split_merged(samples, find_phrases(samples), len(wanted))
     if len(spans) != len(wanted):
         for i, (a, b) in enumerate(spans):
             print(f"  {i + 1:3d}  {a / RATE:7.2f} s  {(b - a) / RATE:5.2f} s")
@@ -215,7 +272,8 @@ def check(name, model):
     # marker that sits in the wrong place.
     parts = [{"text": (
         "You get a number of very short Dutch audio clips. In each one a man "
-        "calls out the name of a fish, e.g. 'een kleine snoek'. Write down "
+        "calls out the name of a fish, e.g. 'een kleine snoek' (a few are the "
+        "name of a place instead). Write down "
         "exactly what is said in each clip, one line per clip, in order, as "
         "'<number>: <words>'. Dutch spelling, no commentary. If a clip is "
         "silent or cut off, say so on its line.")}]

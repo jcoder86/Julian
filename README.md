@@ -58,20 +58,39 @@ served at the dev-server root. Phaser's loader paths reflect that:
 
 ## Maps
 
-There are two fishing spots, picked on a wordless map-select screen after
-the title (and reachable again through the compass button in the HUD):
+There are three fishing spots, picked on the map-select screen after the
+title (and reachable again through the compass button in the HUD). Each is
+a framed painting with its name on a plate; tapping one also says the name.
 
-* **lake** -- the moat of Naarden-Vesting, from a wooden jetty: float
-  fishing with bread, corn, maggots, worms or a bait fish. (The id is
-  still `lake`: it is in every player's save data.)
-* **sea** -- from a stone harbour pier: float fishing with a lugworm or a
-  bait fish, **or lure fishing** with a feather rig, a spoon or a pilk jig.
+* **lake** -- Naarden-Vesting: the moat, from a wooden jetty. Float fishing
+  with bread, corn, maggots, worms or a bait fish. (The id is still
+  `lake`: it is in every player's save data.)
+* **france** -- Frankrijk: a mountain lake, from a floating pontoon on wine
+  barrels (the game's very first painting, repainted). The same five baits;
+  the fish of clear, cold water.
+* **sea** -- Noordzee: from a stone harbour pier. Float fishing with a
+  lugworm or a bait fish, **or lure fishing** with a feather rig, a spoon or
+  a pilk jig.
 
 Everything specific to one spot (painting, optional video, sky mask,
-waterline, default bait, music) is one entry in `src/data/maps.js`; `FishingScene`
-takes a `{ mapId }` and contains no lake or sea specifics itself. Each
-species (`src/data/fish.js`) and each bait or lure (`src/data/baits.js`)
-names the map it belongs to. The collection has one page of 12 per map.
+waterline, default bait, music, ambience, name) is one entry in
+`src/data/maps.js`; `FishingScene` takes a `{ mapId }` and contains no
+specifics of any spot itself.
+
+**Which fish live where** is `MAP_SPECIES` in `src/data/fish.js`: twelve per
+map, in the order of that map's page in the collection. A species can live
+on more than one map (the catfish does, and is rarer in France: `weightOn`);
+its catches are the same wherever it was caught. A bait says on which maps
+it is fished (`maps` in `src/data/baits.js`): the five fresh-water baits
+serve the moat and the French lake alike. `node scripts/fish-odds.js` prints
+what bites on what, per map, and how rare the big ones are.
+
+A species id is for ever -- catches are saved under it -- but a species can
+be renamed or moved. That happened in October 2026: the first lake's Karper
+became the Schubkarper (the mirror carp joined it), its Forel the Bruine
+forel and its Forelbaars the Grootbekbaars, and those two moved to France
+with the Kopvoorn; the sea's Tonijn and Haai became the Blauwvintonijn and
+the Haringhaai. Their catches came along untouched.
 
 ### Lure fishing
 
@@ -320,7 +339,8 @@ paints it.
 On the catch screen a voice calls out what was caught. The phrases live in
 voice atlases: an mp3 with all of them in a row and a JSON that says where
 each one starts (`assets/audio/sfx/vissen.mp3` for the first eleven lake
-fish, `vissen-zee.mp3` for the sea fish and the catfish; the list is
+fish, `vissen-zee.mp3` for the sea fish and the catfish, `vissen-3.mp3`
+for the newcomers, the renamed fish and the names of the maps; the list is
 `VOICE_ATLASES` in `src/systems/AudioManager.js`).
 
 They are spoken by ElevenLabs, a whole atlas in one go so every phrase

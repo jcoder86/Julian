@@ -140,7 +140,9 @@ function adoptJamesCatches(now) {
   const lastCatch = readStrict(LAST_CATCH_KEY);
   const note = { at: new Date(now).toISOString(), loaded: false };
 
-  const lake = speciesForMap('lake').map((species) => species.id);
+  // "Lake fish" here means the twelve species of the first map as it was
+  // when James caught his (some have since moved to the French lake).
+  const lake = Object.keys(JAMES_CATCHES.fishCounts);
   if (lake.some((id) => tables[FISH_COUNTS_KEY][id] > 0)) {
     // They have their own lake fish here: nothing to add, nothing to touch.
     SaveSystem.save(JAMES_ADOPTED_KEY, note);

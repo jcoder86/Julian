@@ -17,15 +17,16 @@ const VIEW_ALIGN_Y = 0.1;
 // "Who is playing?" -- a block on the right of the painting, under the logo:
 //
 //            [ Spelen met: ]          a wooden plate, not a button
-//      (o)(o)            (o)(o)       the teams: big, and what you tap
+//       ( oo )            ( oo )      the teams, each two faces in one frame:
+//                                     big, and what you tap
 //   Julian & Dirk     James & Boaz
 //                (o) Gast             the visitor: grey and smaller
 //
 // All sizes in design px; the block's origin is the middle of its top edge.
 const HEADER_W = 312;              // the plate's picture is 600 x 200
 const HEADER_H = 104;
-const TEAM_FACES_H = 156;          // a team's picture is 442 x 236: two faces
-const TEAM_GAP = 40;               // between the teams
+const TEAM_FACES_H = 200;          // a team's picture is round: its two faces in one frame
+const TEAM_GAP = 56;               // between the teams
 const TEAM_TOP = HEADER_H + 14;    // top of the faces
 const NAME_DROP = 24;              // from the faces' lower edge to the name's middle
 const VISITOR_FACE_H = 100;

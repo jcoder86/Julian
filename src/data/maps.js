@@ -1,5 +1,6 @@
-// Fishing spots. Each map is a 4:3 painting with a jetty (the moat) or a
-// stone pier (the sea) in the lower-left corner; everything a scene needs
+// Fishing spots. Each map is a 4:3 painting with something to fish from in
+// its lower-left corner -- a jetty (the moat), a floating pontoon (the
+// French lake) or a stone pier (the sea); everything a scene needs
 // to know about ONE spot lives here, so FishingScene itself contains no
 // "lake" or "sea" specifics.
 //
@@ -27,6 +28,15 @@ const NAARDEN_WATERLINE = [
   [   0, 585], [  50, 580], [  65, 505], [ 105, 500], [ 110, 356],
   [ 140, 348], [ 165, 302], [ 190, 287], [ 240, 280], [ 270, 272],
   [ 330, 267], [ 336, 253], [1280, 252],
+];
+
+// The mountain lake in France, traced from assets/raw/backdrop-france.png.
+// From x = 250 on, the water starts at the stones of the far shore; left of
+// that it follows the reeds, the rowing boat and the near bank down to the
+// grass beside the pontoon.
+const FRANCE_WATERLINE = [
+  [   0, 520], [  58, 520], [  64, 354], [ 100, 340], [ 176, 333],
+  [ 230, 300], [ 250, 268], [1280, 266],
 ];
 
 /**
@@ -95,6 +105,8 @@ function makeWaterTopAt(samples) {
 //   depthFarY       design y where a cast counts as "far away" (the float
 //                   is drawn smallest there, full size at the jetty)
 //   defaultBait     what is on the hook the first time you fish here
+//   nlName          what the place is called: spoken when it is chosen
+//                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
 //   ambience        what is heard here besides the music (systems/
 //                   Ambience.js): a `bed` that goes round and round, and
@@ -114,6 +126,7 @@ const MAP_DEFS = [
   {
     id: 'lake',
     // The id stays 'lake' for good: it is in every player's save data.
+    nlName: 'Naarden-Vesting',
     backdropKey: 'backdrop',
     backdropImage: 'clean/backdrop-naarden.jpg',
     backdropVideo: 'clean/backdrop-naarden.mp4',
@@ -147,7 +160,45 @@ const MAP_DEFS = [
     },
   },
   {
+    // The game's very first painting, a mountain lake, moved to France: a
+    // floating pontoon on wine barrels, a village and a chateau across the
+    // water. Its fish are those of clear, cold water.
+    id: 'france',
+    nlName: 'Frankrijk',
+    backdropKey: 'backdrop-france',
+    backdropImage: 'clean/backdrop-france.jpg',
+    backdropVideo: 'clean/backdrop-france.mp4',
+    skyMask: 'clean/sky-mask-france.png',
+    skyMaskFraction: 320 / 720,
+    clouds: [
+      { src: 'clean/clouds-france-back.png',  height: 0.28 * WORLD_HEIGHT, speed: 1.3, alpha: 0.95 },
+      { src: 'clean/clouds-france-front.png', height: 0.28 * WORLD_HEIGHT, speed: 3.4, alpha: 1 },
+    ],
+    // On the planks of the pontoon, between its two mooring poles.
+    seat: { x: 262, y: 628 },
+    landing: { x: 640, y: 648 },
+    // Deck, barrels and both poles.
+    dry: [
+      [0, 494], [92, 520], [95, 402], [141, 402], [143, 530], [532, 592], [535, 447],
+      [589, 447], [591, 676], [550, 709], [422, 735], [335, 776], [128, 840], [0, 840],
+    ],
+    waterline: FRANCE_WATERLINE,
+    depthFarY: 266,
+    defaultBait: 'wormen',
+    music: 'ambient',
+    ambience: {
+      bed: { name: 'lake-birds', volume: 0.5 },
+      passing: [
+        // A trout rises.
+        { name: 'lake-plons', every: [20, 60], first: [10, 35], volume: [0.3, 0.6], vary: 0.06 },
+        // The bells of the village church across the lake.
+        { name: 'lake-bells', every: [150, 330], first: [60, 150], volume: [0.3, 0.45] },
+      ],
+    },
+  },
+  {
     id: 'sea',
+    nlName: 'Noordzee',
     backdropKey: 'backdrop-sea',
     backdropImage: 'clean/backdrop-sea.jpg',
     backdropVideo: 'clean/backdrop-sea.mp4',

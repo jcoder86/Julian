@@ -1,0 +1,210 @@
+{
+  "file": "vissen-3.mp3",
+  "totalDuration": 91.32,
+  "phrases": {
+    "small_goby": {
+      "start": 0.5,
+      "duration": 1.6
+    },
+    "small_carp": {
+      "start": 2.6,
+      "duration": 1.24
+    },
+    "small_mirrorcarp": {
+      "start": 4.34,
+      "duration": 1.44
+    },
+    "small_eel": {
+      "start": 6.28,
+      "duration": 1.13
+    },
+    "small_gudgeon": {
+      "start": 7.91,
+      "duration": 1.48
+    },
+    "small_minnow": {
+      "start": 9.89,
+      "duration": 1.3
+    },
+    "small_barbel": {
+      "start": 11.69,
+      "duration": 1.21
+    },
+    "small_bass": {
+      "start": 13.4,
+      "duration": 1.56
+    },
+    "small_grayling": {
+      "start": 15.46,
+      "duration": 1.31
+    },
+    "small_trout": {
+      "start": 17.27,
+      "duration": 1.53
+    },
+    "small_rainbowtrout": {
+      "start": 19.3,
+      "duration": 1.77
+    },
+    "small_char": {
+      "start": 21.57,
+      "duration": 1.34
+    },
+    "small_salmon": {
+      "start": 23.41,
+      "duration": 1.07
+    },
+    "small_sturgeon": {
+      "start": 24.98,
+      "duration": 1.09
+    },
+    "small_tuna": {
+      "start": 26.57,
+      "duration": 1.71
+    },
+    "small_shark": {
+      "start": 28.78,
+      "duration": 1.38
+    },
+    "medium_goby": {
+      "start": 30.66,
+      "duration": 1.27
+    },
+    "medium_carp": {
+      "start": 32.43,
+      "duration": 1.08
+    },
+    "medium_mirrorcarp": {
+      "start": 34.01,
+      "duration": 1.18
+    },
+    "medium_eel": {
+      "start": 35.69,
+      "duration": 0.79
+    },
+    "medium_gudgeon": {
+      "start": 36.98,
+      "duration": 1.19
+    },
+    "medium_minnow": {
+      "start": 38.67,
+      "duration": 0.98
+    },
+    "medium_barbel": {
+      "start": 40.15,
+      "duration": 0.87
+    },
+    "medium_bass": {
+      "start": 41.52,
+      "duration": 1.31
+    },
+    "medium_grayling": {
+      "start": 43.33,
+      "duration": 0.99
+    },
+    "medium_trout": {
+      "start": 44.82,
+      "duration": 1.2
+    },
+    "medium_rainbowtrout": {
+      "start": 46.52,
+      "duration": 1.52
+    },
+    "medium_char": {
+      "start": 48.54,
+      "duration": 0.94
+    },
+    "medium_salmon": {
+      "start": 49.98,
+      "duration": 0.74
+    },
+    "medium_sturgeon": {
+      "start": 51.22,
+      "duration": 0.79
+    },
+    "medium_tuna": {
+      "start": 52.51,
+      "duration": 1.29
+    },
+    "medium_shark": {
+      "start": 54.3,
+      "duration": 1.09
+    },
+    "large_goby": {
+      "start": 55.89,
+      "duration": 1.63
+    },
+    "large_carp": {
+      "start": 58.02,
+      "duration": 1.47
+    },
+    "large_mirrorcarp": {
+      "start": 59.99,
+      "duration": 1.53
+    },
+    "large_eel": {
+      "start": 62.02,
+      "duration": 1.26
+    },
+    "large_gudgeon": {
+      "start": 63.78,
+      "duration": 1.53
+    },
+    "large_minnow": {
+      "start": 65.81,
+      "duration": 1.44
+    },
+    "large_barbel": {
+      "start": 67.75,
+      "duration": 1.28
+    },
+    "large_bass": {
+      "start": 69.53,
+      "duration": 1.59
+    },
+    "large_grayling": {
+      "start": 71.62,
+      "duration": 1.41
+    },
+    "large_trout": {
+      "start": 73.53,
+      "duration": 1.55
+    },
+    "large_rainbowtrout": {
+      "start": 75.58,
+      "duration": 1.78
+    },
+    "large_char": {
+      "start": 77.86,
+      "duration": 1.39
+    },
+    "large_salmon": {
+      "start": 79.75,
+      "duration": 1.15
+    },
+    "large_sturgeon": {
+      "start": 81.4,
+      "duration": 1.14
+    },
+    "large_tuna": {
+      "start": 83.04,
+      "duration": 1.68
+    },
+    "large_shark": {
+      "start": 85.22,
+      "duration": 1.46
+    },
+    "map_lake": {
+      "start": 87.18,
+      "duration": 1.08
+    },
+    "map_france": {
+      "start": 88.76,
+      "duration": 0.75
+    },
+    "map_sea": {
+      "start": 90.01,
+      "duration": 0.81
+    }
+  }
+}

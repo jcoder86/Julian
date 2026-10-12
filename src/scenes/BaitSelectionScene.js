@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
-import { BAITS_BY_ID, baitsForMap, baitFullTextureKey } from '../data/baits.js';
+import { baitOnMap, baitsForMap, baitFullTextureKey } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
 import { addChoiceMenu, MENU_W, MENU_H } from '../systems/Ui.js';
 
@@ -29,7 +29,7 @@ export class BaitSelectionScene extends Phaser.Scene {
     bindLayout(this, { mode: 'frame', fitWidth: MENU_W + 40, fitHeight: MENU_H + 40 });
 
     const saved = SaveSystem.getSelectedBait(this.map.id);
-    const selectedId = BAITS_BY_ID[saved]?.map === this.map.id ? saved : this.map.defaultBait;
+    const selectedId = baitOnMap(saved, this.map.id) ? saved : this.map.defaultBait;
 
     addChoiceMenu(this, GAME_WIDTH / 2, GAME_HEIGHT / 2,
       baitsForMap(this.map.id).map((bait) => ({

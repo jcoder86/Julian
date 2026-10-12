@@ -1,8 +1,9 @@
 // Bait and lure definitions -- "what is on the end of the line".
 //
-// Order in BAITS determines display order in the selection menu. Each map
-// has its own set (`map`), and ids are unique across maps so a fish's
-// `baits` list (data/fish.js) also pins it to one map.
+// Order in BAITS determines display order in the selection menu. `maps`
+// says where a bait is fished: the fresh-water baits serve the moat and the
+// French lake alike, the sea has its own. (Which FISH take a bait is in
+// data/fish.js, and which fish live where too.)
 //
 // `kind` decides how you fish with it:
 //   "bait" -- hangs under the float: cast, wait for the float to go under,
@@ -14,27 +15,35 @@
 // clean/bait_<id>_simple.png (HUD icon; for a lure also the sprite on the
 // end of the line).
 
+const FRESH = ["lake", "france"];
+const SEA = ["sea"];
+
 export const BAITS = [
-  // Lake
-  { id: "brood",    map: "lake", kind: "bait", displayName: "Brood",    nlName: "Brood" },
-  { id: "mais",     map: "lake", kind: "bait", displayName: "Mais",     nlName: "Mais" },
-  { id: "maden",    map: "lake", kind: "bait", displayName: "Maden",    nlName: "Maden" },
-  { id: "wormen",   map: "lake", kind: "bait", displayName: "Wormen",   nlName: "Wormen" },
-  { id: "vis",      map: "lake", kind: "bait", displayName: "Vis",      nlName: "Vis" },
+  // Fresh water
+  { id: "brood",    maps: FRESH, kind: "bait", displayName: "Brood",    nlName: "Brood" },
+  { id: "mais",     maps: FRESH, kind: "bait", displayName: "Mais",     nlName: "Mais" },
+  { id: "maden",    maps: FRESH, kind: "bait", displayName: "Maden",    nlName: "Maden" },
+  { id: "wormen",   maps: FRESH, kind: "bait", displayName: "Wormen",   nlName: "Wormen" },
+  { id: "vis",      maps: FRESH, kind: "bait", displayName: "Vis",      nlName: "Vis" },
 
   // Sea
-  { id: "zeepier",  map: "sea",  kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },
-  { id: "aasvisje", map: "sea",  kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
-  { id: "veren",    map: "sea",  kind: "lure", displayName: "Veertjes", nlName: "Veertjes" },
-  { id: "blinker",  map: "sea",  kind: "lure", displayName: "Blinker",  nlName: "Blinker" },
-  { id: "pilker",   map: "sea",  kind: "lure", displayName: "Pilker",   nlName: "Pilker" },
+  { id: "zeepier",  maps: SEA,   kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },
+  { id: "aasvisje", maps: SEA,   kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
+  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes" },
+  { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker" },
+  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker" },
 ];
 
 export const BAITS_BY_ID = Object.fromEntries(BAITS.map(b => [b.id, b]));
 
 /** The baits and lures available on one map, in menu order. */
 export function baitsForMap(mapId) {
-  return BAITS.filter(b => b.map === mapId);
+  return BAITS.filter(b => b.maps.includes(mapId));
+}
+
+/** Can this bait be fished on this map? (False for an unknown id.) */
+export function baitOnMap(baitId, mapId) {
+  return !!BAITS_BY_ID[baitId]?.maps.includes(mapId);
 }
 
 /** True when this id is a lure (fished actively, without a float). */

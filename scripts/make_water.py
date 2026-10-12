@@ -20,7 +20,9 @@ Step by step
              clip, with a prompt saying the camera is locked off and only
              the water moves: the clip ends where it began and can repeat.
              Kept as work/veo-<map>.mp4 (with Veo's own sound track).
-  3. MASK    Where does the film actually move? Measured per small block
+  3. MASK    Where does the film actually move? (Never on the jetty, pier
+             or pontoon itself: the map's `dry` outline is cut out.)
+             Where does the film actually move? Measured per small block
              of pixels: how much its average brightness changes over the
              clip. (Per single pixel would not do: Veo redraws stone and
              wood with a fine grain that shimmers a little, while a whole
@@ -53,7 +55,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -83,6 +85,8 @@ FILM_SOFTEN = 0.6
 MOTION_BLOCK = 6
 MOTION_MIN = 3.5
 MASK_FEATHER_PX = 6
+# Kept clear around the jetty / pier / pontoon outline of the map.
+DRY_MARGIN_PX = 4
 # Colour is compared between film and painting with fine detail blurred
 # away (Veo redraws every stone and ripple crisper than the painting).
 COLOUR_BLUR_PX = 12
@@ -113,6 +117,20 @@ WATER = {
             " Sound: waves washing against stone, a light sea breeze. No "
             "music, no voices."
         )),
+    "france": dict(
+        painting="backdrop-france",
+        prompt=(
+            "The clear mountain lake is gently alive. A light breeze sends "
+            "small ripples drifting slowly across the surface; the "
+            "reflections of the village, the trees and the mountains shimmer "
+            "and waver softly; in the clear shallows in front, sunlight plays "
+            "over the pebbles. The wooden pontoon with its barrels, its two "
+            "striped mooring poles and their rope, the rowing boat on the "
+            "bank, the houses, the bridge, the trees and the mountains do "
+            "not move -- no leaf stirs. " + STILL_RULES +
+            " Sound: quiet water lapping, a few birds far away. No music, "
+            "no voices."
+        )),
     "lake": dict(
         painting="backdrop-naarden",
         prompt=(
@@ -137,6 +155,22 @@ def waterline(map_id, width, height):
                          cwd=ROOT, check=True, capture_output=True, text=True).stdout
     # Design coordinates: x 0..1280 across, y -120..840 down the painting.
     return [(x * width / 1280.0, (y + 120.0) * height / 960.0) for x, y in json.loads(out)]
+
+
+def dry_land(map_id, width, height):
+    """
+    Where the map's jetty, pier or pontoon stands (its `dry` polygon in
+    src/data/maps.js), as a mask in painting pixels: True = not water.
+    """
+    js = ("import('./src/data/maps.js').then((m) => "
+          "console.log(JSON.stringify(m.getMap(process.argv[1]).dry || [])))")
+    out = subprocess.run(["node", "--input-type=module", "-e", js, map_id],
+                         cwd=ROOT, check=True, capture_output=True, text=True).stdout
+    points = [(x * width / 1280.0, (y + 120.0) * height / 960.0) for x, y in json.loads(out)]
+    mask = Image.new("L", (width, height), 0)
+    if len(points) >= 3:
+        ImageDraw.Draw(mask).polygon(points, fill=255)
+    return np.asarray(mask) > 0
 
 
 def far_shore(map_id, width, height):
@@ -198,6 +232,9 @@ def compose(map_id):
     first_row = max(top + MASK_FEATHER_PX * 3,                  # the film's own top edge
                     round(far_shore(map_id, width, height)))
     water[:first_row] = False
+    # Never what the anglers sit on: a floating pontoon bobs in the film, and
+    # even a fixed jetty's planks shimmer a little. It stays the painting.
+    water &= ~ndimage.binary_dilation(dry_land(map_id, width, height), iterations=DRY_MARGIN_PX)
     # ...then pull the edge in a little and soften it.
     pad = MASK_FEATHER_PX * 4
     water = ndimage.binary_erosion(np.pad(water, pad, mode="edge"), iterations=MASK_FEATHER_PX)

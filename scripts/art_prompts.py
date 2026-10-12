@@ -76,9 +76,81 @@ FISH = {
     "tuna":     ("an Atlantic bluefin tuna (Thunnus thynnus): massive torpedo-shaped body, "
                  "dark metallic blue back, silver-white belly, a row of small yellow finlets, "
                  "crescent-shaped tail", SIDE, ""),
-    "shark":    ("a blue shark (Prionace glauca): sleek and slender, deep blue back, bright "
-                 "white belly, long pointed snout, long pectoral fins, tall dorsal fin, tail "
-                 "with a long upper lobe, mouth slightly open", SIDE, ""),
+    # The sea's shark is a porbeagle ("haringhaai"), the big shark that does
+    # live in the North Sea. (It was painted as a blue shark at first.)
+    "shark":    ("a porbeagle shark (Lamna nasus): a stout, heavy, spindle-shaped mackerel "
+                 "shark -- thick in the middle, not slender. Dark blue-grey back sharply set "
+                 "off from the white belly, a short conical pointed snout, a large black eye, "
+                 "five gill slits, a big upright triangular first dorsal fin with a clear "
+                 "WHITE patch on its free rear tip, short broad pectoral fins, and a "
+                 "crescent-shaped tail with almost equal lobes; mouth slightly open", SIDE, ""),
+
+    # --- The moat of Naarden-Vesting (what joined the first lake fish) ---------
+    "goby":     ("a round goby (Neogobius melanostomus): a small, stout bottom fish with a "
+                 "big blunt head, thick lips and high-set frog-like eyes; mottled grey-brown "
+                 "body with darker blotches, two dorsal fins with a distinct black spot at the "
+                 "rear of the first one, large fan-shaped pectoral fins and a rounded tail",
+                 SIDE, ""),
+    "carp":     ("a common carp of the fully scaled kind (Cyprinus carpio): a deep, heavy, "
+                 "high-backed body covered evenly with large, regular golden-bronze scales, "
+                 "one long dorsal fin running along most of the back, a thick-lipped "
+                 "down-turned mouth with two pairs of barbels, dark olive back, yellowish "
+                 "belly and reddish lower fins", SIDE, ""),
+    "mirrorcarp": ("a mirror carp (Cyprinus carpio): a deep, heavy, pot-bellied carp whose "
+                   "smooth, leathery olive-golden skin is almost scaleless -- only a few very "
+                   "large, irregular, shiny mirror-like scales in a row along the back and "
+                   "scattered near the tail and behind the gill; one long dorsal fin, a "
+                   "thick-lipped mouth with two pairs of barbels", SIDE, ""),
+    "eel":      ("a European eel (Anguilla anguilla): a long, slender, snake-like fish, dark "
+                 "olive-brown back, yellowish belly, a small head with a slightly protruding "
+                 "lower jaw, small pectoral fins and one continuous low fin running along the "
+                 "back, around the pointed tail and under the belly", SIDE,
+                 "\nThe body is drawn almost straight and horizontal, with only a gentle S-curve."),
+    # The pike: the small and the medium one are slim, but a pike of over a
+    # metre is a fat old female, not a long thin one.
+    "pike":     ("a northern pike (Esox lucius): olive-green body with rows of pale yellow "
+                 "oval spots, a long flat duck-bill snout, dorsal and anal fins set far back "
+                 "near the tail, reddish-brown dark-barred fins", SIDE,
+                 "\nIMPORTANT -- the three differ in BUILD as well as in size. The small and "
+                 "the medium one are slim. The large trophy specimen is a huge old female of "
+                 "well over a metre: very thick-bodied and heavy, with a deep, full belly, a "
+                 "massive broad head and a thick back -- about twice as deep-bodied for its "
+                 "length as the small one."),
+
+    # --- The mountain lake in France -------------------------------------------
+    "gudgeon":  ("a gudgeon (Gobio gobio): a small, slender, cylindrical bottom fish, "
+                 "grey-brown back, silvery flanks with a row of dark round blotches along the "
+                 "side, one small barbel at each corner of the down-turned mouth, spotted "
+                 "dorsal and tail fins", SIDE, ""),
+    "minnow":   ("a common minnow (Phoxinus phoxinus): a very small, slim fish, olive-brown "
+                 "back, golden flanks with a row of dark vertical bars merging into a dark "
+                 "stripe, pale belly, small rounded fins and tiny scales", SIDE, ""),
+    "barbel":   ("a barbel (Barbus barbus): a long, muscular, streamlined river fish with a "
+                 "flat belly, olive-bronze back and golden flanks, an underslung fleshy mouth "
+                 "with four distinct barbels, a tall pointed dorsal fin, reddish-orange lower "
+                 "fins and a forked tail", SIDE, ""),
+    "grayling": ("a grayling (Thymallus thymallus): an elegant, slim, silver-grey fish with "
+                 "rows of fine dark dots along the flanks, a small mouth, a small adipose fin "
+                 "and, above all, a very tall and long sail-like dorsal fin with rows of "
+                 "red-purple and dark spots", SIDE, ""),
+    "rainbowtrout": ("a rainbow trout (Oncorhynchus mykiss): a silvery trout densely covered "
+                     "with small black spots, also all over the dorsal fin and the tail; "
+                     "olive-green back and a broad pink-red band along the flank and on the "
+                     "gill cover; small adipose fin", SIDE, ""),
+    "char":     ("an Arctic char (Salvelinus alpinus): a trout-shaped fish with a dark "
+                 "grey-green back sprinkled with pale cream-pink spots, a vivid orange-red "
+                 "belly, and orange-red lower fins with a bright white front edge; small "
+                 "adipose fin, slightly forked tail", SIDE, ""),
+    "salmon":   ("an Atlantic salmon (Salmo salar): a powerful, streamlined, bright silver "
+                 "fish with a blue-grey back, a few small black x-shaped spots above the "
+                 "lateral line, a narrow tail wrist, a slightly forked tail and a small "
+                 "adipose fin; the large one has a slightly hooked lower jaw", SIDE, ""),
+    "sturgeon": ("a European sea sturgeon (Acipenser sturio): a very long, armoured, "
+                 "prehistoric-looking fish with five rows of pale bony plates along the body, "
+                 "a long pointed snout with four barbels in front of an underslung mouth, "
+                 "olive-grey back, pale belly, and a shark-like tail with a much longer upper "
+                 "lobe", SIDE,
+                 "\nThe body is drawn straight and horizontal."),
 }
 
 # ---------------------------------------------------------------------------
@@ -166,6 +238,41 @@ No people, no animals, no boats, no text. Late-afternoon summer light.
 4:3 landscape.
 """
 
+FRANCE_BACKDROP = """\
+Repaint the attached mountain-lake scene as a lake in the French Alps on a
+summer afternoon -- the same place, made richer. Keep the same camera
+position, the same composition and the same rich, detailed painting style
+as the reference.
+
+KEEP EXACTLY AS IN THE REFERENCE: the area covered by water -- the far edge
+of the water stays at the same height across the whole width of the
+picture, about 40% down from the top; the clear shallow water with stones
+in the foreground; the snowy mountain range; the shape and position of the
+left bank.
+
+REPLACE THE JETTY in the lower-left corner by a different kind of landing
+stage, in the same place and of about the same size: a FLOATING PONTOON. A
+flat deck of pale, sun-bleached planks lies on big wooden wine barrels that
+float in the water; it is moored with thick rope to two tall wooden mooring
+poles painted with faded blue, white and red rings. The deck is flat and
+empty and seen from the same angle as the old jetty; its left and lower
+edges run off the picture.
+
+ADD, on the far shore, what makes this France: a small old village of pale
+stone houses with terracotta roofs and blue shutters and a slender church
+spire; a little chateau with round, pointed-roofed towers on a hill above
+it; an old stone bridge with arches where a stream runs into the lake;
+tall slim poplars and a few dark cypresses among the pines; a field of
+purple lavender and a strip of yellow sunflowers on the slope. On the left
+bank a small blue wooden rowing boat lies pulled up among the reeds.
+Everything is softly reflected in the calm blue-green water.
+
+Sky: clear blue with NO clouds at all.
+
+No people, no animals, no text, no flags. Late-afternoon summer light.
+4:3 landscape.
+"""
+
 MAPSELECT_BACKGROUND = """\
 A background painting for the "choose your fishing spot" screen of a
 children's fishing game: the inside wall of a cosy fishing cabin, made of
@@ -215,8 +322,12 @@ SKY_LIGHT = {
              "and gold on the clouds' sunny side, soft lilac-grey in their shade"),
     "sea": ("a bright, clear summer day at noon -- clean white tops, soft blue-grey "
             "undersides"),
+    "france": ("a golden late afternoon in the mountains, low warm sun from the left -- "
+               "glowing cream and apricot on the clouds' sunny side, soft blue-violet in "
+               "their shade"),
 }
-SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png"}
+SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png",
+                "france": "assets/raw/backdrop-france.png"}
 
 # The near layer: a few big clouds, high up.  The far layer: small ones, low.
 SKY_LAYERS = {
@@ -438,6 +549,9 @@ CATCH_WHO = {
 CATCH_GROUND = {
     "lake": ("wooden planks of the jetty", "assets/raw/catch.png"),
     "sea": ("stone slabs of the harbour quay", "assets/raw/catch-sea.png"),
+    "france": ("pale, sun-bleached planks of a floating pontoon on a mountain lake -- at its "
+               "edge a wooden mooring pole with faded blue, white and red rings and a loop "
+               "of thick rope, and clear blue-green water around it", "assets/raw/catch.png"),
 }
 
 # ---------------------------------------------------------------------------
@@ -588,6 +702,10 @@ JOBS = {
                          refs=["assets/raw/catch.png"], brief=SEA_CATCH),
     "naarden":      dict(out="assets/raw/backdrop-naarden.png",
                          refs=["assets/raw/backdrop.png"], brief=NAARDEN_BACKDROP),
+    # The first painting of the game (a mountain lake) is the third map's
+    # starting point.
+    "france":       dict(out="assets/raw/backdrop-france.png",
+                         refs=["assets/raw/backdrop.png"], brief=FRANCE_BACKDROP),
     "mapselect-bg": dict(out="assets/raw/mapselect.png", refs=[], brief=MAPSELECT_BACKGROUND),
     "sea-baits":    dict(out="assets/raw/baits-sea.png",
                          refs=["assets/raw/baits.png"], brief=SEA_BAITS),

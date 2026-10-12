@@ -3,14 +3,16 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { MAPS } from '../data/maps.js';
+import { AudioManager } from '../systems/AudioManager.js';
 import { TEX } from './BootScene.js';
-import { UI, addGlow, lettering, pressable } from '../systems/Ui.js';
+import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
 
 /**
  * "Where shall we fish?" -- one big picture per map, tap to go there.
  *
- * Wordless on purpose: each card is simply that map's painting, hung like a
- * framed picture on the wall of a fishing cabin. The card of the map the
+ * Each card is simply that map's painting, hung like a framed picture on
+ * the wall of a fishing cabin, with its name on a plate under it; a tap
+ * also SAYS the name, for whoever cannot read yet. The card of the map the
  * player fished on last gets a soft pulsing glow.
  *
  * A third, small picture hangs in the top-left corner: the title painting.
@@ -19,11 +21,18 @@ import { UI, addGlow, lettering, pressable } from '../systems/Ui.js';
  * Reached from the title screen and from the map button in the fishing HUD.
  */
 
-// Cards are 4:3 like the paintings, side by side in the design frame.
-const CARD_W   = 500;
-const CARD_H   = 375;
-const CARD_GAP = 70;
+// Cards are 4:3 like the paintings, side by side in the design frame: three
+// of them fill its width.
+const CARD_W   = 384;
+const CARD_H   = 288;
+const CARD_GAP = 34;
 const BORDER   = 8;
+// The name plate hangs from the frame's lower edge (its picture is 600 x 200).
+const PLATE_W  = 264;
+const PLATE_H  = 88;
+const PLATE_DROP = 34;            // from the frame's lower edge to the plate's middle
+// A moment for the name to start sounding before the map opens.
+const ENTER_DELAY_MS = 350;
 
 const BG_COLOR      = 0x6b4a2b;   // shows only if the wall painting is missing
 const BORDER_COLOR  = 0xfff6e0;
@@ -69,7 +78,7 @@ export class MapSelectScene extends Phaser.Scene {
 
     // Camera: keep both cards (plus breathing room) on screen, zooming out
     // only on screens too small for them.
-    bindLayout(this, { mode: 'frame', fitWidth: totalW + 80, fitHeight: CARD_H + 120 }, (layout) => {
+    bindLayout(this, { mode: 'frame', fitWidth: totalW + 40, fitHeight: CARD_H + 190 }, (layout) => {
       const { view, safe } = layout;
 
       // The way back hangs in the top-left corner of the screen. Where the
@@ -136,15 +145,26 @@ export class MapSelectScene extends Phaser.Scene {
       picture = this.add.rectangle(x, y, CARD_W, CARD_H, 0x205070);
     }
 
+    // Its name, for whoever can read.
+    if (map.nlName) {
+      const plateY = y + CARD_H / 2 + BORDER + PLATE_DROP;
+      if (this.textures.exists(UI.BOARD_LABEL)) {
+        this.add.image(x, plateY, UI.BOARD_LABEL).setDisplaySize(PLATE_W, PLATE_H);
+      }
+      this.add.text(x, plateY, map.nlName, lettering(27, COLOR.GOLD)).setOrigin(0.5);
+    }
+
     pressable(this, picture, () => this._enter(map));
   }
 
   _enter(map) {
     if (this._leaving) return;
     this._leaving = true;
-    // Defer to the next frame: starting another scene from inside Phaser's
-    // pointerdown pass can lose the transition (see CatchDisplayScene).
-    this.time.delayedCall(0, () => {
+    // Say where we are going; the voice carries on while the map opens.
+    new AudioManager(this).playPhrase(`map_${map.id}`);
+    // (Not from inside Phaser's pointerdown pass: starting another scene
+    // there can lose the transition -- see CatchDisplayScene.)
+    this.time.delayedCall(ENTER_DELAY_MS, () => {
       this.scene.start('FishingScene', { mapId: map.id });
     });
   }
