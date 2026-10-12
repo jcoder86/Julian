@@ -62,8 +62,9 @@ Frankrijk gebruikt voorlopig de achtergrondgeluiden van Naarden-Vesting
 | Kunstaas voor zoet water: spinner, shad en kunstvlieg, elk hangend aan de lijn en liggend | Codex, `fresh-lures`, daarna `python scripts/split_atlas.py lures-fresh` | ja |
 | Stem: "Helaas! De vis is ontsnapt!" | ElevenLabs, opname `stem-spel` | ja |
 
-De automatische luistercontrole van deze laatste zin is niet gedaan: het
-tegoed van de Gemini-sleutel was op.
+De automatische luistercontrole van deze laatste zin kon eerst niet (het
+tegoed van de Gemini-sleutel was op) en is na het aanvullen alsnog gedaan:
+verstaan zoals geschreven.
 
 ## Nog te doen
 

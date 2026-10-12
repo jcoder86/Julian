@@ -1143,7 +1143,11 @@ export class FishingScene extends Phaser.Scene {
    * a stray tap on the bait icon mid-reel would abort the catch.
    */
   _reelPosition() {
-    const safe = this.layout.safe;
+    // (No layout yet -- the page had no size when the scene started: take
+    // the design frame until the first real layout moves the reel.)
+    const safe = this.layout
+      ? this.layout.safe
+      : new Phaser.Geom.Rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT);
     let x = safe.right - REEL_OFFSET_X;
     const y = safe.bottom - REEL_OFFSET_Y;
     const hud = this._hudRect;
