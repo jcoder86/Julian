@@ -112,9 +112,21 @@ A lure has no float. Cast, and the reel appears at once: cranking swims
 the lure back to the jetty. Somewhere on the way a fish may grab it -- the
 "fish on" sign pops up -- and it is hooked there and then: no tap, just
 keep cranking, and the same reel is now the normal reel fight. No bite,
-and the lure arrives empty: cast again. Rings of ripples spread from the
-lure while it swims, so it is easy to follow on a choppy sea. The tunables
-are the `LURE_*` constants in `FishingScene.js`.
+and the lure arrives empty: cast again (`LURE_BITE_CHANCE`: 7 retrieves in
+10 get a bite).
+
+A lure is ten to fifteen centimetres long itself, so it hooks no small
+fish: never the `small` one of a species, and nothing under 20 cm
+(`smallestCatchOn` in `baits.js`). A fish that would have been too small
+comes as the smallest that is allowed (`catchableSizes` in `fish.js`), so
+the species are as common as on any bait and a large one is as rare as it
+always was; `fish-odds.js` prints the result.
+
+Far out the lure is drawn as small as a float there (`LURE_SCALE_FAR`) --
+on the sea it can be cast to the horizon, and should look it. Rings of
+ripples spread from it while it swims, and those shrink less with distance
+than the lure does (`LURE_WAKE_KEEP`), so it is easy to find and follow on
+a choppy sea. The tunables are the `LURE_*` constants in `FishingScene.js`.
 
 ### The line
 

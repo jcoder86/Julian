@@ -10,7 +10,9 @@
 //   "bait" -- hangs under the float: cast, wait for the float to go under,
 //             tap to strike, reel in.
 //   "lure" -- no float: cast, then reel the lure back yourself; a fish may
-//             grab it on the way in. Tap to strike, keep reeling.
+//             grab it on the way in, and is hooked at once: keep reeling.
+//             A lure is too big a mouthful for a small fish (see
+//             smallestCatchOn below).
 //
 // Texture keys: clean/bait_<id>_full.png (selection menu) and
 // clean/bait_<id>_simple.png (HUD icon; for a lure also the sprite on the
@@ -57,6 +59,19 @@ export function baitOnMap(baitId, mapId) {
 /** True when this id is a lure (fished actively, without a float). */
 export function isLure(baitId) {
   return BAITS_BY_ID[baitId]?.kind === "lure";
+}
+
+// A lure is ten to fifteen centimetres of metal, rubber or feathers itself:
+// a fish of that size cannot take it. So what is hooked on a lure is never
+// the "small" one of its kind, and never shorter than this many cm.
+const LURE_SMALLEST_CATCH = { size: "medium", cm: 20 };
+
+/**
+ * The smallest fish this bait can hook, as { size, cm } -- or null: anything
+ * goes. (What that does to the odds: catchableSizes in data/fish.js.)
+ */
+export function smallestCatchOn(baitId) {
+  return isLure(baitId) ? LURE_SMALLEST_CATCH : null;
 }
 
 /** Texture key for selection-menu (full) bait sprite. */

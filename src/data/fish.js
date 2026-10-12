@@ -3,7 +3,7 @@
 // rarity weight. Catch logic in FishingScene uses weightedPick(bait, map),
 // which takes the species that live on that map and accept the selected
 // bait, then rolls weighted random over the allowed (species, size)
-// combinations.
+// combinations. A lure does not hook small fish: see catchableSizes.
 //
 // Which species live where -- and in what order they are shown in a map's
 // collection -- is MAP_SPECIES below. A species can live in more than one
@@ -252,51 +252,84 @@ export function fishTextureKey(speciesId, size) {
 }
 
 /**
+ * In which sizes a species can be caught on a bait, each with its weight
+ * and its range of lengths in cm.
+ *
+ * `smallest` is the smallest fish the bait can hook, as { size, cm } (from
+ * smallestCatchOn in data/baits.js; null = anything goes). A fish that
+ * would have been too small comes as the smallest that IS allowed: its
+ * weight goes there. So on a lure nothing is "small" and nothing is under
+ * 20 cm, the species are as common as on any bait, and a big one is exactly
+ * as rare as it always was. Empty when the species never gets big enough.
+ *
+ * @returns {{ size: string, weight: number, range: [number, number] }[]}
+ */
+export function catchableSizes(species, smallest = null) {
+  const fromSize = smallest?.size ? Math.max(0, FISH_SIZES.indexOf(smallest.size)) : 0;
+  const fromCm = smallest?.cm ?? 0;
+  const sizes = [];
+  let tooSmall = 0;      // the weight of the sizes passed over so far
+  FISH_SIZES.forEach((size, i) => {
+    // Some legacy species records may have no lengthCm table -- fall back
+    // to a safe default rather than throwing.
+    const [lo, hi] = (species.lengthCm && species.lengthCm[size])
+      || { small: [10, 15], medium: [20, 35], large: [40, 60] }[size];
+    if (i < fromSize || hi < fromCm) {
+      tooSmall += species.sizeWeights[i];
+      return;
+    }
+    sizes.push({ size, weight: species.sizeWeights[i] + tooSmall, range: [Math.max(lo, fromCm), hi] });
+    tooSmall = 0;
+  });
+  return sizes;
+}
+
+/**
  * Weighted random pick of a fish among the species that live on the given
  * map and accept the given bait id. Returns { species, size, lengthCm } --
- * species and size are strings; lengthCm is an integer drawn uniformly from
- * the species' range for the chosen size.
+ * species and size are strings; lengthCm is an integer drawn from the
+ * species' range for the chosen size.
  *
  * @param {string} baitId a bait or lure id from data/baits.js
  * @param {string} mapId  a map id from data/maps.js
  * @param {() => number} rng injectable random; defaults to Math.random
+ * @param {{ size?: string, cm?: number } | null} smallest the smallest fish
+ *   this bait can hook (smallestCatchOn in data/baits.js); see catchableSizes
  * @returns {{ species: string, size: string, lengthCm: number } | null}
  *   null when no species there accepts the bait (shouldn't happen with our matrix)
  */
-export function weightedPick(baitId, mapId, rng = Math.random) {
-  const eligible = speciesForMap(mapId).filter(s => s.baits.includes(baitId));
+export function weightedPick(baitId, mapId, rng = Math.random, smallest = null) {
+  const eligible = speciesForMap(mapId)
+    .filter(s => s.baits.includes(baitId))
+    .map(s => ({ species: s, sizes: catchableSizes(s, smallest) }))
+    .filter(e => e.sizes.length > 0);
   if (eligible.length === 0) return null;
 
   // Stage 1: pick a species by its weight on this map.
-  const totalSpeciesWeight = eligible.reduce((sum, s) => sum + speciesWeightOn(s, mapId), 0);
+  const totalSpeciesWeight = eligible.reduce((sum, e) => sum + speciesWeightOn(e.species, mapId), 0);
   let roll = rng() * totalSpeciesWeight;
-  let chosenSpecies = eligible[eligible.length - 1];
-  for (const s of eligible) {
-    roll -= speciesWeightOn(s, mapId);
-    if (roll <= 0) { chosenSpecies = s; break; }
+  let chosen = eligible[eligible.length - 1];
+  for (const e of eligible) {
+    roll -= speciesWeightOn(e.species, mapId);
+    if (roll <= 0) { chosen = e; break; }
   }
 
   // Stage 2: pick a size for that species.
-  const totalSizeWeight = chosenSpecies.sizeWeights.reduce((a, b) => a + b, 0);
+  const totalSizeWeight = chosen.sizes.reduce((sum, s) => sum + s.weight, 0);
   let sizeRoll = rng() * totalSizeWeight;
-  let chosenSize = FISH_SIZES[FISH_SIZES.length - 1];
-  for (let i = 0; i < FISH_SIZES.length; i++) {
-    sizeRoll -= chosenSpecies.sizeWeights[i];
-    if (sizeRoll <= 0) { chosenSize = FISH_SIZES[i]; break; }
+  let chosenSize = chosen.sizes[chosen.sizes.length - 1];
+  for (const s of chosen.sizes) {
+    sizeRoll -= s.weight;
+    if (sizeRoll <= 0) { chosenSize = s; break; }
   }
 
-  // Stage 3: pick a centimetre length within the chosen size bucket. Some
-  // legacy species records may have no lengthCm table -- fall back to a
-  // safe default rather than throwing.
-  const range = (chosenSpecies.lengthCm && chosenSpecies.lengthCm[chosenSize])
-    || { small: [10, 15], medium: [20, 35], large: [40, 60] }[chosenSize]
-    || [20, 30];
-  const [lo, hi] = range;
+  // Stage 3: pick a centimetre length within the chosen size bucket.
+  const [lo, hi] = chosenSize.range;
   // A large one: the closer to the record, the rarer.
-  const place = chosenSize === "large" ? rng() ** RECORD_SKEW : rng();
+  const place = chosenSize.size === "large" ? rng() ** RECORD_SKEW : rng();
   const lengthCm = Math.round(lo + place * (hi - lo));
 
-  return { species: chosenSpecies.id, size: chosenSize, lengthCm };
+  return { species: chosen.species.id, size: chosenSize.size, lengthCm };
 }
 
 /**

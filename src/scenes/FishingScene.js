@@ -8,7 +8,7 @@ import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
 import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
-import { baitOnMap, baitSimpleTextureKey, isLure } from '../data/baits.js';
+import { baitOnMap, baitSimpleTextureKey, isLure, smallestCatchOn } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
@@ -213,8 +213,10 @@ const LURE_PX_PER_TURN  = 85;
 const LURE_TURNS_MIN    = 4;
 const LURE_TURNS_MAX    = 12;
 // Chance that a fish goes for the lure at all during one retrieve. High on
-// purpose: an empty retrieve is a let-down for a four-year-old.
-const LURE_BITE_CHANCE  = 0.8;
+// purpose: an empty retrieve is a let-down for a four-year-old. (Was 0.8:
+// a little lower since a lure hooks no small fish any more -- fewer fish,
+// but none of them a tiddler. See smallestCatchOn in data/baits.js.)
+const LURE_BITE_CHANCE  = 0.7;
 // The bite comes somewhere in this stretch of the retrieve (0 = just
 // landed, 1 = back at the jetty).
 const LURE_BITE_FROM    = 0.2;
@@ -252,9 +254,14 @@ const LURE_UNDERWATER_ALPHA = 0.92;
 // easily lost from sight on a choppy sea. Width in design px at full scale.
 const LURE_WAKE_WIDTH = 130;
 const LURE_WAKE_PERIOD_MS = 1100;
-// A lure far out is drawn less tiny than a float out there (see
-// BOBBER_SCALE_FAR): the player has to follow it all the way home.
-const LURE_SCALE_FAR = 0.45;
+// A lure far out is as small as a float out there (see BOBBER_SCALE_FAR).
+// (It used to keep almost half its size all the way out, so that it could
+// be followed home -- but then a cast to the horizon of the sea looked no
+// further away than one to the foot of the pier.) What points it out at a
+// distance is its ripples: they shrink less than the lure does, by this
+// much -- 0 = as much as the lure, 1 = not at all.
+const LURE_SCALE_FAR = 0.2;
+const LURE_WAKE_KEEP = 0.4;
 
 // All fish use the reel widget now. Common little ones need just one
 // turn (a flick of the wrist); rare giants take ~9 turns. Kept as a
@@ -461,7 +468,7 @@ export class FishingScene extends Phaser.Scene {
       this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, home.y, p);
       // It shrinks or grows with distance like the float does, and points
       // its nose (the line eye) at the rod it is being pulled to.
-      this.bobber.setScale(this._bobberDepthScale(this.bobber.y));
+      this._setLureScale(this._bobberDepthScale(this.bobber.y));
       this._pointLureAtRod();
       if (this.lure && this.lure.biteAt != null && p >= this.lure.biteAt) {
         this._hookOnLure();
@@ -536,6 +543,15 @@ export class FishingScene extends Phaser.Scene {
     if (this._rigAir) for (const part of this._rigAir) part.setVisible(inAir);
     if (this._rigTip) this._rigTip.setVisible(!inAir);
     if (!inAir && this.bobber && !this.lureSprite) this.bobber.rotation = 0;
+  }
+
+  /**
+   * Draw the lure at this scale -- and its ripples a little less small than
+   * that, so that a lure far out can still be found.
+   */
+  _setLureScale(scale) {
+    this.bobber.setScale(scale);
+    if (this.lureWakeRings) this.lureWakeRings.setScale(scale ** -LURE_WAKE_KEEP);
   }
 
   /**
@@ -913,6 +929,7 @@ export class FishingScene extends Phaser.Scene {
     if (this.bobber) this.bobber.destroy();
     this.lureSprite = null;
     this.lureWake = null;
+    this.lureWakeRings = null;
     this._rigAir = null;       // float mode: what shows in the air...
     this._rigTip = null;       // ...and what shows in the water
 
@@ -933,14 +950,18 @@ export class FishingScene extends Phaser.Scene {
         repeat: -1,
         ease: 'Sine.easeOut',
       });
+      // (The ripples are in a holder of their own: its scale makes up for
+      // part of the lure's shrinking with distance -- see _setLureScale.)
+      const rings = this.add.container(0, 0, [wake]);
       const lure = this.add.image(0, 0, lureKey);
       lure.setScale(LURE_DISPLAY_LENGTH / lure.width);
       lure.setOrigin(0.04, 0.5);
-      c.add([wake, lure]);
+      c.add([rings, lure]);
       c.setDepth(20);
       this.bobber = c;
       this.lureSprite = lure;
       this.lureWake = wake;
+      this.lureWakeRings = rings;
       this.bobber.setVisible(wasVisible);
       this.bobberHomeY = y;
       return;
@@ -1634,7 +1655,9 @@ export class FishingScene extends Phaser.Scene {
    * reel fight, the catch display and SaveSystem.
    */
   _pickFish() {
-    return weightedPick(this._currentBaitId(), this.map.id)
+    const bait = this._currentBaitId();
+    // (A lure hooks no small fish: smallestCatchOn.)
+    return weightedPick(bait, this.map.id, Math.random, smallestCatchOn(bait))
       || weightedPick(this.map.defaultBait, this.map.id);
   }
 
@@ -1660,6 +1683,7 @@ export class FishingScene extends Phaser.Scene {
     this.bobber.y = y;
     this.bobberHomeY = y;
     this.bobber.setAlpha(LURE_UNDERWATER_ALPHA);
+    this._setLureScale(this._bobberDepthScale(y));
     if (this.lureWake) this.lureWake.setVisible(true);
     this.reelEnd = { startX: x, startY: y };
 
