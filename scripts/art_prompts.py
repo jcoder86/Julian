@@ -682,6 +682,39 @@ shadows on the background, no text, no labels, no grid lines. Crisp edges.
 Landscape, about 3:2.
 """
 
+# The lures of the two fresh-water maps. No green anywhere on them: the
+# background is keyed out by its green.
+FRESH_LURES = """\
+A sprite sheet of FRESH-WATER fishing lures for a game, in the same
+realistic painting style and the same kind of layout as the attached
+reference sheet (which shows sea baits and lures): here 3 columns by 2 rows
+on a solid flat pure green (#00FF00) chroma-key background.
+
+Columns, left to right:
+  1. a spinner -- a small classic spinner lure: a shiny golden-brass oval
+     blade on a thin wire shaft, a body of red beads, a tuft of red wool
+  2. a soft rubber shad -- a fish-shaped soft plastic lure with a round
+     paddle tail, pearl-white belly and bright ORANGE back, a black eye
+  3. a trout fly -- a classic artificial fly tied on a small hook: bushy
+     red-brown and grey hackle feathers, upright pale wings, a red tail
+
+TOP ROW, each item hanging vertically "on the line":
+  1. the spinner hanging from a small steel swivel, a treble hook at its
+     bottom
+  2. the shad hanging head-up on a round lead jig head with one single
+     hook coming out of its back
+  3. the fly hanging from a short piece of fine line, hook bend at the
+     bottom
+
+BOTTOM ROW, the same three items lying flat and horizontal. For all three
+the line eye is at the LEFT end and the hook or tail at the RIGHT end.
+
+Nothing on any lure is green. Every item is one solid, connected object,
+clearly separated from its neighbours by plenty of plain green; nothing
+overlaps or touches. No shadows on the background, no text, no labels, no
+grid lines. Crisp edges. Landscape, about 3:2.
+"""
+
 MAP_ICON = """\
 A game HUD button in exactly the same style, size and framing as the
 attached reference icon: a round, glossy blue button with a polished
@@ -709,6 +742,8 @@ JOBS = {
     "mapselect-bg": dict(out="assets/raw/mapselect.png", refs=[], brief=MAPSELECT_BACKGROUND),
     "sea-baits":    dict(out="assets/raw/baits-sea.png",
                          refs=["assets/raw/baits.png"], brief=SEA_BAITS),
+    "fresh-lures":  dict(out="assets/raw/lures-fresh.png",
+                         refs=["assets/raw/baits-sea.png"], brief=FRESH_LURES),
     "icon-map":     dict(out="assets/raw/icon-map.png",
                          refs=["assets/clean/icon-float.png"], brief=MAP_ICON),
 }

@@ -73,9 +73,10 @@ export function voicePath(species, size) {
 //   vissen-zee  the twelve sea fish, and the catfish
 //   vissen-3    the newcomers of the moat and of the French lake, the five
 //               renamed fish, and the names of the maps (`map_<id>`)
+//   stem-spel   what the game itself says: `escaped`, when a fish gets off
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
-export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3'];
+export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel'];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
 }

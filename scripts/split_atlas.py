@@ -15,6 +15,7 @@ Atlases handled:
     fish-<id>.*    -- one species per strip: 3 sizes in white boxes
     baits.png      -- 5 baits x 2 styles  (full/simple)         = 10 cells
     baits-sea.png  -- 2 sea baits + 3 lures, same layout        = 10 cells
+    lures-fresh.png -- 3 fresh-water lures, same two rows       =  6 cells
     floats.png     -- 5 floats x 2 parts  (full/tip)            = 10 cells
     rod.png, icon-*.png, play.png
 
@@ -480,6 +481,25 @@ def process_baits_sea(atlas_path: Path) -> int:
     )
 
 
+# The lures of the fresh-water maps (raw/lures-fresh.png): 3 columns, the
+# same two rows.
+FRESH_LURE_NAMES = ["spinner", "shad", "vlieg"]
+
+
+def process_lures_fresh(atlas_path: Path) -> int:
+    img = Image.open(atlas_path)
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    return _process_grid_via_blobs(
+        cleaned,
+        rows=len(BAIT_ROW_LABELS),
+        cols=len(FRESH_LURE_NAMES),
+        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{FRESH_LURE_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
+        atlas_name="lures-fresh.png",
+        # A spinner is a string of small parts on a wire: keep them together.
+        morph=SEA_BAIT_MERGE_PX,
+    )
+
+
 def process_baits(atlas_path: Path) -> int:
     img = Image.open(atlas_path)
     cleaned = chromakey_remove(img)
@@ -669,6 +689,7 @@ def main():
         ("fish2.png",  process_fish),     # 11 species, gridlined source
         ("baits.png",  process_baits),
         ("baits-sea.png", process_baits_sea),   # sea baits + lures
+        ("lures-fresh.png", process_lures_fresh),   # spinner, shad, fly
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]

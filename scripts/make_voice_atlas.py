@@ -82,12 +82,16 @@ ATLASES = {
         "sturgeon": "steur",
         "tuna": "blauwvintonijn", "shark": "haringhaai",
     },
+    # What the game itself says. No fish in it.
+    "stem-spel": {},
 }
 # Phrases that are not a fish: (key, text), read out after the fish. The
-# map names are spoken when a map is chosen (key `map_<id>`).
+# map names are spoken when a map is chosen (key `map_<id>`); `escaped`
+# when a hooked fish gets off.
 EXTRA = {
     "vissen-3": [("map_lake", "Naarden-Vesting!"), ("map_france", "Frankrijk!"),
                  ("map_sea", "Noordzee!")],
+    "stem-spel": [("escaped", "Helaas! De vis is ontsnapt!")],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}
@@ -215,6 +219,9 @@ def build(name, source):
     wanted = phrases_of(name)
     samples = decode(source)
     spans = split_merged(samples, find_phrases(samples), len(wanted))
+    if len(wanted) == 1 and spans:
+        # One sentence, with whatever pauses it has in it.
+        spans = [(spans[0][0], spans[-1][1])]
     if len(spans) != len(wanted):
         for i, (a, b) in enumerate(spans):
             print(f"  {i + 1:3d}  {a / RATE:7.2f} s  {(b - a) / RATE:5.2f} s")

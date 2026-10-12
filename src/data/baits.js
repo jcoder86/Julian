@@ -1,8 +1,9 @@
 // Bait and lure definitions -- "what is on the end of the line".
 //
 // Order in BAITS determines display order in the selection menu. `maps`
-// says where a bait is fished: the fresh-water baits serve the moat and the
-// French lake alike, the sea has its own. (Which FISH take a bait is in
+// says where a bait is fished: the fresh-water baits and the spinner serve
+// the moat and the French lake alike, each of the two has one lure of its
+// own, and the sea has its own set. (Which FISH take a bait is in
 // data/fish.js, and which fish live where too.)
 //
 // `kind` decides how you fish with it:
@@ -25,6 +26,13 @@ export const BAITS = [
   { id: "maden",    maps: FRESH, kind: "bait", displayName: "Maden",    nlName: "Maden" },
   { id: "wormen",   maps: FRESH, kind: "bait", displayName: "Wormen",   nlName: "Wormen" },
   { id: "vis",      maps: FRESH, kind: "bait", displayName: "Vis",      nlName: "Vis" },
+  // Fresh-water lures, for the hunters only: the spinner flashes for
+  // anything that chases; the rubber shad is hopped along the bottom of the
+  // moat for zander, pike and catfish; the fly is for the trout family (and
+  // the chub) of the French lake.
+  { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner" },
+  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad" },
+  { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg" },
 
   // Sea
   { id: "zeepier",  maps: SEA,   kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },

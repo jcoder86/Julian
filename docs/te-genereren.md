@@ -55,6 +55,16 @@ grote ...!!", en daarna de kaartnamen.
 Frankrijk gebruikt voorlopig de achtergrondgeluiden van Naarden-Vesting
 (vogels, een plons, kerkklokken in de verte).
 
+## Ronde van 12 oktober 2026 (middag): kunstaas in zoet water, ontsnapte vis
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Kunstaas voor zoet water: spinner, shad en kunstvlieg, elk hangend aan de lijn en liggend | Codex, `fresh-lures`, daarna `python scripts/split_atlas.py lures-fresh` | ja |
+| Stem: "Helaas! De vis is ontsnapt!" | ElevenLabs, opname `stem-spel` | ja |
+
+De automatische luistercontrole van deze laatste zin is niet gedaan: het
+tegoed van de Gemini-sleutel was op.
+
 ## Nog te doen
 
 Niets.

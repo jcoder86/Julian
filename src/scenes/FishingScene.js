@@ -20,6 +20,7 @@ import { ReelOverlay } from '../systems/ReelOverlay.js';
 import { Crew, CAST_WINDUP_MS } from '../systems/Crew.js';
 import { FishingLine } from '../systems/FishingLine.js';
 import { FishFight } from '../systems/FishFight.js';
+import { UI, COLOR, lettering } from '../systems/Ui.js';
 
 // =============================================================================
 // Tunable visual constants -- dial these in once the real assets are rendered.
@@ -193,6 +194,8 @@ const STATE = Object.freeze({
   CATCHING: 'catching',
   // Lure fishing (no float). The player reels the lure back in:
   RETRIEVE: 'retrieve',     // lure in the water, reel widget brings it home
+  // The hook let go during the fight: a moment to take that in.
+  ESCAPED: 'escaped',
 });
 
 // ---------------------------------------------------------------------------
@@ -219,6 +222,28 @@ const LURE_BITE_TO      = 0.8;
 // How long the "fish on" sign stays up when a fish takes the lure (ms). It
 // only tells the news: nothing has to be tapped.
 const LURE_FISH_ON_MS = 1300;
+
+// ---------------------------------------------------------------------------
+// The one that got away
+// ---------------------------------------------------------------------------
+// A hook does not always hold. Of every hooked fish -- whatever it is, on
+// bait or lure -- this share gets off again, somewhere in this stretch of
+// the fight (0 = just hooked, 1 = at the jetty). Nothing is recorded.
+const ESCAPE_CHANCE = 0.07;
+const ESCAPE_FROM = 0.25;
+const ESCAPE_TO = 0.8;
+// How long the scene dwells on it before the angler can cast again (ms).
+const ESCAPE_SHOW_MS = 2800;
+// The voice: "Helaas! De vis is ontsnapt!" (a phrase of a voice atlas).
+const VOICE_ESCAPED = 'escaped';
+// The fish is seen for the first and last time as it goes: its dark shape,
+// this long (design px at full scale; a big fish shows bigger, up to that),
+// darting off this far in this many ms.
+const ESCAPE_SHAPE_MIN = 70;
+const ESCAPE_SHAPE_MAX = 260;
+const ESCAPE_SHAPE_PX_PER_CM = 1.6;
+const ESCAPE_DART_PX = 240;
+const ESCAPE_DART_MS = 1100;
 // Lure sprite on the line: display length (design px at full scale) and
 // how see-through it is while under water.
 const LURE_DISPLAY_LENGTH = 82;
@@ -425,6 +450,9 @@ export class FishingScene extends Phaser.Scene {
       this.fight.update(delta);
       this.bobber.x = this.fight.x;
       this.bobber.y = this.fight.y;
+      if (this._escapeAt != null && this.reelOverlay && this.reelOverlay.progress >= this._escapeAt) {
+        this._fishEscapes();
+      }
     } else if (this.state === STATE.RETRIEVE && this.reelOverlay && this.reelEnd) {
       // A lure swims straight home, as far as the reel has been cranked.
       const p = this.reelOverlay.progress;
@@ -1702,6 +1730,11 @@ export class FishingScene extends Phaser.Scene {
   _enterReeling(pick) {
     this.state = STATE.REELING;
     this.crew.mood('reel');
+    // Will the hook hold? Decided now, shown when the fight gets that far.
+    this._hooked = pick;
+    this._escapeAt = Math.random() < ESCAPE_CHANCE
+      ? Phaser.Math.FloatBetween(ESCAPE_FROM, ESCAPE_TO)
+      : null;
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
     // Coming from a lure retrieve the reel widget is already on screen,
@@ -1747,6 +1780,12 @@ export class FishingScene extends Phaser.Scene {
       requiredTurns: turns,
       onComplete: () => {
         this.reelOverlay = null;
+        // (A fish that was going to get off and has not yet -- a tiny one,
+        // reeled in with one flick -- does so here, at the last moment.)
+        if (this._escapeAt != null) {
+          this._fishEscapes();
+          return;
+        }
         this._endFight();
         // The fish is at the landing spot: from there the catch-leap lifts
         // it out -- the "fish breaks the surface right at the jetty" moment.
@@ -1785,6 +1824,102 @@ export class FishingScene extends Phaser.Scene {
       this.fight.destroy();
       this.fight = null;
     }
+  }
+
+  /**
+   * The hook lets go: the fish is off. The reel disappears, the line falls
+   * slack, the fish's shadow darts away, a board and a voice say what
+   * happened -- and after a moment the angler can cast again.
+   */
+  _fishEscapes() {
+    const pick = this._hooked;
+    const at = { x: this.bobber.x, y: this.bobber.y };
+    this._escapeAt = null;
+    this._hooked = null;
+    this.state = STATE.ESCAPED;
+    if (this.reelOverlay) {
+      this.reelOverlay.destroy();
+      this.reelOverlay = null;
+    }
+    this._endFight();
+    this._hideFishOn();
+    this.reelEnd = null;
+    this.crew.mood('wait');
+
+    this.audio.playSfx(SFX.SPLASH, { volume: 0.55 });
+    this.audio.playPhrase(VOICE_ESCAPED);
+    this._showEscape(pick, at);
+    this.time.delayedCall(ESCAPE_SHOW_MS, () => {
+      if (this.state === STATE.ESCAPED) this._enterReady();
+    });
+  }
+
+  /** What an escape looks like: a splash, the fish's shadow making off, and a board. */
+  _showEscape(pick, at) {
+    const depthScale = this._bobberDepthScale(at.y);
+
+    // Rings where it tore loose.
+    for (let i = 0; i < 3; i++) {
+      const ring = this.add.ellipse(at.x, at.y, 46, 17).setDepth(6);
+      ring.setStrokeStyle(3, 0xffffff, 0.85);
+      ring.setScale(depthScale * 0.5);
+      this.tweens.add({
+        targets: ring,
+        scale: depthScale * (2.4 + i * 0.9),
+        alpha: 0,
+        duration: 900 + i * 250,
+        delay: i * 170,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    // The fish itself, seen for the first and last time: a dark shape under
+    // the water that darts away from the jetty and is gone.
+    const key = pick ? fishTextureKey(pick.species, pick.size) : null;
+    if (key && this.textures.exists(key)) {
+      const home = this._reelHome();
+      const away = new Phaser.Math.Vector2(at.x - home.x, at.y - home.y);
+      if (away.lengthSq() < 1) away.set(1, -0.3);
+      away.normalize();
+      const shape = this.add.image(at.x, at.y, key).setDepth(5);
+      const length = Phaser.Math.Clamp(
+        (pick.lengthCm || 30) * ESCAPE_SHAPE_PX_PER_CM, ESCAPE_SHAPE_MIN, ESCAPE_SHAPE_MAX);
+      shape.setScale(length * depthScale / shape.width);
+      shape.setTintFill(0x06202e);
+      shape.setAlpha(0.5);
+      // The sprites look to the right; it swims the way it is going.
+      shape.setFlipX(away.x < 0);
+      shape.setRotation(Math.atan2(away.y, Math.abs(away.x)) * (away.x < 0 ? -1 : 1) * 0.6);
+      this.tweens.add({
+        targets: shape,
+        x: at.x + away.x * ESCAPE_DART_PX * depthScale,
+        y: at.y + away.y * ESCAPE_DART_PX * depthScale * 0.5,
+        alpha: 0,
+        duration: ESCAPE_DART_MS,
+        ease: 'Cubic.easeIn',
+        onComplete: () => shape.destroy(),
+      });
+    }
+
+    // And in words, on a board in the middle of the screen.
+    const view = this.layout ? this.layout.view : { centerX: GAME_WIDTH / 2, top: 0, height: GAME_HEIGHT };
+    const board = this.add.container(view.centerX, view.top + view.height * 0.3).setDepth(60);
+    if (this.textures.exists(UI.BOARD_LABEL)) {
+      board.add(this.add.image(0, 0, UI.BOARD_LABEL).setDisplaySize(520, 172));
+    }
+    board.add(this.add.text(0, -26, 'Helaas!', lettering(44, COLOR.GOLD)).setOrigin(0.5));
+    board.add(this.add.text(0, 30, 'De vis is ontsnapt', lettering(30)).setOrigin(0.5));
+    board.setScale(0.6).setAlpha(0);
+    this.tweens.add({ targets: board, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({
+      targets: board,
+      alpha: 0,
+      y: board.y - 24,
+      delay: ESCAPE_SHOW_MS - 520,
+      duration: 420,
+      onComplete: () => board.destroy(),
+    });
   }
 
   /**

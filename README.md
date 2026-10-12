@@ -63,11 +63,12 @@ title (and reachable again through the compass button in the HUD). Each is
 a framed painting with its name on a plate; tapping one also says the name.
 
 * **lake** -- Naarden-Vesting: the moat, from a wooden jetty. Float fishing
-  with bread, corn, maggots, worms or a bait fish. (The id is still
-  `lake`: it is in every player's save data.)
+  with bread, corn, maggots, worms or a bait fish, or lure fishing with a
+  spinner or a rubber shad. (The id is still `lake`: it is in every
+  player's save data.)
 * **france** -- Frankrijk: a mountain lake, from a floating pontoon on wine
-  barrels (the game's very first painting, repainted). The same five baits;
-  the fish of clear, cold water.
+  barrels (the game's very first painting, repainted). The same five baits,
+  the spinner and a fly; the fish of clear, cold water.
 * **sea** -- Noordzee: from a stone harbour pier. Float fishing with a
   lugworm or a bait fish, **or lure fishing** with a feather rig, a spoon or
   a pilk jig.
@@ -81,9 +82,20 @@ specifics of any spot itself.
 map, in the order of that map's page in the collection. A species can live
 on more than one map (the catfish does, and is rarer in France: `weightOn`);
 its catches are the same wherever it was caught. A bait says on which maps
-it is fished (`maps` in `src/data/baits.js`): the five fresh-water baits
-serve the moat and the French lake alike. `node scripts/fish-odds.js` prints
-what bites on what, per map, and how rare the big ones are.
+it is fished (`maps` in `src/data/baits.js`): the five fresh-water baits and
+the spinner serve the moat and the French lake alike; the shad is the
+moat's own lure, the fly the French lake's. A lure is only taken by the
+fish that hunt: perch, zander and pike (and on the shad the catfish) in the
+moat; the trout family, the chub and the bass in France.
+
+**How big, and how rare.** Every species has a record length -- the last
+number of its `large` range in `fish.js`, the longest it is known to grow.
+A large fish is usually near the low end of its range: the closer to the
+record, the rarer (`RECORD_SKEW`). So what makes a catch special is not its
+centimetres but how close it comes to the biggest its kind can be -- a
+58 cm perch is a rarer catch than a 140 cm catfish. `node
+scripts/fish-odds.js` prints what bites on what, per map, and for every
+species how often one comes within 10 % and within 3 % of its record.
 
 A species id is for ever -- catches are saved under it -- but a species can
 be renamed or moved. That happened in October 2026: the first lake's Karper
@@ -129,6 +141,15 @@ spot: on the water, right at the jetty or the foot of the pier. From there
 the catch is lifted out. Each map also outlines its jetty or pier (`dry`):
 a float cannot land on it. Press **W** in the game to see the castable
 water, the jetty cut out of it and the landing spot.
+
+### The one that got away
+
+A hook does not always hold. Of every hooked fish -- any species, on bait
+or lure -- 7 % gets off again somewhere during the fight (`ESCAPE_CHANCE`
+in `FishingScene.js`). The reel vanishes, the line falls slack, rings
+spread where it tore loose and the fish's dark shape darts away; a board
+and the voice say "Helaas! De vis is ontsnapt!". Nothing is recorded, and
+after a moment the angler can cast again.
 
 ### The fight
 
@@ -340,7 +361,9 @@ On the catch screen a voice calls out what was caught. The phrases live in
 voice atlases: an mp3 with all of them in a row and a JSON that says where
 each one starts (`assets/audio/sfx/vissen.mp3` for the first eleven lake
 fish, `vissen-zee.mp3` for the sea fish and the catfish, `vissen-3.mp3`
-for the newcomers, the renamed fish and the names of the maps; the list is
+for the newcomers, the renamed fish and the names of the maps,
+`stem-spel.mp3` for what the game itself says ("Helaas! De vis is
+ontsnapt!"); the list is
 `VOICE_ATLASES` in `src/systems/AudioManager.js`).
 
 They are spoken by ElevenLabs, a whole atlas in one go so every phrase
