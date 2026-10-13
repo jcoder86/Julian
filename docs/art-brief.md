@@ -216,6 +216,7 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-zee.mp3` + `.json` | de twaalf zeevissen en de meerval |
 | `assets/audio/sfx/vissen-3.mp3` + `.json` | de nieuwe vissen van Naarden-Vesting en Frankrijk, de vijf vissen met een preciezere naam, en de namen van de kaarten |
 | `assets/audio/sfx/stem-spel.mp3` + `.json` | wat het spel zelf zegt: "Helaas! De vis is ontsnapt!" |
+| `assets/audio/sfx/vissen-gigant.mp3` + `.json` | "Wow! Een gigantische ...!" voor elke vissoort: een vangst binnen 5 % van de grootste lengte van die soort |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.

@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 // Phaser is bundled via vite; ensure side-effect import for BlendModes etc.
-import { FISH_SIZES, catchKey, fishTextureKey, speciesForMap } from '../data/fish.js';
+import { FISH_SIZES, catchKey, fishTextureKey, isGiant, speciesForMap } from '../data/fish.js';
 import { MAPS, getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
-import { UI, COLOR, lettering, written, addGlow, pressable } from '../systems/Ui.js';
+import { UI, COLOR, lettering, written, addGlow, addRays, addGlints, pressable } from '../systems/Ui.js';
 
 /**
  * Trophy collection: a grid of paper cards pinned to the cabin wall, one
@@ -15,6 +15,11 @@ import { UI, COLOR, lettering, written, addGlow, pressable } from '../systems/Ui
  * fish's faint shape if never caught), the species' Dutch name and how many
  * were caught. The species of the most recent catch glows, so the player
  * can see "what I just caught" at a glance.
+ *
+ * A species of which a GIANT was caught (the best catch is within 5 % of
+ * the longest its kind can be: isGiant in data/fish.js) shows it for good:
+ * golden rays behind the fish, glints on it, a gold star, and its length
+ * on gold.
  *
  * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
@@ -39,6 +44,13 @@ const UNCAUGHT_ALPHA = 0.3;
 // The boxes at the foot of a card: a shade darker than its paper.
 const CELL_COLOR = 0xb89a68;
 const CELL_EDGE = 0x7a6140;
+// A card with a giant on it. Paper is light, so the rays are drawn in gold
+// paint rather than as added light; the white glints show on the fish, the
+// amber ones on the paper around it.
+const GIANT_GOLD = 0xffd23c;
+const GIANT_GOLD_EDGE = 0x9a6a00;
+const GIANT_RAYS = { radius: 100, color: 0xffa600, alpha: 0.85 };
+const GIANT_AMBER = 0xff9a00;
 
 // 4 columns x 3 rows = 12 cells, one per species. A card has the shape of
 // its picture (480 x 352).
@@ -355,13 +367,17 @@ export class FishingCollectionScene extends Phaser.Scene {
       // A fish that lives on two maps is kept apart per map.
       const key = catchKey(species.id, map.id);
       const isLast = key === lastKey;
+      const speciesBest = best[key] || {};
 
       this._buildCard(cx, cy, species, {
         totalCount: fishCounts[key] || 0,
-        speciesBest: best[key] || {},
+        speciesBest,
         speciesSizeCounts: sizeCounts[key] || {},
         isLast,
         lastCaughtSize: isLast ? lastCatch.size : null,
+        // Was one of them a giant? (Nothing extra is saved for this: the
+        // best length per size says it.)
+        giant: FISH_SIZES.some((size) => isGiant(species.id, speciesBest[size])),
       });
     });
   }
@@ -378,6 +394,12 @@ export class FishingCollectionScene extends Phaser.Scene {
       this._put(this.add.image(cx, cy, UI.CARD).setDisplaySize(CARD_W, CARD_H));
     } else {
       this._put(this.add.rectangle(cx, cy, CARD_W, CARD_H, 0xf1dfb8).setStrokeStyle(2, 0x7a6140));
+    }
+    // A giant: golden rays on the paper, behind everything written on it.
+    if (info.giant) {
+      this._put(addRays(this, cx, cy + 3, GIANT_RAYS.radius, {
+        color: GIANT_RAYS.color, alpha: GIANT_RAYS.alpha, blend: Phaser.BlendModes.NORMAL,
+      }));
     }
 
     // Top line, between the two pins: the name and how many were caught,
@@ -398,6 +420,31 @@ export class FishingCollectionScene extends Phaser.Scene {
 
     // Bottom strip: three small cells with the best cm per size.
     this._renderSizeStrip(cx, cy + CARD_H / 2 - 32, species, info);
+
+    if (info.giant) this._renderGiantMarks(cx, cy);
+  }
+
+  /** What makes a giant's card glitter: glints, and a gold star. */
+  _renderGiantMarks(cx, cy) {
+    const glints = this._put(this.add.container(cx, cy + 3));
+    addGlints(this, glints, { w: CARD_W - 70, h: CARD_H - 120, count: 7, size: 15 });
+    addGlints(this, glints, {
+      w: CARD_W - 40, h: CARD_H - 70, count: 6, size: 12,
+      colors: [GIANT_AMBER, GIANT_GOLD], blend: Phaser.BlendModes.NORMAL,
+    });
+
+    const star = this._put(this.add.star(cx + CARD_W / 2 - 40, cy - CARD_H / 2 + 62, 5, 8, 18, GIANT_GOLD));
+    star.setStrokeStyle(2.5, 0x3a1d06);
+    star.setAngle(-12);
+    this.tweens.add({
+      targets: star,
+      scale: { from: 0.9, to: 1.18 },
+      angle: 12,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   /**
@@ -447,11 +494,15 @@ export class FishingCollectionScene extends Phaser.Scene {
       const cm = info.speciesBest[size];
       const haveCount = info.speciesSizeCounts[size] || 0;
       const filled = typeof cm === 'number';
+      // The length that made it a giant stands on gold.
+      const giant = isGiant(species.id, cm);
 
       const box = this._put(this.add.graphics({ x, y: cy }));
-      box.fillStyle(CELL_COLOR, filled ? 0.5 : 0.22);
+      if (giant) box.fillStyle(GIANT_GOLD, 1);
+      else box.fillStyle(CELL_COLOR, filled ? 0.5 : 0.22);
       box.fillRoundedRect(-(cellW - 5) / 2, -cellH / 2, cellW - 5, cellH, 8);
-      box.lineStyle(1.5, CELL_EDGE, filled ? 0.7 : 0.35);
+      if (giant) box.lineStyle(2.5, GIANT_GOLD_EDGE, 1);
+      else box.lineStyle(1.5, CELL_EDGE, filled ? 0.7 : 0.35);
       box.strokeRoundedRect(-(cellW - 5) / 2, -cellH / 2, cellW - 5, cellH, 8);
       const label = filled
         ? `${cm} cm${haveCount > 1 ? ` \u00b7${haveCount}` : ''}`

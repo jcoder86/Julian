@@ -4,7 +4,7 @@ import {
   WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP, WORLD_RIGHT, WORLD_BOTTOM,
 } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
-import { AudioManager, SFX, MUSIC } from '../systems/AudioManager.js';
+import { AudioManager, SFX, MUSIC, reloadMissingVoice } from '../systems/AudioManager.js';
 import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
@@ -316,6 +316,8 @@ export class FishingScene extends Phaser.Scene {
 
   create() {
     this.audio = new AudioManager(this);
+    // (A voice file that did not load at start-up gets a second chance.)
+    reloadMissingVoice(this);
     this.state = STATE.READY;
 
     // The scene object is reused every time a map is (re)entered, so
@@ -1875,7 +1877,7 @@ export class FishingScene extends Phaser.Scene {
     this.crew.mood('wait');
 
     this.audio.playSfx(SFX.SPLASH, { volume: 0.55 });
-    this.audio.playPhrase(VOICE_ESCAPED);
+    this.audio.playPhrase(VOICE_ESCAPED, { volume: this.map.voiceVolume ?? 1 });
     this._showEscape(pick, at);
     this.time.delayedCall(ESCAPE_SHOW_MS, () => {
       if (this.state === STATE.ESCAPED) this._enterReady();

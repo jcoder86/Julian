@@ -108,6 +108,9 @@ function makeWaterTopAt(samples) {
 //   nlName          what the place is called: spoken when it is chosen
 //                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
+//   voiceVolume     how loud the voice speaks here, as a share of its usual
+//                   volume (1 if left out): on the pier it has the waves,
+//                   the gulls and louder music to speak over
 //   ambience        what is heard here besides the music (systems/
 //                   Ambience.js): a `bed` that goes round and round, and
 //                   sounds that are `passing` now and then. `every` and
@@ -221,6 +224,7 @@ const MAP_DEFS = [
     depthFarY: WORLD_TOP + SEA_HORIZON * WORLD_HEIGHT,
     defaultBait: 'zeepier',
     music: 'relaxing',
+    voiceVolume: 1.15,
     ambience: {
       bed: { name: 'sea-waves', volume: 0.6 },
       passing: [

@@ -1,6 +1,7 @@
 // How rare is what? For every map and every bait or lure fished there: the
-// chance per hooked fish of each species, and of a catch close to the
-// record of its own kind.
+// chance per hooked fish of each species, of a catch close to the record of
+// its own kind, and of a GIANT (within 5 % of that record: the catch that
+// glitters and is called out -- isGiant in src/data/fish.js).
 //
 //   node scripts/fish-odds.js
 //
@@ -12,14 +13,15 @@
 // small fish, nothing under 20 cm). Run it after changing any of those.
 
 import {
-  MAP_SPECIES, RECORD_SKEW, catchableSizes, recordCm, speciesForMap, speciesWeightOn,
+  GIANT_SHARE, MAP_SPECIES, RECORD_SKEW, catchableSizes, recordCm, speciesForMap, speciesWeightOn,
 } from '../src/data/fish.js';
 import { baitsForMap, smallestCatchOn } from '../src/data/baits.js';
 
-// A catch counts as "big" from this share of the species' record, and as
-// "a record fish" from that one.
+// A catch counts as "big" from this share of the species' record, and as a
+// giant from the game's own share.
 const BIG = 0.9;
-const RECORD = 0.97;
+const RECORD = GIANT_SHARE;
+const giantPct = `${Math.round((1 - GIANT_SHARE) * 100)}%`;
 
 /** Chance that a fish of this size, somewhere in this range of lengths, is at least `cm` long. */
 function shareAtLeast({ size, range: [lo, hi] }, cm) {
@@ -67,9 +69,9 @@ for (const mapId of Object.keys(MAP_SPECIES)) {
     }
     const limit = smallest ? ` (lure: no small fish, nothing under ${smallest.cm} cm)` : '';
     console.log(`${bait.nlName}${limit}:  ${lines.join(', ')}`);
-    console.log(`    a large one: ${pct(large)}    any fish within 10% of its record: ${oneIn(big)}    within 3%: ${oneIn(record)}`);
+    console.log(`    a large one: ${pct(large)}    any fish within 10% of its record: ${oneIn(big)}    a giant (within ${giantPct}): ${oneIn(record)}`);
   }
-  console.log('per species, once it is hooked -- within 10% of its record / within 3%:');
+  console.log(`per species, once it is hooked -- within 10% of its record / a giant (within ${giantPct}):`);
   for (const s of speciesForMap(mapId)) {
     console.log(`    ${s.nlName.padEnd(16)} ${oneIn(chanceNearRecord(s, BIG)).padEnd(10)} ${oneIn(chanceNearRecord(s, RECORD))}`);
   }

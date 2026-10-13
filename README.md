@@ -97,7 +97,18 @@ record, the rarer (`RECORD_SKEW`). So what makes a catch special is not its
 centimetres but how close it comes to the biggest its kind can be -- a
 58 cm perch is a rarer catch than a 140 cm catfish. `node
 scripts/fish-odds.js` prints what bites on what, per map, and for every
-species how often one comes within 10 % and within 3 % of its record.
+species how often one comes within 10 % of its record -- and how often it
+is a giant.
+
+**A giant** is a catch within 5 % of its species' record (`GIANT_SHARE`,
+`isGiant` in `fish.js`): about one hooked fish in 140 to 240, depending on
+the bait. It gets the works on the catch screen -- rays of light turning
+behind it, a gleam running over it, glints, "Gigantisch!" above it -- and
+the voice calls out "Wow! Een gigantische snoek!" instead of "een grote
+snoek!". In the fish book its card keeps glittering: golden rays, a gold
+star, and the length that did it on gold. Nothing extra is saved for this:
+the best length per size, which was already kept, says it -- so a giant
+caught before this existed counts too.
 
 A species id is for ever -- catches are saved under it -- but a species can
 be renamed or moved. That happened in October 2026: the first lake's Karper
@@ -377,8 +388,15 @@ each one starts (`assets/audio/sfx/vissen.mp3` for the first eleven lake
 fish, `vissen-zee.mp3` for the sea fish and the catfish, `vissen-3.mp3`
 for the newcomers, the renamed fish and the names of the maps,
 `stem-spel.mp3` for what the game itself says ("Helaas! De vis is
-ontsnapt!"); the list is
-`VOICE_ATLASES` in `src/systems/AudioManager.js`).
+ontsnapt!"), `vissen-gigant.mp3` for "Wow! Een gigantische ...!" of every
+species; the list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
+
+A map can make the voice speak up (`voiceVolume` in `maps.js`): on the
+pier it is 15 % louder, over the waves, the gulls and louder music. And a
+voice file that did not load when the game started is fetched again when
+the map screen or a fishing spot opens, or when one of its phrases is
+wanted (`reloadMissingVoice`): its fish do not stay silent until the next
+start.
 
 They are spoken by ElevenLabs, a whole atlas in one go so every phrase
 has the same tone. To add fish, add an atlas rather than redoing one:
@@ -392,13 +410,16 @@ has the same tone. To add fish, add an atlas rather than redoing one:
 3. `python scripts/make_voice_atlas.py <name> <download.mp3>` cuts it at
    the pauses, matches the loudness of the first atlas and writes the mp3
    and JSON. It stops if it does not find exactly the phrases asked for.
+   (Phrases that open with a cry and a pause -- "Wow! ... een gigantische
+   snoek!" -- need `OPENING_CRY_S` for their atlas, or each comes out as
+   two.)
 4. `python scripts/make_voice_atlas.py <name> --check` lets Gemini listen
    to every phrase as the game will play it and compares it with the text.
    Then listen yourself: a machine does not hear an odd accent.
 5. Add the name to `VOICE_ATLASES`.
 
-A single phrase can also be a loose file,
-`assets/audio/voice/<size>-<id>.wav`; an atlas goes first.
+When a species is added, add its giant too: a line in `GIANTS` in the
+script, and a new atlas with just that phrase (an atlas is not redone).
 
 How rare a catch is follows from `speciesWeight`, `sizeWeights` and
 `lengthCm` in `src/data/fish.js`; `node scripts/fish-odds.js` prints the

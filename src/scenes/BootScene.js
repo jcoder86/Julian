@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  SFX, MUSIC, sfxPath, musicPath, voiceKey, voicePath,
+  SFX_RECORDED, MUSIC, sfxPath, musicPath,
   VOICE_ATLASES, voiceAtlasMetaKey, voiceAtlasPath, voiceAtlasMetaPath,
 } from '../systems/AudioManager.js';
 import { ambienceKey, ambienceNames, ambiencePath } from '../systems/Ambience.js';
@@ -149,7 +149,7 @@ export class BootScene extends Phaser.Scene {
 
     // Audio -- SFX, music, voice. Missing files are gracefully fall back
     // to a console.log in AudioManager so the game keeps working.
-    for (const key of Object.values(SFX)) {
+    for (const key of SFX_RECORDED) {
       this.load.audio(key, sfxPath(key));
     }
     for (const key of Object.values(MUSIC)) {
@@ -159,18 +159,11 @@ export class BootScene extends Phaser.Scene {
     for (const name of ambienceNames(MAPS)) {
       this.load.audio(ambienceKey(name), ambiencePath(name));
     }
-    // Voice atlases (preferred): a few mp3s that each hold many phrases.
-    // The companion JSON gives us seek + duration per (species, size).
+    // Voice atlases: a few mp3s that each hold many phrases. The companion
+    // JSON gives us seek + duration per phrase.
     for (const atlas of VOICE_ATLASES) {
       this.load.audio(atlas, voiceAtlasPath(atlas));
       this.load.json(voiceAtlasMetaKey(atlas), voiceAtlasMetaPath(atlas));
-    }
-    // Per-clip voice fallback: one short clip per species × size.
-    // Loaded only if individual files exist; an atlas takes precedence.
-    for (const species of FISH_SPECIES) {
-      for (const size of FISH_SIZES) {
-        this.load.audio(voiceKey(species.id, size), voicePath(species.id, size));
-      }
     }
   }
 

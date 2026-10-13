@@ -134,6 +134,96 @@ export function addHalo(scene, x, y, radius, color = COLOR.GLOW) {
 }
 
 /**
+ * Rays of light, turning slowly: behind something truly special (a giant
+ * fish). One picture of a sunburst, made once; two of them turn against
+ * each other, so the rays seem to flicker.
+ * `blend`: ADD on a painting; NORMAL on paper, where added light is lost.
+ */
+export function addRays(scene, x, y, radius,
+                        { color = COLOR.GLOW, alpha = 0.6, blend = Phaser.BlendModes.ADD } = {}) {
+  const key = 'ui-rays';
+  if (!scene.textures.exists(key)) {
+    const size = 512;
+    const c = size / 2;
+    const RAYS = 14;
+    const texture = scene.textures.createCanvas(key, size, size);
+    const ctx = texture.getContext();
+    const fade = ctx.createRadialGradient(c, c, 0, c, c, c);
+    fade.addColorStop(0, 'rgba(255,255,255,0.95)');
+    fade.addColorStop(0.4, 'rgba(255,255,255,0.55)');
+    fade.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = fade;
+    for (let i = 0; i < RAYS; i++) {
+      const at = (i / RAYS) * Math.PI * 2;
+      const half = (Math.PI / RAYS) * (i % 2 ? 0.3 : 0.52);     // thin and broad, in turn
+      ctx.beginPath();
+      ctx.moveTo(c, c);
+      ctx.arc(c, c, c, at - half, at + half);
+      ctx.closePath();
+      ctx.fill();
+    }
+    texture.refresh();
+  }
+  const rays = scene.add.container(x, y);
+  [[1, 1, 1, 30000], [-1, 0.84, 0.7, 21000]].forEach(([turn, size, share, ms], i) => {
+    const sun = scene.add.image(0, 0, key);
+    sun.setDisplaySize(radius * 2 * size, radius * 2 * size);
+    sun.setTint(color);
+    sun.setBlendMode(blend);
+    sun.setAlpha(alpha * share);
+    sun.rotation = i * 0.21;
+    scene.tweens.add({
+      targets: sun, rotation: sun.rotation + turn * Math.PI * 2, duration: ms, repeat: -1,
+    });
+    rays.add(sun);
+  });
+  scene.tweens.add({
+    targets: rays,
+    alpha: { from: 0.72, to: 1 },
+    scale: { from: 0.96, to: 1.05 },
+    duration: 950,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+  });
+  return rays;
+}
+
+/**
+ * Glints: little four-pointed stars that flash up and die away, each in its
+ * own time and each time somewhere else, in a box of `w` x `h` around the
+ * origin of `into` (a container).
+ * `size`: the longest a star's arm gets, in px.
+ */
+export function addGlints(scene, into, { w, h, count = 12, size = 12, colors = [0xffffff, 0xfff1b0],
+                                         blend = Phaser.BlendModes.ADD } = {}) {
+  const somewhere = (star) => star.setPosition((Math.random() - 0.5) * w, (Math.random() - 0.5) * h);
+  for (let i = 0; i < count; i++) {
+    const arm = size * (0.45 + Math.random() * 0.55);
+    const star = scene.add.star(0, 0, 4, arm * 0.2, arm, colors[i % colors.length], 1);
+    star.setBlendMode(blend);
+    star.setAlpha(0);
+    star.setAngle(Math.random() * 90);
+    somewhere(star);
+    into.add(star);
+    scene.tweens.add({
+      targets: star,
+      alpha: { from: 0, to: 1 },
+      scale: { from: 0.15, to: 1 },
+      angle: `+=${30 + Math.random() * 40}`,
+      duration: 260 + Math.random() * 320,
+      yoyo: true,
+      hold: 60,
+      repeat: -1,
+      repeatDelay: 120 + Math.random() * 900,
+      delay: Math.random() * 1100,
+      ease: 'Sine.easeInOut',
+      onRepeat: () => somewhere(star),
+    });
+  }
+}
+
+/**
  * Make something feel like a button: it dips when pressed, and `onTap`
  * runs a moment later, when the dip has been seen.
  */

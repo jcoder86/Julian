@@ -16,6 +16,13 @@ export const SFX = Object.freeze({
   FISHON:   'fishon',       // one-shot ping when the bobber goes under (strike window opens)
 });
 
+// The sounds there is a recording of (assets/audio/sfx/<key>.wav). The
+// others are names only so far, and playSfx just logs them. BootScene loads
+// these and no more: a file that is not there costs a request at every
+// start -- and the live site answers it with the web page, which is then
+// decoded as sound, and fails.
+export const SFX_RECORDED = Object.freeze([SFX.PLOP, SFX.SPLASH, SFX.REEL, SFX.APPLAUSE, SFX.FISHON]);
+
 // Music keys.
 export const MUSIC = Object.freeze({
   AMBIENT: 'ambient',      // relaxed background loop on FishingScene (the lake)
@@ -52,31 +59,28 @@ export function musicPath(key) {
   return [`audio/music/${key}.mp3`, `audio/music/${key}.wav`];
 }
 
-// Voice clips: same WAV-first preference as SFX. These are used as
-// FALLBACK when no voice atlas has the phrase -- the preferred path is an
-// atlas (one mp3 with many phrases, addressed by JSON seek).
-export function voiceKey(species, size)  { return `voice_${size}_${species}`; }
-export function voicePath(species, size) {
-  return [
-    `audio/voice/${size}-${species}.wav`,
-    `audio/voice/${size}-${species}.mp3`,
-  ];
-}
-
 // Voice atlases: audio files that each hold many voice phrases in a row
 // with silent gaps. A companion JSON describes the start time + duration
 // of each phrase, keyed by `${size}_${species}`. AudioManager.playVoice()
 // looks a phrase up in all of them, the NEWEST first -- so a fish whose
 // name became more exact (the Karper is the Schubkarper now) is called by
 // its new name, while the old recording stays as it is:
-//   vissen      the first eleven fish of the first lake
-//   vissen-zee  the twelve sea fish, and the catfish
-//   vissen-3    the newcomers of the moat and of the French lake, the five
-//               renamed fish, and the names of the maps (`map_<id>`)
-//   stem-spel   what the game itself says: `escaped`, when a fish gets off
+//   vissen         the first eleven fish of the first lake
+//   vissen-zee     the twelve sea fish, and the catfish
+//   vissen-3       the newcomers of the moat and of the French lake, the
+//                  five renamed fish, and the names of the maps (`map_<id>`)
+//   stem-spel      what the game itself says: `escaped`, when a fish gets off
+//   vissen-gigant  "Wow! Een gigantische snoek!", for every species
+//                  (`giant_<species>`): a catch that is a giant (isGiant in
+//                  data/fish.js)
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
-export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel'];
+//
+// (There used to be a second way: one small file per fish and size, tried
+// for every species at start-up. None of those files ever existed, so every
+// start asked the server for a hundred sounds that were not there -- and
+// was handed the web page instead, to be decoded as sound and fail. Gone.)
+export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant'];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
 }
@@ -87,6 +91,39 @@ export function voiceAtlasMetaPath(atlas) {
   return `audio/sfx/${atlas}.json`;
 }
 
+// One Sound per atlas for the whole game, whichever scene speaks: the voice
+// is one voice (a new phrase cuts off the one before it, also across
+// scenes), and nothing piles up in the sound manager catch after catch.
+const voiceSounds = new WeakMap();      // sound manager -> { atlas: Sound }
+
+function missingVoiceFiles(scene) {
+  return VOICE_ATLASES.filter((atlas) =>
+    !scene.cache.audio.exists(atlas) || !scene.cache.json.exists(voiceAtlasMetaKey(atlas)));
+}
+
+/**
+ * Fetch again whatever voice atlas did not make it at start-up. A file can
+ * fail to arrive or to decode on a busy tablet, and without this all the
+ * fish in it stay silent until the game is started anew. Called when the
+ * map screen and a fishing spot open, and when a phrase cannot be said.
+ * `onDone` runs when the second attempt is over, whatever came of it.
+ * Returns whether anything was missing (and is being fetched).
+ */
+export function reloadMissingVoice(scene, onDone) {
+  const missing = missingVoiceFiles(scene);
+  if (!missing.length || scene.load.isLoading()) return false;
+  for (const atlas of missing) {
+    if (!scene.cache.audio.exists(atlas)) scene.load.audio(atlas, voiceAtlasPath(atlas));
+    if (!scene.cache.json.exists(voiceAtlasMetaKey(atlas))) {
+      scene.load.json(voiceAtlasMetaKey(atlas), voiceAtlasMetaPath(atlas));
+    }
+  }
+  console.warn(`[VOICE] fetching again: ${missing.join(', ')}`);
+  if (onDone) scene.load.once('complete', onDone);
+  scene.load.start();
+  return true;
+}
+
 export class AudioManager {
   /**
    * @param {Phaser.Scene} scene -- any scene; we use it for sound + cache access.
@@ -95,7 +132,6 @@ export class AudioManager {
     this.scene = scene;
     this.currentMusic = null;
     this.reelSound = null;
-    this._voiceSounds = {};      // atlas name -> its Sound, with markers
   }
 
   playSfx(key, opts = {}) {
@@ -113,32 +149,47 @@ export class AudioManager {
   }
 
   /**
-   * Voice announcement when a fish is caught. Prefers a voice atlas via
-   * Phaser audio MARKERS -- the only way the framework will actually stop
-   * playback at a given duration. Falls back to per-clip files, then to a
-   * console.log when neither is present.
+   * Voice announcement when a fish is caught: "een grote snoek!" -- or, for
+   * a giant, "Wow! Een gigantische snoek!" (and then not the other).
+   * `volume`: a share of the usual voice volume (a map's `voiceVolume`).
    */
-  playVoice(species, size) {
-    // Path 1: an atlas (preferred), using markers for hard start+duration.
-    if (this.playPhrase(`${size}_${species}`)) return;
-    // Path 2: per-clip file fallback.
-    const key = voiceKey(species, size);
-    if (this.scene.cache.audio.exists(key)) {
-      try {
-        this.scene.sound.play(key, { volume: VOICE_VOLUME });
-        return;
-      } catch (e) {
-        console.warn(`[VOICE] play failed for ${key}`, e);
-      }
-    }
-    console.log(`[VOICE] ${size}_${species} (no audio)`);
+  playVoice(species, size, { giant = false, volume = 1 } = {}) {
+    const plain = `${size}_${species}`;
+    return this._sayFirst(giant ? [`giant_${species}`, plain] : [plain], volume);
   }
 
   /**
    * Say one phrase of a voice atlas by its key: a fish (`large_pike`) or
-   * anything else an atlas holds (`map_sea`). Returns whether it was found.
+   * anything else an atlas holds (`map_sea`). Returns whether it is being
+   * said (or will be, see _sayFirst).
    */
-  playPhrase(markerName) {
+  playPhrase(markerName, { volume = 1 } = {}) {
+    return this._sayFirst([markerName], volume);
+  }
+
+  /**
+   * Say the first of these phrases that there is a recording of. If there
+   * is none of any of them while a voice atlas is missing -- it did not
+   * load at start-up -- the atlas is fetched again and the phrase is said
+   * as soon as it is there: late, but not never.
+   */
+  _sayFirst(names, volume, mayFetch = true) {
+    for (const name of names) {
+      if (this._say(name, volume)) return true;
+    }
+    const scene = this.scene;
+    if (mayFetch && reloadMissingVoice(scene, () => {
+      if (scene.sys.isActive()) this._sayFirst(names, volume, false);
+    })) return true;
+    console.log(`[VOICE] ${names.join(' / ')} (no audio)`);
+    return false;
+  }
+
+  /**
+   * One phrase, now. Uses Phaser audio MARKERS -- the only way the
+   * framework will actually stop playback at a given duration.
+   */
+  _say(markerName, volume) {
     for (const atlas of [...VOICE_ATLASES].reverse()) {
       if (!this.scene.cache.audio.exists(atlas)) continue;
       const meta = this.scene.cache.json.get(voiceAtlasMetaKey(atlas));
@@ -146,10 +197,12 @@ export class AudioManager {
       try {
         const sound = this._voiceSound(atlas, meta);
         // Stop any in-progress voice so consecutive phrases don't stack.
-        for (const other of Object.values(this._voiceSounds)) {
+        for (const other of Object.values(voiceSounds.get(this.scene.sound) || {})) {
           if (other.isPlaying) other.stop();
         }
-        sound.play(markerName);
+        // (The volume is given every time: Phaser keeps what a marker was
+        // last played with.)
+        sound.play(markerName, { volume: VOICE_VOLUME * volume });
         return true;
       } catch (e) {
         console.warn(`[VOICE atlas] play failed for ${markerName}`, e);
@@ -160,11 +213,14 @@ export class AudioManager {
 
   /**
    * The Sound instance of one voice atlas, created on first use with one
-   * marker per phrase.
+   * marker per phrase and shared by every AudioManager of this game.
    */
   _voiceSound(atlas, meta) {
-    if (!this._voiceSounds[atlas]) {
-      const sound = this.scene.sound.add(atlas);
+    const manager = this.scene.sound;
+    if (!voiceSounds.has(manager)) voiceSounds.set(manager, {});
+    const sounds = voiceSounds.get(manager);
+    if (!sounds[atlas]) {
+      const sound = manager.add(atlas);
       for (const [name, entry] of Object.entries(meta.phrases)) {
         sound.addMarker({
           name,
@@ -173,9 +229,9 @@ export class AudioManager {
           config: { volume: VOICE_VOLUME },
         });
       }
-      this._voiceSounds[atlas] = sound;
+      sounds[atlas] = sound;
     }
-    return this._voiceSounds[atlas];
+    return sounds[atlas];
   }
 
   /**

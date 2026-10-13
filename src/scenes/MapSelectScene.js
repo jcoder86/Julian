@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { MAPS } from '../data/maps.js';
-import { AudioManager } from '../systems/AudioManager.js';
+import { AudioManager, reloadMissingVoice } from '../systems/AudioManager.js';
 import { fishTextureKey } from '../data/fish.js';
 import { TEX } from './BootScene.js';
 import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
@@ -66,6 +66,8 @@ export class MapSelectScene extends Phaser.Scene {
 
   create() {
     this._leaving = false;
+    // (A voice file that did not load at start-up gets a second chance.)
+    reloadMissingVoice(this);
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, BG_OVERSIZE, BG_OVERSIZE, BG_COLOR);
     const wall = this.textures.exists(TEX.MAPSELECT_BG)

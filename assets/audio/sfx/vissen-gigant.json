@@ -1,0 +1,146 @@
+{
+  "file": "vissen-gigant.mp3",
+  "totalDuration": 101.64,
+  "phrases": {
+    "giant_roach": {
+      "start": 0.5,
+      "duration": 2.31
+    },
+    "giant_rudd": {
+      "start": 3.31,
+      "duration": 2.48
+    },
+    "giant_goby": {
+      "start": 6.29,
+      "duration": 2.61
+    },
+    "giant_perch": {
+      "start": 9.4,
+      "duration": 2.17
+    },
+    "giant_bream": {
+      "start": 12.07,
+      "duration": 2.24
+    },
+    "giant_tench": {
+      "start": 14.81,
+      "duration": 2.07
+    },
+    "giant_carp": {
+      "start": 17.38,
+      "duration": 2.39
+    },
+    "giant_mirrorcarp": {
+      "start": 20.27,
+      "duration": 2.56
+    },
+    "giant_eel": {
+      "start": 23.33,
+      "duration": 2.21
+    },
+    "giant_zander": {
+      "start": 26.04,
+      "duration": 2.41
+    },
+    "giant_pike": {
+      "start": 28.95,
+      "duration": 2.1
+    },
+    "giant_catfish": {
+      "start": 31.55,
+      "duration": 2.27
+    },
+    "giant_gudgeon": {
+      "start": 34.32,
+      "duration": 2.56
+    },
+    "giant_minnow": {
+      "start": 37.38,
+      "duration": 2.42
+    },
+    "giant_chub": {
+      "start": 40.3,
+      "duration": 2.32
+    },
+    "giant_barbel": {
+      "start": 43.12,
+      "duration": 2.46
+    },
+    "giant_bass": {
+      "start": 46.08,
+      "duration": 2.8
+    },
+    "giant_grayling": {
+      "start": 49.38,
+      "duration": 2.62
+    },
+    "giant_trout": {
+      "start": 52.5,
+      "duration": 2.73
+    },
+    "giant_rainbowtrout": {
+      "start": 55.73,
+      "duration": 2.82
+    },
+    "giant_char": {
+      "start": 59.05,
+      "duration": 2.5
+    },
+    "giant_salmon": {
+      "start": 62.05,
+      "duration": 2.22
+    },
+    "giant_sturgeon": {
+      "start": 64.77,
+      "duration": 2.18
+    },
+    "giant_herring": {
+      "start": 67.45,
+      "duration": 2.27
+    },
+    "giant_whiting": {
+      "start": 70.22,
+      "duration": 2.3
+    },
+    "giant_mackerel": {
+      "start": 73.02,
+      "duration": 2.37
+    },
+    "giant_flounder": {
+      "start": 75.89,
+      "duration": 2.12
+    },
+    "giant_plaice": {
+      "start": 78.51,
+      "duration": 2.26
+    },
+    "giant_garfish": {
+      "start": 81.27,
+      "duration": 2.31
+    },
+    "giant_seabass": {
+      "start": 84.08,
+      "duration": 2.48
+    },
+    "giant_cod": {
+      "start": 87.06,
+      "duration": 2.44
+    },
+    "giant_ray": {
+      "start": 90.0,
+      "duration": 2.18
+    },
+    "giant_conger": {
+      "start": 92.68,
+      "duration": 2.39
+    },
+    "giant_tuna": {
+      "start": 95.57,
+      "duration": 2.65
+    },
+    "giant_shark": {
+      "start": 98.72,
+      "duration": 2.42
+    }
+  }
+}

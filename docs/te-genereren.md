@@ -69,3 +69,13 @@ verstaan zoals geschreven.
 ## Nog te doen
 
 Niets.
+
+## Ronde van 13 oktober 2026: gigantische vissen
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Stem: "Wow! Een gigantische ...!" voor alle 35 vissoorten | ElevenLabs, `python scripts/make_voice_atlas.py vissen-gigant` | ja |
+
+Stralen, glinsteringen en de lichtveeg over een gigantische vis zijn geen
+plaatjes maar worden door het spel zelf getekend (`addRays`, `addGlints` in
+`src/systems/Ui.js`).

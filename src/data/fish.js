@@ -238,6 +238,23 @@ export function recordCm(species) {
   return species.lengthCm.large[1];
 }
 
+// A GIANT: a catch within this share of the longest its kind can be (0.95 =
+// no more than 5 % short of the record). About one catch in 150-200. It is
+// called out ("Wow! Een gigantische snoek!"), it glitters on the catch
+// screen, and its card in the fish book keeps glittering.
+export const GIANT_SHARE = 0.95;
+
+/** The length in cm from which a fish of this species is a giant. */
+export function giantFromCm(species) {
+  return recordCm(species) * GIANT_SHARE;
+}
+
+/** Is a fish of this species and this length (cm) a giant? */
+export function isGiant(speciesId, lengthCm) {
+  const species = FISH_BY_ID[speciesId];
+  return !!species && typeof lengthCm === "number" && lengthCm >= giantFromCm(species);
+}
+
 /** Convenience helper returning the Dutch display name for a species id. */
 export function speciesNlName(speciesId) {
   return FISH_BY_ID[speciesId]?.nlName ?? speciesId;

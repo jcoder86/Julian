@@ -18,9 +18,11 @@ go for the whole atlas so every phrase has the same tone:
 2. Generate, download, and keep the download in work/voice/ (git-ignored).
 3. `python scripts/make_voice_atlas.py <name> <download.mp3>` finds the
    phrases (anything between two silences; two that the voice ran together
-   are cut apart at the pause between them), checks that there are exactly
-   as many as were asked for, brings them to the loudness of the first
-   atlas, and writes them out with half a second of silence in between.
+   are cut apart at the pause between them, and one that it spoke with a
+   pause in it -- "Wow! ... een gigantische snoek!" -- is put together
+   again), checks that there are exactly as many as were asked for, brings
+   them to the loudness of the first atlas, and writes them out with half a
+   second of silence in between.
 4. `... --check` afterwards has Google's Gemini write down what it hears
    in the atlas and compares that with the text (needs the GEMINI_API_KEY
    of scripts/gen_video.py). A machine's ears, but better than none.
@@ -28,7 +30,7 @@ go for the whole atlas so every phrase has the same tone:
 A new atlas also has to be listed in VOICE_ATLASES in AudioManager.js.
 
 Besides fish an atlas can hold other phrases (EXTRA): the names of the maps,
-spoken when one is chosen.
+spoken when one is chosen; what is called out for a GIANT of each species.
 
 Usage (from the project root):
     python scripts/make_voice_atlas.py vissen-zee --text
@@ -84,7 +86,30 @@ ATLASES = {
     },
     # What the game itself says. No fish in it.
     "stem-spel": {},
+    # October 2026: what is called out for a giant -- a catch within 5 % of
+    # the longest its kind can be (isGiant in src/data/fish.js). One phrase
+    # per species, see GIANTS below.
+    "vissen-gigant": {},
 }
+# Every species by the name on its card, for "Wow! Een gigantische ...!"
+# (key `giant_<species>`).
+GIANTS = {
+    "roach": "blankvoorn", "rudd": "ruisvoorn", "goby": "zwartbekgrondel", "perch": "baars",
+    "bream": "brasem", "tench": "zeelt", "carp": "schubkarper", "mirrorcarp": "spiegelkarper",
+    "eel": "paling", "zander": "snoekbaars", "pike": "snoek", "catfish": "meerval",
+    "gudgeon": "riviergrondel", "minnow": "elrits", "chub": "kopvoorn", "barbel": "barbeel",
+    "bass": "grootbekbaars", "grayling": "vlagzalm", "trout": "bruine forel",
+    "rainbowtrout": "regenboogforel", "char": "beekridder", "salmon": "zalm", "sturgeon": "steur",
+    "herring": "haring", "whiting": "wijting", "mackerel": "makreel", "flounder": "bot",
+    "plaice": "schol", "garfish": "geep", "seabass": "zeebaars", "cod": "kabeljauw", "ray": "rog",
+    "conger": "zeepaling", "tuna": "blauwvintonijn", "shark": "haringhaai",
+}
+GIANT_PHRASE = "Wow! Een gigantische {}!"
+# Atlases whose every phrase opens with a short cry ("Wow!") and a pause:
+# how long that cry lasts at most, in seconds. A stretch of sound no longer
+# than this is the opening of the phrase after it. (The pause after "Wow!"
+# is as long as some pauses BETWEEN phrases, so the pauses cannot tell.)
+OPENING_CRY_S = {"vissen-gigant": 0.6}
 # Phrases that are not a fish: (key, text), read out after the fish. The
 # map names are spoken when a map is chosen (key `map_<id>`); `escaped`
 # when a hooked fish gets off.
@@ -92,6 +117,8 @@ EXTRA = {
     "vissen-3": [("map_lake", "Naarden-Vesting!"), ("map_france", "Frankrijk!"),
                  ("map_sea", "Noordzee!")],
     "stem-spel": [("escaped", "Helaas! De vis is ontsnapt!")],
+    "vissen-gigant": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
+                      for species, spoken in GIANTS.items()],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}
@@ -198,6 +225,32 @@ def split_merged(samples, spans, expected):
     return spans
 
 
+def join_broken(spans, expected, opening_cry=None):
+    """
+    A phrase the voice spoke with a pause in it ("Wow! ... een gigantische
+    snoek!") comes out as two. Where the atlas says its phrases open with a
+    short cry, every stretch that short is put together with the one after
+    it. Then, while there are still too many phrases, the two with the
+    shortest pause between them are put together.
+    """
+    spans = list(spans)
+    if opening_cry:
+        joined, i = [], 0
+        while i < len(spans):
+            a, b = spans[i]
+            if (b - a) / RATE <= opening_cry and i + 1 < len(spans):
+                b = spans[i + 1][1]
+                i += 1
+            joined.append((a, b))
+            i += 1
+        spans = joined
+    while len(spans) > expected and len(spans) > 1:
+        gaps = [spans[i + 1][0] - spans[i][1] for i in range(len(spans) - 1)]
+        i = min(range(len(gaps)), key=gaps.__getitem__)
+        spans[i:i + 2] = [(spans[i][0], spans[i + 1][1])]
+    return spans
+
+
 def speech_rms(samples, spans):
     """Loudness of the speech alone: the silences in between do not count."""
     spoken = np.concatenate([samples[a:b] for a, b in spans])
@@ -218,10 +271,17 @@ def reference_rms():
 def build(name, source):
     wanted = phrases_of(name)
     samples = decode(source)
-    spans = split_merged(samples, find_phrases(samples), len(wanted))
-    if len(wanted) == 1 and spans:
-        # One sentence, with whatever pauses it has in it.
-        spans = [(spans[0][0], spans[-1][1])]
+    found = find_phrases(samples)
+    spans = join_broken(split_merged(samples, found, len(wanted)), len(wanted),
+                        OPENING_CRY_S.get(name))
+    if len(found) > len(wanted):
+        # Worth a look: the pauses that were closed, and the shortest left open.
+        inside = sorted(b[0] - a[1] for a, b in zip(found, found[1:])
+                        if not any(a[1] == s[1] for s in spans))
+        between = sorted(b[0] - a[1] for a, b in zip(spans, spans[1:]))
+        print(f"  ({len(found) - len(wanted)} phrases had a pause in them: the longest of those pauses "
+              f"{inside[-1] / RATE:.2f} s, the shortest pause between two phrases "
+              f"{between[0] / RATE:.2f} s)" if inside and between else "")
     if len(spans) != len(wanted):
         for i, (a, b) in enumerate(spans):
             print(f"  {i + 1:3d}  {a / RATE:7.2f} s  {(b - a) / RATE:5.2f} s")
@@ -260,7 +320,8 @@ def build(name, source):
 
 def heard(text):
     """A phrase reduced to its words, for comparing."""
-    return re.sub(r"[^a-z ]", "", text.lower()).split()
+    words = re.sub(r"[^a-z ]", "", text.lower()).split()
+    return ["wow" if w in ("wauw", "wouw", "waauw") else w for w in words]
 
 
 def check(name, model):
@@ -279,8 +340,8 @@ def check(name, model):
     # marker that sits in the wrong place.
     parts = [{"text": (
         "You get a number of very short Dutch audio clips. In each one a man "
-        "calls out the name of a fish, e.g. 'een kleine snoek' (a few are the "
-        "name of a place instead). Write down "
+        "calls out the name of a fish, e.g. 'een kleine snoek' or 'Wow! Een "
+        "gigantische snoek!' (a few are the name of a place instead). Write down "
         "exactly what is said in each clip, one line per clip, in order, as "
         "'<number>: <words>'. Dutch spelling, no commentary. If a clip is "
         "silent or cut off, say so on its line.")}]
