@@ -17,9 +17,9 @@ export const FISH_SIZES = ["small", "medium", "large"];
 
 // How strongly the lengths of "large" fish crowd toward the low end of
 // their range: a large fish's place in the range is (a random number 0..1)
-// to this power. With 3, half of all large fish are in the lowest eighth of
-// the range, 1 in 5 gets past the middle, about 1 in 29 comes within a
-// tenth of the range of the record, and 1 in 100 within 3 % of it.
+// to this power. With 4, half of all large fish are in the lowest sixteenth
+// of the range, 1 in 6 gets past the middle, and about 1 in 38 comes within
+// a tenth of the range of the record.
 export const RECORD_SKEW = 4;
 
 /**
@@ -239,9 +239,10 @@ export function recordCm(species) {
 }
 
 // A GIANT: a catch within this share of the longest its kind can be (0.95 =
-// no more than 5 % short of the record). About one catch in 150-200. It is
-// called out ("Wow! Een gigantische snoek!"), it glitters on the catch
-// screen, and its card in the fish book keeps glittering.
+// no more than 5 % short of the record). About one bite in 80-150,
+// depending on the bait (see "The old ones" below). It is called out ("Wow!
+// Een gigantische snoek!"), it glitters on the catch screen, and its card
+// in the fish book keeps glittering.
 export const GIANT_SHARE = 0.95;
 
 /** The length in cm from which a fish of this species is a giant. */
@@ -253,6 +254,55 @@ export function giantFromCm(species) {
 export function isGiant(speciesId, lengthCm) {
   const species = FISH_BY_ID[speciesId];
   return !!species && typeof lengthCm === "number" && lengthCm >= giantFromCm(species);
+}
+
+// ---------------------------------------------------------------------------
+// The old ones
+// ---------------------------------------------------------------------------
+// A giant is a very old fish. Going by the lengths alone (RECORD_SKEW) one
+// turned up once in 140-240 bites, and of the rare species practically
+// never: a little too rare. So besides the ordinary roll, every hooked fish
+// has a small chance of being one of the OLD ONES of its kind -- a fish
+// somewhere in the top 5 % of what its kind can reach, a giant for certain.
+//
+// How big that chance is follows nature: the older a kind of fish can get,
+// the more very old ones there are about. A goby or a minnow lives a few
+// years and hardly any gets old; pike, carp and cod live for decades; a
+// catfish for eighty years and a sturgeon for a hundred -- and in water
+// where nobody takes them out (a moat, a mountain lake) one year class
+// piles up on the other. So a species gets OLD_ONE_PER_YEAR for every year
+// it can live: 1 in 250 hooked perch, 1 in 100 eels, 1 in 50 sturgeon.
+// `node scripts/fish-odds.js` prints what that comes to per fish and bait.
+//
+// OLDEST_YEARS: the greatest age each species is known to reach (FishBase
+// and angling literature, rounded and kept sober -- not the one freak in an
+// aquarium; the eel as in closed water, where it cannot leave to spawn).
+export const OLDEST_YEARS = {
+  // The moat
+  roach: 14, rudd: 17, goby: 5, perch: 20, bream: 23, tench: 20,
+  carp: 40, mirrorcarp: 40, eel: 50, zander: 17, pike: 25, catfish: 80,
+  // The French lake
+  gudgeon: 8, minnow: 6, chub: 22, barbel: 20, bass: 20, grayling: 14,
+  trout: 20, rainbowtrout: 11, char: 30, salmon: 13, sturgeon: 100,
+  // The North Sea
+  herring: 22, whiting: 20, mackerel: 18, flounder: 15, plaice: 50, garfish: 18,
+  seabass: 30, cod: 25, ray: 15, conger: 20, tuna: 35, shark: 45,
+};
+// A species that is not in the list is taken for an ordinary one.
+const OLDEST_YEARS_UNKNOWN = 15;
+export const OLD_ONE_PER_YEAR = 0.0002;
+// Among the old ones, too, the closer to the record the rarer: an old one's
+// place in its band of lengths is (a random number 0..1) to this power.
+export const OLD_ONE_SKEW = 2;
+
+/** The chance that a hooked fish of this species is one of the old ones. */
+export function oldOneChance(species) {
+  return (OLDEST_YEARS[species.id] ?? OLDEST_YEARS_UNKNOWN) * OLD_ONE_PER_YEAR;
+}
+
+/** The lengths an old one can have, in whole cm: [from, to], both giants. */
+export function oldOneRange(species) {
+  return [Math.ceil(giantFromCm(species)), recordCm(species)];
 }
 
 /** Convenience helper returning the Dutch display name for a species id. */
@@ -305,7 +355,8 @@ export function catchableSizes(species, smallest = null) {
  * Weighted random pick of a fish among the species that live on the given
  * map and accept the given bait id. Returns { species, size, lengthCm } --
  * species and size are strings; lengthCm is an integer drawn from the
- * species' range for the chosen size.
+ * species' range for the chosen size. Now and then the fish is one of the
+ * old ones of its kind (see "The old ones" above): then it is a giant.
  *
  * @param {string} baitId a bait or lure id from data/baits.js
  * @param {string} mapId  a map id from data/maps.js
@@ -329,6 +380,14 @@ export function weightedPick(baitId, mapId, rng = Math.random, smallest = null) 
   for (const e of eligible) {
     roll -= speciesWeightOn(e.species, mapId);
     if (roll <= 0) { chosen = e; break; }
+  }
+
+  // One of the old ones? Then it is a large one from the top of the range,
+  // whatever the rolls below would have said.
+  if (chosen.sizes.some(s => s.size === "large") && rng() < oldOneChance(chosen.species)) {
+    const [from, to] = oldOneRange(chosen.species);
+    const lengthCm = Math.min(to, from + Math.floor(rng() ** OLD_ONE_SKEW * (to - from + 1)));
+    return { species: chosen.species.id, size: "large", lengthCm };
   }
 
   // Stage 2: pick a size for that species.

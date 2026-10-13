@@ -101,14 +101,25 @@ species how often one comes within 10 % of its record -- and how often it
 is a giant.
 
 **A giant** is a catch within 5 % of its species' record (`GIANT_SHARE`,
-`isGiant` in `fish.js`): about one hooked fish in 140 to 240, depending on
-the bait. It gets the works on the catch screen -- rays of light turning
-behind it, a gleam running over it, glints, "Gigantisch!" above it -- and
-the voice calls out "Wow! Een gigantische snoek!" instead of "een grote
-snoek!". In the fish book its card keeps glittering: golden rays, a gold
-star, and the length that did it on gold. Nothing extra is saved for this:
-the best length per size, which was already kept, says it -- so a giant
-caught before this existed counts too.
+`isGiant` in `fish.js`). It gets the works on the catch screen -- rays of
+light turning behind it, a gleam running over it, glints, "Gigantisch!"
+above it -- and the voice calls out "Wow! Een gigantische snoek!" instead of
+"een grote snoek!". In the fish book its card keeps glittering: golden rays,
+a gold star, and the length that did it on gold. Nothing extra is saved for
+this: the best length per size, which was already kept, says it -- so a
+giant caught before this existed counts too.
+
+How often: about one bite in 80 to 150, depending on the bait. Going by
+the lengths alone it was one in 140 to 240, and of the rare species
+practically never, which proved a little too rare. So every hooked fish
+also has a small chance of being one of **the old ones** of its kind: a
+fish from the top 5 %, a giant for certain. That chance follows nature --
+the older a kind of fish can get, the more very old ones are about:
+`OLD_ONE_PER_YEAR` (0.02 %) for every year in `OLDEST_YEARS`, so 1 in 1000
+gobies, 1 in 250 perch, 1 in 100 eels, 1 in 50 sturgeon. The margin of what
+counts as a giant is untouched. `node scripts/fish-odds.js --tabel` prints,
+per fish, the chance per bite on its best bait, how many of them are large
+and how many are giants.
 
 A species id is for ever -- catches are saved under it -- but a species can
 be renamed or moved. That happened in October 2026: the first lake's Karper
