@@ -36,7 +36,11 @@ export const MUSIC = Object.freeze({
 
 // Default music volume -- keeps the loop in the background.
 export const MUSIC_VOLUME = 0.35;
-export const VOICE_VOLUME = 1.0;
+// The voice: louder than a recording on its own (15 % up on request,
+// October 2026) -- but never so loud that a phrase's loudest moment would
+// clip: then that phrase gets as much as it can take (VOICE_CEILING).
+export const VOICE_VOLUME = 1.15;
+const VOICE_CEILING = 0.97;
 export const SFX_VOLUME   = 0.8;
 export const REEL_VOLUME  = 0.6;
 
@@ -73,6 +77,8 @@ export function musicPath(key) {
 //   vissen-gigant  "Wow! Een gigantische snoek!", for every species
 //                  (`giant_<species>`): a catch that is a giant (isGiant in
 //                  data/fish.js)
+//   vissen-4       the roach once more, by the name on its card: Blankvoorn
+//                  (the first recording says "voorn")
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
 //
@@ -80,7 +86,7 @@ export function musicPath(key) {
 // for every species at start-up. None of those files ever existed, so every
 // start asked the server for a hundred sounds that were not there -- and
 // was handed the web page instead, to be decoded as sound and fail. Gone.)
-export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant'];
+export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4'];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
 }
@@ -95,6 +101,8 @@ export function voiceAtlasMetaPath(atlas) {
 // is one voice (a new phrase cuts off the one before it, also across
 // scenes), and nothing piles up in the sound manager catch after catch.
 const voiceSounds = new WeakMap();      // sound manager -> { atlas: Sound }
+// The loudest moment of each phrase, once looked up: `${atlas} ${phrase}` -> 0..1.
+const phrasePeaks = new Map();
 
 function missingVoiceFiles(scene) {
   return VOICE_ATLASES.filter((atlas) =>
@@ -202,13 +210,40 @@ export class AudioManager {
         }
         // (The volume is given every time: Phaser keeps what a marker was
         // last played with.)
-        sound.play(markerName, { volume: VOICE_VOLUME * volume });
+        const peak = this._peakOf(atlas, meta.phrases[markerName], markerName);
+        sound.play(markerName, { volume: Math.min(VOICE_VOLUME * volume, VOICE_CEILING / peak) });
         return true;
       } catch (e) {
         console.warn(`[VOICE atlas] play failed for ${markerName}`, e);
       }
     }
     return false;
+  }
+
+  /**
+   * How loud a phrase gets at its loudest (0..1), read from the decoded
+   * sound once. 1 when that cannot be read (then nothing is made louder).
+   */
+  _peakOf(atlas, entry, name) {
+    const key = `${atlas} ${name}`;
+    if (phrasePeaks.has(key)) return phrasePeaks.get(key);
+    let peak = 1;
+    const buffer = this.scene.cache.audio.get(atlas);
+    if (buffer && typeof buffer.getChannelData === 'function') {
+      const from = Math.max(0, Math.floor(entry.start * buffer.sampleRate));
+      const to = Math.min(buffer.length, Math.ceil((entry.start + entry.duration) * buffer.sampleRate));
+      let max = 0;
+      for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = from; i < to; i++) {
+          const v = Math.abs(data[i]);
+          if (v > max) max = v;
+        }
+      }
+      if (max > 0.01) peak = max;
+    }
+    phrasePeaks.set(key, peak);
+    return peak;
   }
 
   /**

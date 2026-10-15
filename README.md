@@ -145,10 +145,26 @@ the species are as common as on any bait and a large one is as rare as it
 always was; `fish-odds.js` prints the result.
 
 Far out the lure is drawn as small as a float there (`LURE_SCALE_FAR`) --
-on the sea it can be cast to the horizon, and should look it. Rings of
-ripples spread from it while it swims, and those shrink less with distance
-than the lure does (`LURE_WAKE_KEEP`), so it is easy to find and follow on
-a choppy sea. The tunables are the `LURE_*` constants in `FishingScene.js`.
+on the sea it can be cast to the horizon, and should look it.
+
+**Under water** (`src/systems/LureSwim.js`). The lure lands with a splash
+and sinks to the depth it runs at; it swims nose first along the way to
+the jetty, and its depth shows -- the deeper, the fainter and the more the
+colour of the water (`waterTint` per map), and a touch lower in the
+picture. Cranked, it wobbles the way its kind does: a lure's `swim` in
+`baits.js` (the spinner whirrs and flashes, the shad wags its tail deep
+down, the pilker is jigged up and down, a spoon wobbles wide and flashes,
+the dry fly skitters over the surface and never sinks). The faster the
+crank, the livelier; near the jetty it comes up. Left alone, it sinks
+towards the bottom. The line comes down from the rod, goes into the water
+a little in front of the lure -- a bright dimple, and ripples running off
+while it is cranked -- and runs on under the surface, fainter, to the
+lure's nose (FishingLine's `lure` shape). A fish that is going to bite
+shows itself first: a dark shape that follows the lure, closer with every
+turn of the reel (`LURE_FOLLOW_SPAN`); at the bite the water boils. On
+three in ten retrieves without a bite a fish follows for a while and turns
+away (`LURE_REFUSE_CHANCE`). The other tunables are the `LURE_*` constants
+in `FishingScene.js` and the constants at the top of `LureSwim.js`.
 
 ### The line
 
@@ -400,7 +416,13 @@ fish, `vissen-zee.mp3` for the sea fish and the catfish, `vissen-3.mp3`
 for the newcomers, the renamed fish and the names of the maps,
 `stem-spel.mp3` for what the game itself says ("Helaas! De vis is
 ontsnapt!"), `vissen-gigant.mp3` for "Wow! Een gigantische ...!" of every
-species; the list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
+species, `vissen-4.mp3` for the roach by the name on its card (Blankvoorn;
+the first recording says "voorn"); the list is `VOICE_ATLASES` in
+`src/systems/AudioManager.js`).
+
+The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except
+where a phrase's loudest moment would then clip: that phrase gets as much
+as it can take.
 
 A map can make the voice speak up (`voiceVolume` in `maps.js`): on the
 pier it is 15 % louder, over the waves, the gulls and louder music. And a

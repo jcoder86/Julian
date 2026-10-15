@@ -8,7 +8,7 @@ import { AudioManager, SFX, MUSIC, reloadMissingVoice } from '../systems/AudioMa
 import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
-import { baitOnMap, baitSimpleTextureKey, isLure, smallestCatchOn } from '../data/baits.js';
+import { BAITS_BY_ID, baitOnMap, baitSimpleTextureKey, isLure, smallestCatchOn } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
@@ -20,6 +20,7 @@ import { ReelOverlay } from '../systems/ReelOverlay.js';
 import { Crew, CAST_WINDUP_MS } from '../systems/Crew.js';
 import { FishingLine } from '../systems/FishingLine.js';
 import { FishFight } from '../systems/FishFight.js';
+import { LureSwim } from '../systems/LureSwim.js';
 import { UI, COLOR, lettering } from '../systems/Ui.js';
 
 // =============================================================================
@@ -204,7 +205,9 @@ const STATE = Object.freeze({
 // Cast -> reel the lure back -> somewhere on the way a fish may grab it ->
 // it is hooked at once: keep cranking, now against the fish (the normal
 // REELING phase). There is no strike to time: the player's hand is on the
-// reel, and a bite on a moving lure hooks itself.
+// reel, and a bite on a moving lure hooks itself. How the lure looks and
+// moves under water meanwhile -- and the fish that follows it before it
+// bites -- is systems/LureSwim.js.
 
 // Reel turns to bring an untouched lure all the way home: one turn per
 // this many design px of cast distance, within [min, max]. (Was 170 px a
@@ -224,6 +227,14 @@ const LURE_BITE_TO      = 0.8;
 // How long the "fish on" sign stays up when a fish takes the lure (ms). It
 // only tells the news: nothing has to be tapped.
 const LURE_FISH_ON_MS = 1300;
+// A fish that is going to bite shows itself first, following the lure: from
+// this share of the way before the bite. And now and then, on a retrieve
+// that gets no bite, a fish follows for a while and turns away (this share
+// of those retrieves, somewhere in this stretch of the way).
+const LURE_FOLLOW_SPAN = 0.16;
+const LURE_REFUSE_CHANCE = 0.3;
+const LURE_REFUSE_FROM = 0.4;
+const LURE_REFUSE_TO = 0.8;
 
 // ---------------------------------------------------------------------------
 // The one that got away
@@ -246,22 +257,14 @@ const ESCAPE_SHAPE_MAX = 260;
 const ESCAPE_SHAPE_PX_PER_CM = 1.6;
 const ESCAPE_DART_PX = 240;
 const ESCAPE_DART_MS = 1100;
-// Lure sprite on the line: display length (design px at full scale) and
-// how see-through it is while under water.
+// Lure sprite on the line: display length (design px at full scale).
 const LURE_DISPLAY_LENGTH = 82;
-const LURE_UNDERWATER_ALPHA = 0.92;
-// Ripples spreading from the lure while it swims: a small silver lure is
-// easily lost from sight on a choppy sea. Width in design px at full scale.
-const LURE_WAKE_WIDTH = 130;
-const LURE_WAKE_PERIOD_MS = 1100;
 // A lure far out is as small as a float out there (see BOBBER_SCALE_FAR).
 // (It used to keep almost half its size all the way out, so that it could
 // be followed home -- but then a cast to the horizon of the sea looked no
 // further away than one to the foot of the pier.) What points it out at a
-// distance is its ripples: they shrink less than the lure does, by this
-// much -- 0 = as much as the lure, 1 = not at all.
+// distance is the water it stirs (systems/LureSwim.js).
 const LURE_SCALE_FAR = 0.2;
-const LURE_WAKE_KEEP = 0.4;
 
 // All fish use the reel widget now. Common little ones need just one
 // turn (a flick of the wrist); rare giants take ~9 turns. Kept as a
@@ -326,6 +329,7 @@ export class FishingScene extends Phaser.Scene {
     this.reelOverlay = null;
     this.reelEnd = null;
     this.lure = null;
+    this.swim = null;
     this.hudIcons = null;
     this.cloudDomLayers = [];
     this._skyMaskReady = false;
@@ -463,15 +467,15 @@ export class FishingScene extends Phaser.Scene {
         this._fishEscapes();
       }
     } else if (this.state === STATE.RETRIEVE && this.reelOverlay && this.reelEnd) {
-      // A lure swims straight home, as far as the reel has been cranked.
+      // A lure swims home under water, as far as the reel has been cranked.
       const p = this.reelOverlay.progress;
-      const home = this._reelHome();
-      this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, home.x, p);
-      this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, home.y, p);
-      // It shrinks or grows with distance like the float does, and points
-      // its nose (the line eye) at the rod it is being pulled to.
-      this._setLureScale(this._bobberDepthScale(this.bobber.y));
-      this._pointLureAtRod();
+      if (this.swim) {
+        this.swim.update(delta, { progress: p, cranking: !!this.reelOverlay.isDragging });
+      } else {
+        const home = this._reelHome();
+        this.bobber.x = Phaser.Math.Linear(this.reelEnd.startX, home.x, p);
+        this.bobber.y = Phaser.Math.Linear(this.reelEnd.startY, home.y, p);
+      }
       if (this.lure && this.lure.biteAt != null && p >= this.lure.biteAt) {
         this._hookOnLure();
       }
@@ -523,6 +527,13 @@ export class FishingScene extends Phaser.Scene {
     }
     const rate = slack < this._slack ? LINE_TIGHTEN_RATE : LINE_SLACKEN_RATE;
     this._slack += (slack - this._slack) * (1 - Math.exp(-rate * Math.min(delta, 64) / 1000));
+    if (this.state === STATE.RETRIEVE && this.swim) {
+      // Down to the water, in, and under it to the lure's nose.
+      this.line.update(delta, tip, end, {
+        kind: 'lure', slack: this._slack, foot: this.map.landing, entry: this.swim.entry,
+      });
+      return;
+    }
     this.line.update(delta, tip, end, {
       kind: 'water', slack: this._slack, foot: this.map.landing, tremble,
     });
@@ -545,15 +556,6 @@ export class FishingScene extends Phaser.Scene {
     if (this._rigAir) for (const part of this._rigAir) part.setVisible(inAir);
     if (this._rigTip) this._rigTip.setVisible(!inAir);
     if (!inAir && this.bobber && !this.lureSprite) this.bobber.rotation = 0;
-  }
-
-  /**
-   * Draw the lure at this scale -- and its ripples a little less small than
-   * that, so that a lure far out can still be found.
-   */
-  _setLureScale(scale) {
-    this.bobber.setScale(scale);
-    if (this.lureWakeRings) this.lureWakeRings.setScale(scale ** -LURE_WAKE_KEEP);
   }
 
   /**
@@ -927,11 +929,12 @@ export class FishingScene extends Phaser.Scene {
     const x = this.bobber ? this.bobber.x : this.rodTip.x;
     const y = this.bobber ? this.bobber.y : this.rodTip.y;
     const wasVisible = this.bobber ? this.bobber.visible : false;
-    if (this.lureWake) this.tweens.killTweensOf(this.lureWake);
+    if (this.swim) {
+      this.swim.destroy();
+      this.swim = null;
+    }
     if (this.bobber) this.bobber.destroy();
     this.lureSprite = null;
-    this.lureWake = null;
-    this.lureWakeRings = null;
     this._rigAir = null;       // float mode: what shows in the air...
     this._rigTip = null;       // ...and what shows in the water
 
@@ -941,29 +944,13 @@ export class FishingScene extends Phaser.Scene {
       // Origin sits on that eye, so the line ends exactly where it is tied
       // and the lure trails behind it; _pointLureAtRod() turns it.
       const c = this.add.container(x, y);
-      const wake = this.add.ellipse(0, 0, LURE_WAKE_WIDTH, LURE_WAKE_WIDTH * 0.36);
-      wake.setStrokeStyle(4, 0xffffff, 1);
-      wake.setVisible(false);            // only while the lure swims
-      this.tweens.add({
-        targets: wake,
-        scale: { from: 0.3, to: 1.2 },
-        alpha: { from: 0.9, to: 0 },
-        duration: LURE_WAKE_PERIOD_MS,
-        repeat: -1,
-        ease: 'Sine.easeOut',
-      });
-      // (The ripples are in a holder of their own: its scale makes up for
-      // part of the lure's shrinking with distance -- see _setLureScale.)
-      const rings = this.add.container(0, 0, [wake]);
       const lure = this.add.image(0, 0, lureKey);
       lure.setScale(LURE_DISPLAY_LENGTH / lure.width);
       lure.setOrigin(0.04, 0.5);
-      c.add([rings, lure]);
+      c.add(lure);
       c.setDepth(20);
       this.bobber = c;
       this.lureSprite = lure;
-      this.lureWake = wake;
-      this.lureWakeRings = rings;
       this.bobber.setVisible(wasVisible);
       this.bobberHomeY = y;
       return;
@@ -1684,9 +1671,7 @@ export class FishingScene extends Phaser.Scene {
     this.bobber.x = x;
     this.bobber.y = y;
     this.bobberHomeY = y;
-    this.bobber.setAlpha(LURE_UNDERWATER_ALPHA);
-    this._setLureScale(this._bobberDepthScale(y));
-    if (this.lureWake) this.lureWake.setVisible(true);
+    this.bobber.setScale(this._bobberDepthScale(y));
     this.reelEnd = { startX: x, startY: y };
 
     // A long cast takes more cranking than a short one.
@@ -1694,12 +1679,34 @@ export class FishingScene extends Phaser.Scene {
     const dist = Phaser.Math.Distance.Between(x, y, home.x, home.y);
     const turns = Phaser.Math.Clamp(dist / LURE_PX_PER_TURN, LURE_TURNS_MIN, LURE_TURNS_MAX);
 
-    // Decide now whether, and how far along, a fish will go for it.
-    this.lure = {
-      biteAt: Math.random() < LURE_BITE_CHANCE
-        ? Phaser.Math.FloatBetween(LURE_BITE_FROM, LURE_BITE_TO)
-        : null,
-    };
+    // Decide now whether, and how far along, a fish will go for it -- and
+    // which one: it shows itself before it bites, following the lure.
+    const biteAt = Math.random() < LURE_BITE_CHANCE
+      ? Phaser.Math.FloatBetween(LURE_BITE_FROM, LURE_BITE_TO)
+      : null;
+    this.lure = { biteAt, pick: biteAt != null ? this._pickFish() : null };
+
+    // The lure under water: how it sinks, swims and stirs the water.
+    if (this.lureSprite) {
+      this.swim = new LureSwim(this, {
+        container: this.bobber,
+        sprite: this.lureSprite,
+        start: { x, y },
+        home,
+        swim: BAITS_BY_ID[this._currentBaitId()]?.swim,
+        depthScale: (yy) => this._bobberDepthScale(yy),
+        waterTint: this.map.waterTint,
+        isWater: (xx, yy) => this.map.isWater(xx, yy),
+      });
+      if (this.lure.pick) {
+        this.swim.follow(this.lure.pick, Math.max(0.02, biteAt - LURE_FOLLOW_SPAN), biteAt);
+      } else if (Math.random() < LURE_REFUSE_CHANCE) {
+        // Just a look: this fish follows, and turns away.
+        const at = Phaser.Math.FloatBetween(LURE_REFUSE_FROM, LURE_REFUSE_TO);
+        const looker = this._pickFish();
+        if (looker) this.swim.follow(looker, at - LURE_FOLLOW_SPAN, at, true);
+      }
+    }
 
     const reelPos = this._reelPosition();
     this.reelOverlay = new ReelOverlay(this, {
@@ -1709,8 +1716,9 @@ export class FishingScene extends Phaser.Scene {
       decay: false,           // nothing pulls back on an empty lure
       onComplete: () => {
         this.reelOverlay = null;
-        // Home without a fish: straight back to "ready", no sad sound --
-        // just cast again.
+        // Home without a fish: out of the water, and straight back to
+        // "ready", no sad sound -- just cast again.
+        if (this.swim) this.swim.leaveWater();
         this._enterReady();
       },
     });
@@ -1722,8 +1730,12 @@ export class FishingScene extends Phaser.Scene {
    */
   _hookOnLure() {
     if (this.state !== STATE.RETRIEVE) return;
-    // Same cues as the float going under -- thump, "fish on!" sign and
-    // ping -- but only as news: there is nothing to tap.
+    const pick = (this.lure && this.lure.pick) || this._pickFish();
+    // The fish that was following lunges: the water boils where the lure
+    // was. Then the same cues as the float going under -- thump, "fish on!"
+    // sign and ping -- but only as news: there is nothing to tap.
+    if (this.swim) this.swim.strike();
+    this.audio.playSfx(SFX.SPLASH, { volume: 0.45 });
     this.audio.playSfx(SFX.DIVE);
     this.audio.playSfx(SFX.FISHON);
     this._showFishOn();
@@ -1731,10 +1743,14 @@ export class FishingScene extends Phaser.Scene {
       // (Unless a float has gone under meanwhile: then the sign is its.)
       if (this.state !== STATE.DIVE) this._hideFishOn();
     });
-    this._enterReeling(this._pickFish());
+    this._enterReeling(pick);
   }
 
-  /** Turn the lure so its nose (the line eye, on the sprite's left) faces the rod. */
+  /**
+   * In the air (hanging from the rod, flying out, lifted out with a fish)
+   * the lure turns its nose -- the line eye, on the sprite's left -- to the
+   * rod. In the water LureSwim steers it.
+   */
   _pointLureAtRod() {
     if (!this.lureSprite || !this.bobber) return;
     const toRod = Math.atan2(this.rodTip.y - this.bobber.y, this.rodTip.x - this.bobber.x);
@@ -1745,7 +1761,10 @@ export class FishingScene extends Phaser.Scene {
   }
 
   _resetLureSprite() {
-    if (this.lureWake) this.lureWake.setVisible(false);
+    if (this.swim) {
+      this.swim.destroy();
+      this.swim = null;
+    }
     if (!this.lureSprite) return;
     this.tweens.killTweensOf(this.lureSprite);
     this.lureSprite.setPosition(0, 0);

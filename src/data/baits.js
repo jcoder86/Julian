@@ -14,6 +14,16 @@
 //             A lure is too big a mouthful for a small fish (see
 //             smallestCatchOn below).
 //
+// A lure's `swim` says how it moves when reeled in (systems/LureSwim.js):
+//   depth   how deep it runs while cranked (m)
+//   sink    how fast it sinks when the cranking stops (m/s)
+//   sway    how far it wags from side to side (design px at full size)
+//   roll    how far it rolls over as it does (degrees)
+//   beat    how many wags a second at a normal crank
+//   jig     a pilker is jerked up and down: by this much (m)
+//   flash   metal: it flashes in the light as it rolls
+//   floats  a dry fly: it stays on the surface
+//
 // Texture keys: clean/bait_<id>_full.png (selection menu) and
 // clean/bait_<id>_simple.png (HUD icon; for a lure also the sprite on the
 // end of the line).
@@ -32,16 +42,27 @@ export const BAITS = [
   // anything that chases; the rubber shad is hopped along the bottom of the
   // moat for zander, pike and catfish; the fly is for the trout family (and
   // the chub) of the French lake.
-  { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner" },
-  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad" },
-  { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg" },
+  // A spinner runs fairly high, its blade whirring and flashing; a shad
+  // wags its rubber tail down deep and drops to the bottom when left; a dry
+  // fly floats and is skittered over the surface.
+  { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner",
+    swim: { depth: 0.7, sink: 0.25, sway: 2, roll: 9, beat: 8, flash: true } },
+  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad",
+    swim: { depth: 1.3, sink: 0.7, sway: 6, roll: 14, beat: 3 } },
+  { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg",
+    swim: { depth: 0, sink: 0, sway: 3, roll: 6, beat: 2, floats: true } },
 
   // Sea
   { id: "zeepier",  maps: SEA,   kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },
   { id: "aasvisje", maps: SEA,   kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
-  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes" },
-  { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker" },
-  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker" },
+  // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
+  // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
+  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes",
+    swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
+  { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker",
+    swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
+  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker",
+    swim: { depth: 1.6, sink: 0.9, sway: 2, roll: 10, beat: 1.4, jig: 0.6, flash: true } },
 ];
 
 export const BAITS_BY_ID = Object.fromEntries(BAITS.map(b => [b.id, b]));

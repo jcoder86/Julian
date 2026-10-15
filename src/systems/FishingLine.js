@@ -20,6 +20,17 @@
  *                                            and lies on it up to the float.
  *                                            slack 0: pulled tight, straight
  *                                            from the tip into the water.
+ *     { kind: 'lure', slack, foot, entry }   a lure under water: the line
+ *                                            comes down to the water (slack:
+ *                                            drooping, the last bit lying on
+ *                                            it), goes in at `entry`, and
+ *                                            runs on UNDER the surface to
+ *                                            the lure's nose -- drawn fainter
+ *                                            and the colour of the water.
+ *                                            (Seen from above, line under
+ *                                            water looks bent toward the
+ *                                            surface: it lies along the way
+ *                                            the lure swims.)
  *
  * Between any two shapes the line does not jump: every point of it trails
  * a little behind where it should be, the middle more than the ends. That
@@ -53,6 +64,10 @@ const WIDTH_FAR = 0.9;
 const ALPHA_NEAR = 0.92;
 const ALPHA_FAR = 0.6;
 const ALPHA_ON_WATER = 0.72;
+// Under water: thinner, fainter, tinged with the water.
+const COLOR_UNDER = 0xdff2f5;
+const ALPHA_UNDER = 0.6;
+const WIDTH_UNDER = 1.25;
 
 // Of a slack line, this share (from the rod) hangs in the air; it lands on
 // the water this far along the way from the rod's foot to the float, and
@@ -60,6 +75,11 @@ const ALPHA_ON_WATER = 0.72;
 // away and the rod tip not high: most of the line is in the air.)
 const AIR_SHARE = 0.8;
 const LANDING_SHARE = 0.8;
+// A lure's line: this share of its points (from the rod) is above water,
+// the rest is under it; of the part above water, a slack line lies on the
+// surface from this share on.
+const ABOVE_SHARE = 0.74;
+const LURE_AIR_SHARE = 0.62;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -71,6 +91,7 @@ export class FishingLine {
     this._pts = null;                                   // where the line is drawn
     this._target = Array.from({ length: SEGMENTS + 1 }, () => ({ x: 0, y: 0 }));
     this._wet = new Float32Array(SEGMENTS + 1);         // 1 = this point lies on the water
+    this._under = new Float32Array(SEGMENTS + 1);       // 1 = this point is under water
     this._bow = null;                                   // bow left over from the flight...
     this._bowLeft = 0;                                  // ...and how much of it (1..0)
     this._hang = { x: 0, y: 0, px: 0, py: 0, length: HANG_LENGTH, ready: false, time: 0 };
@@ -145,6 +166,7 @@ export class FishingLine {
     const target = this._target;
     const wet = this._wet;
     wet.fill(0);
+    this._under.fill(0);
 
     for (let i = 0; i <= SEGMENTS; i++) {
       const s = i / SEGMENTS;
@@ -156,6 +178,8 @@ export class FishingLine {
       this._flightShape(tip, end, shape.t ?? 1);
     } else if (shape.kind === 'water') {
       this._waterShape(tip, end, shape);
+    } else if (shape.kind === 'lure') {
+      this._lureShape(tip, end, shape);
     }
 
     // What is left of the bow from the cast, falling.
@@ -243,6 +267,58 @@ export class FishingLine {
     }
   }
 
+  /**
+   * A lure under water: from the tip to `entry` above water (pulled
+   * straight, or drooping and lying on the surface for its last stretch),
+   * then under the surface to the lure. See the top of this file.
+   */
+  _lureShape(tip, end, shape) {
+    const slack = Math.max(0, Math.min(1, shape.slack ?? 0));
+    const entry = shape.entry || end;
+    const foot = shape.foot || { x: tip.x, y: entry.y };
+    // Where a drooping line meets the water: on the way from the jetty to
+    // where it goes under.
+    const landX = lerp(foot.x, entry.x, LANDING_SHARE);
+    const landY = lerp(foot.y, entry.y, LANDING_SHARE);
+    const cx = lerp(tip.x, landX, 0.5);
+    const cy = lerp(tip.y, landY, 0.82);
+    for (let i = 0; i <= SEGMENTS; i++) {
+      const s = i / SEGMENTS;
+      let x;
+      let y;
+      if (s <= ABOVE_SHARE) {
+        const a = s / ABOVE_SHARE;
+        // Pulled straight: tip to entry.
+        const tx = lerp(tip.x, entry.x, a);
+        const ty = lerp(tip.y, entry.y, a);
+        // Drooping: down through the air, then lying on the water.
+        let sx;
+        let sy;
+        if (a <= LURE_AIR_SHARE) {
+          const t = a / LURE_AIR_SHARE;
+          const inv = 1 - t;
+          sx = inv * inv * tip.x + 2 * inv * t * cx + t * t * landX;
+          sy = inv * inv * tip.y + 2 * inv * t * cy + t * t * landY;
+          sx += Math.sin(this._time * 2.1 + t * 2.4) * 2.4 * Math.sin(Math.PI * t);
+        } else {
+          const t = (a - LURE_AIR_SHARE) / (1 - LURE_AIR_SHARE);
+          sx = lerp(landX, entry.x, t);
+          sy = lerp(landY, entry.y, t) + Math.sin(this._time * 2.6 + t * 9) * 0.9 * Math.sin(Math.PI * t);
+          this._wet[i] = slack;
+        }
+        x = lerp(tx, sx, slack);
+        y = lerp(ty, sy, slack);
+      } else {
+        const t = (s - ABOVE_SHARE) / (1 - ABOVE_SHARE);
+        x = lerp(entry.x, end.x, t);
+        y = lerp(entry.y, end.y, t);
+        this._under[i] = 1;
+      }
+      this._target[i].x = x;
+      this._target[i].y = y;
+    }
+  }
+
   _draw(tremble) {
     const g = this.gfx;
     const pts = this._pts;
@@ -268,7 +344,11 @@ export class FishingLine {
       const s = (i - 0.5) / SEGMENTS;
       const b = at(i);
       const wet = Math.max(this._wet[i - 1], this._wet[i]);
-      g.lineStyle(lerp(WIDTH_NEAR, WIDTH_FAR, s), COLOR, lerp(ALPHA_NEAR, ALPHA_FAR, s) * lerp(1, ALPHA_ON_WATER, wet));
+      if (this._under[i - 1] && this._under[i]) {
+        g.lineStyle(WIDTH_UNDER, COLOR_UNDER, ALPHA_UNDER);
+      } else {
+        g.lineStyle(lerp(WIDTH_NEAR, WIDTH_FAR, s), COLOR, lerp(ALPHA_NEAR, ALPHA_FAR, s) * lerp(1, ALPHA_ON_WATER, wet));
+      }
       g.beginPath();
       g.moveTo(a.x, a.y);
       g.lineTo(b.x, b.y);

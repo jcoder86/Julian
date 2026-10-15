@@ -90,6 +90,9 @@ ATLASES = {
     # the longest its kind can be (isGiant in src/data/fish.js). One phrase
     # per species, see GIANTS below.
     "vissen-gigant": {},
+    # October 2026: the first recording calls the roach "voorn"; its card
+    # says Blankvoorn.
+    "vissen-4": {"roach": "blankvoorn"},
 }
 # Every species by the name on its card, for "Wow! Een gigantische ...!"
 # (key `giant_<species>`).

@@ -108,6 +108,8 @@ function makeWaterTopAt(samples) {
 //   nlName          what the place is called: spoken when it is chosen
 //                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
+//   waterTint       the colour something takes on deep in this water (a
+//                   lure being reeled in: systems/LureSwim.js)
 //   voiceVolume     how loud the voice speaks here, as a share of its usual
 //                   volume (1 if left out): on the pier it has the waves,
 //                   the gulls and louder music to speak over
@@ -150,6 +152,7 @@ const MAP_DEFS = [
     ],
     waterline: NAARDEN_WATERLINE,
     depthFarY: 252,
+    waterTint: 0x3f7a72,          // the moat: green
     defaultBait: 'wormen',
     music: 'ambient',
     ambience: {
@@ -188,6 +191,7 @@ const MAP_DEFS = [
     ],
     waterline: FRANCE_WATERLINE,
     depthFarY: 266,
+    waterTint: 0x4f97a6,          // clear mountain water: turquoise
     defaultBait: 'wormen',
     music: 'ambient',
     ambience: {
@@ -222,6 +226,7 @@ const MAP_DEFS = [
     ],
     waterline: flatHorizon(SEA_HORIZON),
     depthFarY: WORLD_TOP + SEA_HORIZON * WORLD_HEIGHT,
+    waterTint: 0x2c5a86,          // the North Sea: deep blue
     defaultBait: 'zeepier',
     music: 'relaxing',
     voiceVolume: 1.15,
