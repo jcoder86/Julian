@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   WORLD_WIDTH, WORLD_HEIGHT, WORLD_LEFT, WORLD_TOP, WORLD_RIGHT, WORLD_BOTTOM,
+  PX_PER_CM,
 } from '../constants.js';
 import { bindLayout } from '../systems/Layout.js';
 import { AudioManager, SFX, MUSIC, reloadMissingVoice } from '../systems/AudioManager.js';
@@ -252,13 +253,13 @@ const VOICE_ESCAPED = 'escaped';
 // The fish is seen for the first and last time as it goes: its dark shape,
 // this long (design px at full scale; a big fish shows bigger, up to that),
 // darting off this far in this many ms.
-const ESCAPE_SHAPE_MIN = 70;
-const ESCAPE_SHAPE_MAX = 260;
-const ESCAPE_SHAPE_PX_PER_CM = 1.6;
+const ESCAPE_SHAPE_MIN = 60;
+const ESCAPE_SHAPE_MAX = 440;
 const ESCAPE_DART_PX = 240;
 const ESCAPE_DART_MS = 1100;
-// Lure sprite on the line: display length (design px at full scale).
-const LURE_DISPLAY_LENGTH = 82;
+// A lure is drawn as long as it really is (its `lengthCm`, at PX_PER_CM);
+// one without a length in the data, this long.
+const LURE_LENGTH_CM = 8;
 // A lure far out is as small as a float out there (see BOBBER_SCALE_FAR).
 // (It used to keep almost half its size all the way out, so that it could
 // be followed home -- but then a cast to the horizon of the sea looked no
@@ -414,6 +415,51 @@ export class FishingScene extends Phaser.Scene {
   _currentBaitId() {
     const saved = SaveSystem.getSelectedBait(this.map.id);
     return baitOnMap(saved, this.map.id) ? saved : this.map.defaultBait;
+  }
+
+  /**
+   * A copy of a picture made small, for something that is only ever drawn a
+   * few dozen px wide: shrinking the full picture on the fly makes small
+   * things glitter and crawl. Made once, at twice the size it is drawn at
+   * its biggest, smoothed. Returns the key to use.
+   */
+  _smallTexture(key, displayWidth) {
+    const small = `${key}-small`;
+    if (this.textures.exists(small)) return small;
+    const source = this.textures.get(key).getSourceImage();
+    if (!source || !source.width) return key;
+    const width = Math.max(8, Math.min(source.width, Math.round(displayWidth * 2)));
+    const height = Math.max(4, Math.round(source.height * width / source.width));
+    if (width >= source.width) return key;
+    const texture = this.textures.createCanvas(small, width, height);
+    const ctx = texture.getContext();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    // In halves: one big step down loses the fine parts (the line eye, the
+    // hooks) altogether.
+    let from = source;
+    let w = source.width;
+    let h = source.height;
+    while (w / 2 > width) {
+      const half = document.createElement('canvas');
+      half.width = Math.round(w / 2);
+      half.height = Math.round(h / 2);
+      const hc = half.getContext('2d');
+      hc.imageSmoothingEnabled = true;
+      hc.imageSmoothingQuality = 'high';
+      hc.drawImage(from, 0, 0, half.width, half.height);
+      from = half;
+      w = half.width;
+      h = half.height;
+    }
+    ctx.drawImage(from, 0, 0, width, height);
+    texture.refresh();
+    return small;
+  }
+
+  /** How long the lure on the line is drawn at full scale (design px). */
+  _lureLengthPx() {
+    return (BAITS_BY_ID[this._currentBaitId()]?.lengthCm ?? LURE_LENGTH_CM) * PX_PER_CM;
   }
 
   /** True when the player is fishing with a lure (no float). */
@@ -944,8 +990,8 @@ export class FishingScene extends Phaser.Scene {
       // Origin sits on that eye, so the line ends exactly where it is tied
       // and the lure trails behind it; _pointLureAtRod() turns it.
       const c = this.add.container(x, y);
-      const lure = this.add.image(0, 0, lureKey);
-      lure.setScale(LURE_DISPLAY_LENGTH / lure.width);
+      const lure = this.add.image(0, 0, this._smallTexture(lureKey, this._lureLengthPx()));
+      lure.setScale(this._lureLengthPx() / lure.width);
       lure.setOrigin(0.04, 0.5);
       c.add(lure);
       c.setDepth(20);
@@ -1697,6 +1743,8 @@ export class FishingScene extends Phaser.Scene {
         depthScale: (yy) => this._bobberDepthScale(yy),
         waterTint: this.map.waterTint,
         isWater: (xx, yy) => this.map.isWater(xx, yy),
+        lengthPx: this._lureLengthPx(),
+        pxPerCm: PX_PER_CM,
       });
       if (this.lure.pick) {
         this.swim.follow(this.lure.pick, Math.max(0.02, biteAt - LURE_FOLLOW_SPAN), biteAt);
@@ -1933,7 +1981,7 @@ export class FishingScene extends Phaser.Scene {
       away.normalize();
       const shape = this.add.image(at.x, at.y, key).setDepth(5);
       const length = Phaser.Math.Clamp(
-        (pick.lengthCm || 30) * ESCAPE_SHAPE_PX_PER_CM, ESCAPE_SHAPE_MIN, ESCAPE_SHAPE_MAX);
+        (pick.lengthCm || 30) * PX_PER_CM, ESCAPE_SHAPE_MIN, ESCAPE_SHAPE_MAX);
       shape.setScale(length * depthScale / shape.width);
       shape.setTintFill(0x06202e);
       shape.setAlpha(0.5);

@@ -7,6 +7,7 @@ import { getTeam } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { bindLayout } from '../systems/Layout.js';
 import { TEX } from './BootScene.js';
+import { AudioManager } from '../systems/AudioManager.js';
 import { UI, COLOR, lettering, written, addGlow, addRays, addGlints, pressable } from '../systems/Ui.js';
 
 /**
@@ -15,6 +16,9 @@ import { UI, COLOR, lettering, written, addGlow, addRays, addGlints, pressable }
  * fish's faint shape if never caught), the species' Dutch name and how many
  * were caught. The species of the most recent catch glows, so the player
  * can see "what I just caught" at a glance.
+ *
+ * Tap a card and the voice says what fish it is: "een snoek!" -- the
+ * phrase without a size, also for one that has not been caught yet.
  *
  * A species of which a GIANT was caught (the best catch is within 5 % of
  * the longest its kind can be: isGiant in data/fish.js) shows it for good:
@@ -69,6 +73,10 @@ const BACK_MARGIN  = 18;
 const SWITCH_W = 112;
 const SWITCH_H = 84;
 
+// A tap on a card says its name; a finger that moved further than this
+// (design px) was scrolling, not tapping.
+const TAP_SLOP = 14;
+
 // The whole book starts a little lower than a single page, clear of the
 // back button: the cards slide away under one straight edge. A page is its
 // name plate plus its grid, with some wall between pages -- on a 4:3 screen
@@ -121,6 +129,7 @@ export class FishingCollectionScene extends Phaser.Scene {
   }
 
   create() {
+    this.audio = new AudioManager(this);
     // This scene's background covers the whole screen, so the
     // FishingScene's DOM video behind the canvas is invisible -- hide it
     // rather than let the browser keep compositing it. Same as
@@ -383,6 +392,7 @@ export class FishingCollectionScene extends Phaser.Scene {
   }
 
   _buildCard(cx, cy, species, info) {
+    this._makeSayable(cx, cy, species);
     // A glow behind the card of the species caught last, so the eye goes
     // to "what I just caught".
     if (info.isLast) {
@@ -422,6 +432,24 @@ export class FishingCollectionScene extends Phaser.Scene {
     this._renderSizeStrip(cx, cy + CARD_H / 2 - 32, species, info);
 
     if (info.giant) this._renderGiantMarks(cx, cy);
+  }
+
+  /**
+   * The card says its fish's name when tapped -- and lights up, so that it
+   * is clear which one spoke. Not when the finger was scrolling, and not
+   * where the card has scrolled away under the title.
+   */
+  _makeSayable(cx, cy, species) {
+    const zone = this._put(this.add.zone(cx, cy, CARD_W, CARD_H));
+    zone.setInteractive({ useHandCursor: true });
+    zone.on('pointerup', (pointer) => {
+      if (pointer.getDistance() > TAP_SLOP) return;
+      if (this.showAll && pointer.worldY < BOOK_TOP) return;
+      this.audio.playPhrase(`medium_${species.id}`);
+      const flash = this._put(this.add.rectangle(cx, cy, CARD_W - 10, CARD_H - 10, 0xfff3c4, 0.5));
+      flash.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: flash, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => flash.destroy() });
+    });
   }
 
   /** What makes a giant's card glitter: glints, and a gold star. */

@@ -23,6 +23,8 @@
 //   jig     a pilker is jerked up and down: by this much (m)
 //   flash   metal: it flashes in the light as it rolls
 //   floats  a dry fly: it stays on the surface
+// and `lengthCm` how long it really is, hooks and all: it is drawn to the
+// same scale as everything on the water (PX_PER_CM in constants.js).
 //
 // Texture keys: clean/bait_<id>_full.png (selection menu) and
 // clean/bait_<id>_simple.png (HUD icon; for a lure also the sprite on the
@@ -45,11 +47,11 @@ export const BAITS = [
   // A spinner runs fairly high, its blade whirring and flashing; a shad
   // wags its rubber tail down deep and drops to the bottom when left; a dry
   // fly floats and is skittered over the surface.
-  { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner",
+  { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner", lengthCm: 8,
     swim: { depth: 0.7, sink: 0.25, sway: 2, roll: 9, beat: 8, flash: true } },
-  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad",
+  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad", lengthCm: 10,
     swim: { depth: 1.3, sink: 0.7, sway: 6, roll: 14, beat: 3 } },
-  { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg",
+  { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg", lengthCm: 3,
     swim: { depth: 0, sink: 0, sway: 3, roll: 6, beat: 2, floats: true } },
 
   // Sea
@@ -57,11 +59,11 @@ export const BAITS = [
   { id: "aasvisje", maps: SEA,   kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
   // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
   // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
-  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes",
+  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
     swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
-  { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker",
+  { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker", lengthCm: 7,
     swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
-  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker",
+  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker", lengthCm: 12,
     swim: { depth: 1.6, sink: 0.9, sway: 2, roll: 10, beat: 1.4, jig: 0.6, flash: true } },
 ];
 

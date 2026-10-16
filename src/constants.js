@@ -22,3 +22,11 @@ export const WORLD_LEFT = 0;
 export const WORLD_TOP = -(WORLD_HEIGHT - GAME_HEIGHT) / 2;   // -120
 export const WORLD_RIGHT = WORLD_LEFT + WORLD_WIDTH;           // 1280
 export const WORLD_BOTTOM = WORLD_TOP + WORLD_HEIGHT;          // 840
+
+// How big a thing of one centimetre is drawn on the water at full scale --
+// at the front edge of the picture (further away it shrinks with the depth
+// scale of the fishing scene). Julian sits on the jetty 232 px tall, about
+// 85 cm, where things are drawn at 0.83 of full scale: 3.3 px a centimetre.
+// A lure, a fish under the water, a fish getting away: all of them are
+// drawn to this scale, so that they keep their proportions.
+export const PX_PER_CM = 3.2;

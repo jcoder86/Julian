@@ -64,7 +64,6 @@ const TINT_DEEP = 0.6;         // how far toward the water's colour, at its fain
 // A lure heading straight toward the jetty (or away) is seen nearly end-on
 // from up there: it looks this much shorter. (And so does a fish.)
 const FORESHORTEN = 0.45;
-const LURE_LENGTH = 82;        // design px at full scale (= LURE_DISPLAY_LENGTH)
 
 // Ripples (design px at full scale; they shrink less with distance than the
 // lure does, so that a lure far out can still be found).
@@ -84,12 +83,11 @@ const FLOAT_RING_MS = 1500;    // a fly lying still on the surface
 const FLASH_MS = 220;
 const FLASH_SIZE = 15;
 
-// The fish that follows: how long it is drawn (px per cm, at full scale,
-// within bounds), how far behind the lure it starts and ends (in its own
-// lengths), how dark and how see-through.
-const FOLLOWER_PX_PER_CM = 1.5;
-const FOLLOWER_MIN = 60;
-const FOLLOWER_MAX = 260;
+// The fish that follows: drawn to scale (opts.pxPerCm), within bounds
+// (design px at full scale); how far behind the lure it starts and ends (in
+// its own lengths), how dark and how see-through.
+const FOLLOWER_MIN = 40;
+const FOLLOWER_MAX = 440;
 const FOLLOW_BACK_FROM = 2.2;
 const FOLLOW_BACK_TO = 0.12;
 const FOLLOWER_COLOR = 0x0a2630;
@@ -111,8 +109,11 @@ export class LureSwim {
    * @param opts.waterTint   the colour a thing deep in this water takes on
    * @param opts.isWater     (x, y) => is there water there? (a following fish
    *                         keeps out of sight where there is none)
+   * @param opts.lengthPx    how long the lure is drawn at full scale
+   * @param opts.pxPerCm     the scale of the water at full scale: px per cm
    */
-  constructor(scene, { container, sprite, start, home, swim, depthScale, waterTint, isWater }) {
+  constructor(scene, { container, sprite, start, home, swim, depthScale, waterTint, isWater,
+                       lengthPx = 26, pxPerCm = 3.2 }) {
     this.scene = scene;
     this.container = container;
     this.sprite = sprite;
@@ -121,6 +122,8 @@ export class LureSwim {
     this.swim = { depth: 0.8, sink: 0.4, sway: 3, roll: 10, beat: 4, ...swim };
     this.depthScale = depthScale;
     this.isWater = isWater || (() => true);
+    this.lengthPx = lengthPx;
+    this.pxPerCm = pxPerCm;
     this.waterTint = Phaser.Display.Color.ValueToColor(waterTint ?? 0x4a7f99);
 
     const dx = this.home.x - this.start.x;
@@ -297,7 +300,7 @@ export class LureSwim {
     shape.setTintFill(FOLLOWER_COLOR);
     shape.setAlpha(0);
     shape.setVisible(false);
-    const length = Phaser.Math.Clamp((pick.lengthCm || 30) * FOLLOWER_PX_PER_CM, FOLLOWER_MIN, FOLLOWER_MAX);
+    const length = Phaser.Math.Clamp((pick.lengthCm || 30) * this.pxPerCm, FOLLOWER_MIN, FOLLOWER_MAX);
     this.follower = { shape, from, to, refuses, length, gone: false };
   }
 
@@ -316,7 +319,7 @@ export class LureSwim {
     // Behind the lure on its way, closing in; swimming, so not quite in
     // line. (From the lure's eye: past the lure, the gap, half the fish.)
     const gap = lerp(FOLLOW_BACK_FROM, FOLLOW_BACK_TO, k ** 1.3) * length;
-    const back = (LURE_LENGTH * scale + gap + length / 2) * along;
+    const back = (this.lengthPx * scale + gap + length / 2) * along;
     const weave = Math.sin(this._time * 2.6) * 7 * scale;
     const x = lx - this.dir.x * back - this.dir.y * weave;
     const y = ly - this.dir.y * back + this.dir.x * weave + FOLLOWER_DEEPER * DROP_PX * scale;
@@ -459,7 +462,7 @@ export class LureSwim {
 
   /** A flash of light on metal, at the middle of the lure. */
   _flash(x, y, scale, strength) {
-    const along = LURE_LENGTH * 0.45 * scale * lerp(1, FORESHORTEN, Math.abs(this.dir.y));
+    const along = this.lengthPx * 0.45 * scale * lerp(1, FORESHORTEN, Math.abs(this.dir.y));
     const size = FLASH_SIZE * scale ** 0.7 * strength;
     const star = this.scene.add.star(x - this.dir.x * along, y - this.dir.y * along, 4, size * 0.18, size, 0xffffff, 1)
       .setDepth(22).setBlendMode(Phaser.BlendModes.ADD).setAngle(Math.random() * 90);

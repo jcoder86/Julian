@@ -147,6 +147,13 @@ always was; `fish-odds.js` prints the result.
 Far out the lure is drawn as small as a float there (`LURE_SCALE_FAR`) --
 on the sea it can be cast to the horizon, and should look it.
 
+**To scale.** Everything on the water is drawn to one scale, `PX_PER_CM`
+in `constants.js` (Julian on the jetty, about 85 cm, is 232 px): a lure as
+long as it really is (`lengthCm` in `baits.js` -- a spinner 8 cm, a dry
+fly 3, a pilker 12), and the fish that follows it, or gets away, as long
+as that fish. A lure is drawn from a smoothed small copy of its picture
+(`_smallTexture`), so that it does not glitter when it is that small.
+
 **Under water** (`src/systems/LureSwim.js`). The lure lands with a splash
 and sinks to the depth it runs at; it swims nose first along the way to
 the jetty, and its depth shows -- the deeper, the fainter and the more the
@@ -208,17 +215,23 @@ after a moment the angler can cast again.
 While a fish is being reeled in (`src/systems/FishFight.js`) it has a
 will of its own, and more of it the bigger it is:
 
-* it **swims from side to side** -- a small fish hardly, a big one in wide
-  sweeps (5 px at 25 cm up to 115 px from 180 cm, less in the distance);
+* it **swims** -- a small fish hardly, a big one all over the place: it
+  picks a spot in the water around the way in, to one side or the other
+  or back out, and swims there in a curve; it has weight, so it overshoots
+  and swings round before it picks the next (up to 330 px to the side and
+  170 px back out from 180 cm, less in the distance and the closer it
+  comes);
 * a fish of 45 cm or more now and then makes a **run**: for about a second
-  it tears off and takes back some of the line. One run per 45 cm of
-  fish, four at most; each takes back 5-9 % of the fight, all together
-  never more than 30 %. Cranking through a run is worth a quarter.
+  it tears off, sideways and away, and takes back some of the line. One run
+  per 45 cm of fish, four at most; each takes back 5-9 % of the fight, all
+  together never more than 30 %. Cranking through a run is worth a quarter.
 
 During a run the angler holds on with the rod bent double, the reel's
-progress ring turns from green to orange, the line shivers and rings
-spread faster from where it cuts the water. The fish itself stays out of
-sight: what was caught is a surprise until the catch screen.
+progress ring turns from green to orange, the line shivers, the water
+boils where the run starts and rings spread faster from where the line
+cuts the water; where it cuts through fast it leaves a wake. The fish
+itself stays out of sight: what was caught is a surprise until the catch
+screen.
 
 Runs are planned at the start of the fight, at set points along the way,
 so a big fish makes the fight longer (about one and a half times for the
@@ -461,7 +474,8 @@ of a tuna or shark of over two metres. Run it after changing a weight.
 
 The collection screen is a 4 x 3 grid per map and each map currently has
 exactly 12 species; a 13th on one map needs a layout change in
-`FishingCollectionScene.js`. From the fishing screen it opens on that map's
+`FishingCollectionScene.js`. A tap on a card says the fish's name ("een
+snoek!", the phrase without a size). From the fishing screen it opens on that map's
 page; the card "Alle vissen" on the map screen opens the whole book, every
 map's page under the other, to scroll through (drag, flick or mouse wheel).
 
