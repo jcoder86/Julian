@@ -39,6 +39,20 @@ The descriptions the sounds were generated from:
     sea-horn    "Distant ship foghorn: a large cargo ship far away at sea
                 sounds one long, deep, mellow horn blast with a natural echo
                 over the water, then silence."  (6 s)
+    greece-waves  "Gentle sea water at the edge of a rocky shore in summer:
+                small waves washing irregularly over and around rocks, uneven
+                soft splashes at random moments, water sloshing, gurgling and
+                draining between the stones, the faint hiss of a little foam,
+                a calm open-air sound with no regular rhythm, natural field
+                recording. ..."  (20 s, not looping: the first try, looping,
+                had a beat every two seconds -- heard as someone rowing)
+    greece-cicadas  "Cicadas singing in the pine trees on a hot summer
+                afternoon on a Greek coast: a chorus of cicadas that swells
+                up, buzzes and shimmers for a few seconds, and fades away
+                again, heard from a little distance, ..."  (8 s)
+                (A chapel bell for the Greek coast came out as tinkling
+                little bells, jingles and a desk bell; the chapel there rings
+                lake-bells.)
 """
 
 import subprocess
@@ -68,6 +82,11 @@ SOUNDS = {
     # The horn: a blast of about two seconds at 108 Hz. Dry and close it
     # is a buzzer; soft-edged, dull and echoing it is a ship far out.
     "sea-horn":    dict(src="sea-foghorn-2", far=1300, head=0.45, tail=1.6, echo=1.8),
+    # The Greek coast. (Of the cicadas only variant 1 is plainly cicadas;
+    # the others hiss like a spray can. They come and go slowly.)
+    "greece-waves":   dict(src="greece-waves-5", bed=True, far=None, stereo=True),
+    # (Low-passed they turn into rain: their song is all around 6 kHz.)
+    "greece-cicadas": dict(src="greece-cicadas-1", far=None, head=1.6, tail=2.2),
 }
 ECHO = "aecho=0.8:0.65:330|700|1250:0.38|0.24|0.13"
 

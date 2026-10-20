@@ -16,6 +16,7 @@ Atlases handled:
     baits.png      -- 5 baits x 2 styles  (full/simple)         = 10 cells
     baits-sea.png  -- 2 sea baits + 3 lures, same layout        = 10 cells
     lures-fresh.png -- 3 fresh-water lures, same two rows       =  6 cells
+    baits-greece.png -- 2 Greek baits + 2 lures, same two rows  =  8 cells
     floats.png     -- 5 floats x 2 parts  (full/tip)            = 10 cells
     rod.png, icon-*.png, play.png
 
@@ -335,6 +336,17 @@ FISH_STRIPS = [
     ("fish-char", "char"),           # beekridder
     ("fish-salmon", "salmon"),       # zalm
     ("fish-sturgeon", "sturgeon"),   # steur
+    # The rocky coast in Greece (sea bass and garfish: the sea's strips).
+    ("fish-gilthead", "gilthead"),   # goudbrasem
+    ("fish-whitebream", "whitebream"),   # witte zeebrasem
+    ("fish-mullet", "mullet"),       # harder
+    ("fish-redmullet", "redmullet"),     # gestreepte zeebarbeel
+    ("fish-horsemackerel", "horsemackerel"),   # mediterrane horsmakreel
+    ("fish-barracuda", "barracuda"),     # geelstaartbarracuda
+    ("fish-bonito", "bonito"),       # bonito
+    ("fish-dentex", "dentex"),       # tandbrasem
+    ("fish-amberjack", "amberjack"),     # amberjack
+    ("fish-moray", "moray"),         # murene
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 
@@ -496,6 +508,25 @@ def process_lures_fresh(atlas_path: Path) -> int:
         out_pattern=lambda r, c: CLEAN_DIR / f"bait_{FRESH_LURE_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
         atlas_name="lures-fresh.png",
         # A spinner is a string of small parts on a wire: keep them together.
+        morph=SEA_BAIT_MERGE_PX,
+    )
+
+
+# The Greek coast (raw/baits-greece.png): a shrimp and a strip of squid for
+# under the float, a minnow plug and a casting jig. 4 columns, the same rows.
+GREECE_BAIT_NAMES = ["garnaal", "inktvis", "plug", "werpjig"]
+
+
+def process_baits_greece(atlas_path: Path) -> int:
+    img = Image.open(atlas_path)
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    return _process_grid_via_blobs(
+        cleaned,
+        rows=len(BAIT_ROW_LABELS),
+        cols=len(GREECE_BAIT_NAMES),
+        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{GREECE_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
+        atlas_name="baits-greece.png",
+        # Feelers, trebles and an assist hook on its cord: keep them together.
         morph=SEA_BAIT_MERGE_PX,
     )
 
@@ -690,6 +721,7 @@ def main():
         ("baits.png",  process_baits),
         ("baits-sea.png", process_baits_sea),   # sea baits + lures
         ("lures-fresh.png", process_lures_fresh),   # spinner, shad, fly
+        ("baits-greece.png", process_baits_greece),   # shrimp, squid, plug, jig
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]

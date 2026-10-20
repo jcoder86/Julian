@@ -1,6 +1,7 @@
 // Fishing spots. Each map is a 4:3 painting with something to fish from in
 // its lower-left corner -- a jetty (the moat), a floating pontoon (the
-// French lake) or a stone pier (the sea); everything a scene needs
+// French lake), a stone pier (the sea) or a flat rock (the Greek coast);
+// everything a scene needs
 // to know about ONE spot lives here, so FishingScene itself contains no
 // "lake" or "sea" specifics.
 //
@@ -37,6 +38,17 @@ const NAARDEN_WATERLINE = [
 const FRANCE_WATERLINE = [
   [   0, 520], [  58, 520], [  64, 354], [ 100, 340], [ 176, 333],
   [ 230, 300], [ 250, 268], [1280, 266],
+];
+
+// The Greek coast, traced from assets/raw/backdrop-greece.png. From x = 380
+// on, the open sea runs up to the horizon (GREECE_HORIZON, below); left of
+// that the water ends at the foot of the headland with the chapel.
+const GREECE_SKY = 0.223;
+const GREECE_HORIZON = GREECE_SKY + 0.005;
+const GREECE_HORIZON_Y = WORLD_TOP + GREECE_HORIZON * WORLD_HEIGHT;
+const GREECE_WATERLINE = [
+  [   0, 150], [ 110, 142], [ 200, 137], [ 290, 120], [ 365, 110],
+  [ 380, GREECE_HORIZON_Y], [1280, GREECE_HORIZON_Y],
 ];
 
 /**
@@ -122,6 +134,7 @@ function makeWaterTopAt(samples) {
 //                   loudness, see scripts/make_ambience.py); `vary`: how far
 //                   its pitch may wander, as a share (0.07 = 7 % up or down)
 
+// (The Greek coast's horizon is with its waterline, above.)
 // The horizon of assets/raw/backdrop-sea.png lies 24.5% down the painting;
 // casting starts a hair below it, so a float never sits ON the line.
 const SEA_SKY = 0.245;
@@ -236,6 +249,47 @@ const MAP_DEFS = [
         { name: 'sea-gulls', every: [22, 60], first: [8, 25], volume: [0.18, 0.38], vary: 0.07 },
         // A ship far out.
         { name: 'sea-horn', every: [140, 320], first: [50, 130], volume: [0.4, 0.55] },
+      ],
+    },
+  },
+  {
+    // A rocky coast in Greece: pale limestone to fish from, clear turquoise
+    // water over sand and weed, a headland with pines and a white chapel,
+    // islands in the haze.
+    id: 'greece',
+    nlName: 'Griekenland',
+    backdropKey: 'backdrop-greece',
+    backdropImage: 'clean/backdrop-greece.jpg',
+    backdropVideo: 'clean/backdrop-greece.mp4',
+    skyMask: 'clean/sky-mask-greece.png',
+    skyMaskFraction: 320 / 720,
+    // A clear summer sky: only a few thin clouds, down to the horizon.
+    clouds: [
+      { src: 'clean/clouds-greece-back.png',  height: GREECE_SKY * WORLD_HEIGHT, speed: 1.2, alpha: 0.85 },
+      { src: 'clean/clouds-greece-front.png', height: GREECE_SKY * WORLD_HEIGHT, speed: 3,   alpha: 0.95 },
+    ],
+    // On the flat top of the rock, well back from where it drops into the sea.
+    seat: { x: 270, y: 575 },
+    landing: { x: 770, y: 640 },
+    // The rock: its flat top, and its broken front down to the water.
+    dry: [
+      [0, 395], [95, 440], [175, 445], [420, 452], [620, 500], [650, 560], [725, 605],
+      [735, 635], [680, 700], [700, 765], [625, 840], [0, 840],
+    ],
+    waterline: GREECE_WATERLINE,
+    depthFarY: GREECE_HORIZON_Y,
+    waterTint: 0x2a9fa8,          // clear Greek water: bright turquoise
+    defaultBait: 'garnaal',
+    music: 'relaxing',
+    voiceVolume: 1.1,
+    ambience: {
+      bed: { name: 'greece-waves', volume: 0.55 },
+      passing: [
+        // Cicadas in the pines on the headland, in the heat.
+        { name: 'greece-cicadas', every: [30, 80], first: [6, 20], volume: [0.25, 0.45], vary: 0.05 },
+        { name: 'sea-gulls', every: [50, 120], first: [25, 60], volume: [0.14, 0.28], vary: 0.07 },
+        // The bell of the chapel across the bay.
+        { name: 'lake-bells', every: [180, 360], first: [70, 160], volume: [0.25, 0.38] },
       ],
     },
   },

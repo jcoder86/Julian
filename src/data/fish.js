@@ -156,10 +156,12 @@ export const FISH_SPECIES = [
     lengthCm: { small: [15, 25], medium: [28, 40], large: [ 50,  95] } },
 
   // Hunters near the surface and around the jetty.
-  { id: "garfish",  nlName: "Geep",      baits: ["aasvisje", "veren", "blinker"],              speciesWeight:  55, sizeWeights: [50, 35, 15],
-    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 80, 100] } },
-  { id: "seabass",  nlName: "Zeebaars",  baits: ["zeepier", "aasvisje", "blinker", "pilker"],  speciesWeight:  45, sizeWeights: [45, 40, 15],
-    lengthCm: { small: [20, 35], medium: [40, 60], large: [ 75, 100] } },
+  // (Both also live on the Greek coast, where they take a shrimp and a plug
+  // -- the sea bass also a squid strip and a shad -- and are a little rarer.)
+  { id: "garfish",  nlName: "Geep",      baits: ["aasvisje", "veren", "blinker", "garnaal", "plug"], speciesWeight:  55, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 80, 100] }, weightOn: { greece: 50 } },
+  { id: "seabass",  nlName: "Zeebaars",  baits: ["zeepier", "aasvisje", "blinker", "pilker", "garnaal", "inktvis", "plug", "shad"], speciesWeight:  45, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [20, 35], medium: [40, 60], large: [ 75, 100] }, weightOn: { greece: 30 } },
   { id: "cod",      nlName: "Kabeljauw", baits: ["zeepier", "aasvisje", "veren", "pilker"],    speciesWeight:  40, sizeWeights: [45, 35, 20],
     lengthCm: { small: [25, 40], medium: [50, 80], large: [100, 180] } },
 
@@ -185,6 +187,49 @@ export const FISH_SPECIES = [
   // and then mostly a small one.
   { id: "shark",    nlName: "Haringhaai", baits: ["aasvisje", "pilker"],                       speciesWeight: 1.1, sizeWeights: [58, 29, 13],
     lengthCm: { small: [80, 120], medium: [140, 200], large: [220, 365] }, maxReelTurns: 14 },
+
+  // ===========================================================================
+  // The rocky coast in Greece
+  // ===========================================================================
+  // Clear, warm water off pale limestone. Under the float: bread (the
+  // mullet), a shrimp or a strip of squid; or a lure: feathers, a minnow
+  // plug, a casting jig, a shad. The sea bass and the garfish are the North
+  // Sea's (above).
+
+  // Along the rocks -- bread, a shrimp, a strip of squid.
+  { id: "whitebream", nlName: "Witte zeebrasem", baits: ["brood", "garnaal", "inktvis"],      speciesWeight: 100, sizeWeights: [60, 30, 10],
+    lengthCm: { small: [10, 15], medium: [18, 28], large: [ 32,  45] } },
+  // Mullet: only ever on bread, and there are always some around.
+  { id: "mullet",   nlName: "Harder",    baits: ["brood"],                                     speciesWeight:  95, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [15, 22], medium: [28, 45], large: [ 52,  75] } },
+  { id: "gilthead", nlName: "Goudbrasem", baits: ["garnaal", "inktvis"],                      speciesWeight:  55, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [15, 22], medium: [26, 40], large: [ 45,  70] } },
+  // It grubs over the sand with its whiskers: a shrimp on the bottom.
+  { id: "redmullet", nlName: "Gestreepte zeebarbeel", baits: ["garnaal"],                     speciesWeight:  70, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [10, 14], medium: [16, 24], large: [ 27,  40] } },
+  // Shoals in mid-water: a shrimp, a bit of squid, a string of feathers or
+  // a small jig.
+  { id: "horsemackerel", nlName: "Mediterrane horsmakreel", baits: ["garnaal", "inktvis", "veren", "werpjig"], speciesWeight: 85, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 35,  60] } },
+
+  // Hunters, out in the blue -- lures.
+  { id: "barracuda", nlName: "Geelstaartbarracuda", baits: ["plug", "shad", "werpjig"],       speciesWeight:  25, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [30, 45], medium: [55, 80], large: [ 90, 128] }, maxReelTurns: 10 },
+  // A small tuna that races through: a fast jig or plug.
+  { id: "bonito",   nlName: "Bonito",    baits: ["werpjig", "plug"],                           speciesWeight:  12, sizeWeights: [40, 45, 15],
+    lengthCm: { small: [30, 40], medium: [45, 62], large: [ 68,  91] }, maxReelTurns: 10 },
+  // The big sea bream of the rocks: a big shad, or squid on the bottom.
+  { id: "dentex",   nlName: "Tandbrasem", baits: ["inktvis", "shad"],                          speciesWeight:   8, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [20, 30], medium: [35, 60], large: [ 65, 100] }, maxReelTurns: 11 },
+
+  // The two to tell your friends about: the amberjack, a powerful hunter of
+  // almost two metres that hits a heavy jig (or a squid); and the moray,
+  // which lives in the holes of the rocks and comes out for a strip of
+  // squid.
+  { id: "amberjack", nlName: "Amberjack", baits: ["werpjig", "inktvis"],                      speciesWeight:   3, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [40, 60], medium: [70, 110], large: [125, 190] }, maxReelTurns: 13 },
+  { id: "moray",    nlName: "Murene",    baits: ["inktvis"],                                   speciesWeight:   5, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [40, 60], medium: [70, 100], large: [110, 150] }, maxReelTurns: 12 },
 ];
 
 /**
@@ -203,6 +248,8 @@ export const MAP_SPECIES = {
            "trout", "rainbowtrout", "char", "salmon", "sturgeon", "catfish"],
   sea: ["herring", "whiting", "mackerel", "flounder", "plaice", "garfish",
         "seabass", "cod", "ray", "conger", "tuna", "shark"],
+  greece: ["gilthead", "whitebream", "seabass", "mullet", "redmullet", "barracuda",
+           "garfish", "horsemackerel", "bonito", "dentex", "amberjack", "moray"],
 };
 
 /** All species of one map, in display order. */
@@ -287,6 +334,9 @@ export const OLDEST_YEARS = {
   // The North Sea
   herring: 22, whiting: 20, mackerel: 18, flounder: 15, plaice: 50, garfish: 18,
   seabass: 30, cod: 25, ray: 15, conger: 20, tuna: 35, shark: 45,
+  // The Greek coast
+  gilthead: 11, whitebream: 12, mullet: 20, redmullet: 11, horsemackerel: 12,
+  barracuda: 12, bonito: 5, dentex: 30, amberjack: 17, moray: 30,
 };
 // A species that is not in the list is taken for an ordinary one.
 const OLDEST_YEARS_UNKNOWN = 15;

@@ -70,6 +70,25 @@ verstaan zoals geschreven.
 
 Niets.
 
+## Ronde van 20 oktober 2026: Griekenland
+
+Alles hieronder is op 20 oktober 2026 gemaakt en zit in het spel.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Kaart Griekenland: de kust vanaf een kalkstenen rots, met een kaap met dennen en een witte kapel, eilanden in de verte | Codex, `greece` | ja |
+| Vangstscherm Griekenland, Julian & Dirk en James & Boaz | Codex, `catch-julian-greece`, `catch-guest-greece` | ja |
+| Wolken Griekenland | Codex, `clouds-greece-front-1..2`, `clouds-greece-back-1..2` | ja |
+| Bewegend water Griekenland (Veo, betaald) | `python scripts/make_water.py greece` | ja |
+| Garnaal, inktvis, plug en werpjig | Codex, `greece-baits`, daarna `python scripts/split_atlas.py baits-greece` | ja |
+| Tien nieuwe vissen: goudbrasem, witte zeebrasem, harder, gestreepte zeebarbeel, mediterrane horsmakreel, geelstaartbarracuda, bonito, tandbrasem, amberjack, murene | Codex, `fish-<id>` | ja |
+| Stem: de tien nieuwe vissen (klein, gewoon, groot) en "Griekenland!" | ElevenLabs, `vissen-5` | ja |
+| Stem: "Wow! Een gigantische ...!" voor die tien | ElevenLabs, `vissen-gigant-2` | ja |
+| Golfjes tegen de rotsen, cicaden | ElevenLabs Sound Effects, `greece-waves`, `greece-cicadas` | ja |
+
+De klok van de kapel is die van Naarden-Vesting (`lake-bells`): een eigen
+kapelklokje kwam bij ElevenLabs steeds uit als rinkelbelletjes.
+
 ## Ronde van 13 oktober 2026: gigantische vissen
 
 | Wat | Hoe | Klaar |

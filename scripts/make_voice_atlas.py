@@ -93,6 +93,16 @@ ATLASES = {
     # October 2026: the first recording calls the roach "voorn"; its card
     # says Blankvoorn.
     "vissen-4": {"roach": "blankvoorn"},
+    # October 2026, with the map of Greece: its ten new fish (the sea bass
+    # and the garfish are the North Sea's), and the name of the map.
+    "vissen-5": {
+        "gilthead": "goudbrasem", "whitebream": "witte zeebrasem", "mullet": "harder",
+        "redmullet": "gestreepte zeebarbeel", "horsemackerel": "mediterrane horsmakreel",
+        "barracuda": "geelstaartbarracuda", "bonito": "bonito", "dentex": "tandbrasem",
+        "amberjack": "amberjack", "moray": "murene",
+    },
+    # And what is called out for a giant of each of them: GIANTS_GREECE.
+    "vissen-gigant-2": {},
 }
 # Every species by the name on its card, for "Wow! Een gigantische ...!"
 # (key `giant_<species>`).
@@ -107,12 +117,19 @@ GIANTS = {
     "plaice": "schol", "garfish": "geep", "seabass": "zeebaars", "cod": "kabeljauw", "ray": "rog",
     "conger": "zeepaling", "tuna": "blauwvintonijn", "shark": "haringhaai",
 }
+# The fish of Greece that are new there (vissen-gigant-2).
+GIANTS_GREECE = {
+    "gilthead": "goudbrasem", "whitebream": "witte zeebrasem", "mullet": "harder",
+    "redmullet": "gestreepte zeebarbeel", "horsemackerel": "mediterrane horsmakreel",
+    "barracuda": "geelstaartbarracuda", "bonito": "bonito", "dentex": "tandbrasem",
+    "amberjack": "amberjack", "moray": "murene",
+}
 GIANT_PHRASE = "Wow! Een gigantische {}!"
 # Atlases whose every phrase opens with a short cry ("Wow!") and a pause:
 # how long that cry lasts at most, in seconds. A stretch of sound no longer
 # than this is the opening of the phrase after it. (The pause after "Wow!"
 # is as long as some pauses BETWEEN phrases, so the pauses cannot tell.)
-OPENING_CRY_S = {"vissen-gigant": 0.6}
+OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6}
 # Phrases that are not a fish: (key, text), read out after the fish. The
 # map names are spoken when a map is chosen (key `map_<id>`); `escaped`
 # when a hooked fish gets off.
@@ -122,6 +139,9 @@ EXTRA = {
     "stem-spel": [("escaped", "Helaas! De vis is ontsnapt!")],
     "vissen-gigant": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
                       for species, spoken in GIANTS.items()],
+    "vissen-5": [("map_greece", "Griekenland!")],
+    "vissen-gigant-2": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
+                        for species, spoken in GIANTS_GREECE.items()],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}

@@ -156,6 +156,52 @@ FISH = {
                  "\nThe body is drawn straight and horizontal."),
 }
 
+# The fish of the rocky Greek coast (map "greece", October 2026). The sea
+# bass and the garfish are the North Sea's own strips.
+FISH.update({
+    "gilthead": ("a gilthead sea bream (Sparus aurata): a deep, oval, silver-grey sea bream "
+                 "with a steep forehead, a bright GOLDEN band across the forehead between the "
+                 "eyes, a dark blotch at the top of the gill cover, thin dark lengthwise lines "
+                 "along the sides and a dark-edged forked tail", SIDE, ""),
+    "whitebream": ("a white sea bream (Diplodus sargus): an oval, flattened, bright silver "
+                   "sea bream with eight or nine faint dark VERTICAL bars, a black saddle spot "
+                   "on the tail stalk, a black-edged forked tail and a small mouth with thick "
+                   "lips", SIDE, ""),
+    "mullet": ("a thicklip grey mullet (Chelon labrosus): a long, torpedo-shaped fish with a "
+               "broad flat head, a thick upper lip and a small mouth, blue-grey back, silver "
+               "sides with faint dark lengthwise stripes, two separate small dorsal fins and a "
+               "forked tail", SIDE, ""),
+    "redmullet": ("a striped red mullet (Mullus surmuletus): a small, elongated, ROSY-RED fish "
+                  "with a steep head profile, two long whisker-like barbels under the chin, "
+                  "a few yellow lengthwise stripes along the side and a first dorsal fin with "
+                  "dark stripes", SIDE, ""),
+    "horsemackerel": ("a Mediterranean horse mackerel (Trachurus mediterraneus): a slender, "
+                      "streamlined silvery fish with a blue-green back, a LARGE eye, a row of "
+                      "hard bony scutes along the lateral line that dips down halfway, a small "
+                      "dark spot on the gill cover and a deeply forked tail", SIDE, ""),
+    "barracuda": ("a yellowmouth barracuda (Sphyraena viridensis): a long, slender, "
+                  "torpedo-shaped predator with a long pointed head, a jutting lower jaw and "
+                  "sharp fang-like teeth, silver with irregular dark vertical bars on the upper "
+                  "half of the body, two widely separated dorsal fins and a yellowish forked "
+                  "tail", SIDE, "\nThe body is drawn straight and horizontal."),
+    "bonito": ("an Atlantic bonito (Sarda sarda): a streamlined, tuna-like fish, steel-blue "
+               "back with dark STRIPES running obliquely down and forward, a silvery-white "
+               "belly, a row of small finlets before the deeply forked crescent tail", SIDE, ""),
+    "dentex": ("a common dentex (Dentex dentex): a big, robust, deep-bodied sea bream, "
+               "pinkish-bronze to grey-silver with many small blue spots on the upper body, a "
+               "large head with strong canine teeth visible at the front of the jaws; the "
+               "large trophy specimen has a noticeably steeper, humped forehead", SIDE, ""),
+    "amberjack": ("a greater amberjack (Seriola dumerili): a powerful, elongated, "
+                  "deep-chested jack with an olive-blue back, silver sides and belly, an "
+                  "AMBER-YELLOW stripe along the side from the eye to the tail, a dark diagonal "
+                  "band through the eye, and a big forked tail", SIDE, ""),
+    "moray": ("a Mediterranean moray (Muraena helena): a long, thick, snake-like, scaleless "
+              "eel without pectoral fins, dark chocolate-brown densely marbled and speckled "
+              "with yellow-cream spots, a slightly open mouth with small sharp teeth and a "
+              "small eye; the low fin runs along back and belly into the pointed tail", SIDE,
+              "\nThe body is drawn straight and horizontal, with at most a gentle wave."),
+})
+
 # ---------------------------------------------------------------------------
 # Paintings
 # ---------------------------------------------------------------------------
@@ -276,6 +322,44 @@ No people, no animals, no text, no flags. Late-afternoon summer light.
 4:3 landscape.
 """
 
+GREECE_BACKDROP = """\
+Repaint the FIRST reference image (a view over the sea from a stone pier)
+as a rocky coast in Greece on a hot, bright summer day. Keep the same
+camera position, the same composition and the same rich, detailed painting
+style as the first reference. The SECOND reference is a photo of the
+place: take its atmosphere, its light and its colours from it.
+
+THE ROCK. In the lower-left corner, exactly where the stone pier is in the
+first reference -- same position, same size, same viewing angle, same
+footprint -- there is now a natural ledge of pale, weathered LIMESTONE:
+sun-bleached cream and light grey, with cracks, little hollows, a few dry
+tufts of grass, its top flat enough to sit on. Its front drops off in
+rough natural steps into the sea; at the waterline the rock is darker with
+a fringe of green weed. The flat middle of its top stays clear and empty
+(a boy and a dog are added there later).
+
+THE WATER. Crystal clear. Near the rocks it is bright TURQUOISE, with pale
+rock, sand and dark patches of sea grass shining through; further out it
+becomes deep, saturated Mediterranean blue. Calm, with a gentle ripple and
+small sparkles of sunlight; a touch of white foam only right at the rocks.
+
+THE COAST. On the left, going back into the distance and taking up no more
+than the left fifth of the picture above the rock: a low rocky headland of
+pale limestone with umbrella pines and dark cypresses, and among them a
+few white, flat-roofed houses; on the point a tiny white chapel with a
+small red dome. All the rest of the picture is open water.
+
+THE HORIZON. A HIGH, perfectly level horizon about one quarter of the way
+down from the top edge, with long, low, hazy blue-grey islands and
+mountains on it, as in the photo.
+
+THE SKY. Clear blue with NO clouds at all, a soft pale haze just above the
+islands.
+
+No people, no animals, no boats, no text. Bright midday summer light.
+4:3 landscape.
+"""
+
 MAPSELECT_BACKGROUND = """\
 A background painting for the "choose your fishing spot" screen of a
 children's fishing game: the inside wall of a cosy fishing cabin, made of
@@ -328,9 +412,11 @@ SKY_LIGHT = {
     "france": ("a golden late afternoon in the mountains, low warm sun from the left -- "
                "glowing cream and apricot on the clouds' sunny side, soft blue-violet in "
                "their shade"),
+    "greece": ("a brilliant, hot Mediterranean summer day -- dazzling white fair-weather "
+               "clouds with soft blue-grey shading, hazy and pale near the horizon"),
 }
 SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png",
-                "france": "assets/raw/backdrop-france.png"}
+                "france": "assets/raw/backdrop-france.png", "greece": "assets/raw/backdrop-greece.png"}
 
 # The near layer: a few big clouds, high up.  The far layer: small ones, low.
 SKY_LAYERS = {
@@ -555,6 +641,10 @@ CATCH_GROUND = {
     "france": ("pale, sun-bleached planks of a floating pontoon on a mountain lake -- at its "
                "edge a wooden mooring pole with faded blue, white and red rings and a loop "
                "of thick rope, and clear blue-green water around it", "assets/raw/catch.png"),
+    "greece": ("pale, sun-warmed LIMESTONE rock of a Greek coast instead of the stone slabs -- "
+               "flat, weathered, with cracks, a small rock pool and a coil of rope -- and "
+               "crystal clear TURQUOISE seawater over pale stones and sea grass along the top",
+               "assets/raw/catch-sea.png"),
 }
 
 # ---------------------------------------------------------------------------
@@ -718,6 +808,42 @@ overlaps or touches. No shadows on the background, no text, no labels, no
 grid lines. Crisp edges. Landscape, about 3:2.
 """
 
+# The Greek coast: two baits for under the float and two lures.
+GREECE_BAITS = """\
+A sprite sheet of Mediterranean fishing baits and lures for a game, in
+exactly the same realistic painting style and the same kind of layout as
+the attached reference sheet: here 4 columns by 2 rows on a solid flat
+pure green (#00FF00) chroma-key background.
+
+Columns, left to right:
+  1. a shrimp -- a small, whole, translucent grey-pink prawn with long
+     feelers
+  2. a strip of squid -- a pale, creamy-white, slightly translucent strip
+     of squid with a few purple-brown speckles, cut in a long narrow
+     triangle
+  3. a minnow plug -- a hard plastic fish-shaped lure, about as long as a
+     hand, with a metallic blue back, holographic silver sides, a big eye,
+     a clear plastic diving lip at the front and two treble hooks
+  4. a casting jig -- a slim, heavy, fish-shaped metal lure, polished
+     silver with a PINK back and holographic flash, a single assist hook on
+     a short cord at its front
+
+TOP ROW, each item hanging vertically "on the line":
+  1. the shrimp threaded on a single steel hook, eye at the top
+  2. the squid strip hooked through its wide end on a single steel hook
+  3. the plug hanging from a small steel snap at its nose, diving lip up
+  4. the jig hanging from a steel ring at its front, hook at the top
+
+BOTTOM ROW, the same four items lying flat and horizontal: 1. the shrimp
+alone  2. the squid strip alone  3. the plug  4. the jig. For 3 and 4 the
+line eye is at the LEFT end.
+
+Nothing on any item is green. Every item is one solid, connected object,
+clearly separated from its neighbours by plenty of plain green; nothing
+overlaps or touches. No shadows on the background, no text, no labels, no
+grid lines. Crisp edges. Landscape, about 3:2.
+"""
+
 MAP_ICON = """\
 A game HUD button in exactly the same style, size and framing as the
 attached reference icon: a round, glossy blue button with a polished
@@ -742,6 +868,13 @@ JOBS = {
     # starting point.
     "france":       dict(out="assets/raw/backdrop-france.png",
                          refs=["assets/raw/backdrop.png"], brief=FRANCE_BACKDROP),
+    # A rocky coast in Greece. The second reference is a photo of the place,
+    # kept only on the owner's computer (work/, not in git).
+    "greece":       dict(out="assets/raw/backdrop-greece.png",
+                         refs=["assets/raw/backdrop-sea.png", "work/greece-sfeer.png"],
+                         brief=GREECE_BACKDROP),
+    "greece-baits": dict(out="assets/raw/baits-greece.png",
+                         refs=["assets/raw/baits-sea.png"], brief=GREECE_BAITS),
     "mapselect-bg": dict(out="assets/raw/mapselect.png", refs=[], brief=MAPSELECT_BACKGROUND),
     "sea-baits":    dict(out="assets/raw/baits-sea.png",
                          refs=["assets/raw/baits.png"], brief=SEA_BAITS),

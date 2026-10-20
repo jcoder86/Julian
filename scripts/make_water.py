@@ -9,6 +9,7 @@ exactly the still painting: razor sharp and rock solid under Julian.
 
     python scripts/make_water.py sea            # generate (costs money) + compose
     python scripts/make_water.py lake
+    python scripts/make_water.py greece
     python scripts/make_water.py sea --compose  # only redo the composing
 
 Step by step
@@ -130,6 +131,22 @@ WATER = {
             "not move -- no leaf stirs. " + STILL_RULES +
             " Sound: quiet water lapping, a few birds far away. No music, "
             "no voices."
+        )),
+    "greece": dict(
+        painting="backdrop-greece",
+        prompt=(
+            "A calm, clear summer sea, gently alive. Small ripples drift "
+            "slowly across the deep blue water and sunlight glitters on it; "
+            "in the clear turquoise shallows in front, the light plays in "
+            "moving patterns over the sand, the stones and the weed on the "
+            "bottom; small wavelets lap softly against the foot of the pale "
+            "limestone rock, with a little white foam. The motion is the "
+            "same, gentle and regular, all the way through: no big wave, no "
+            "splash, no spray, and no water ever comes onto the rock. The "
+            "rock, the headland, its pines, the white houses, the chapel and "
+            "the islands do not move -- no branch stirs. " + STILL_RULES +
+            " Sound: small waves lapping against rock, cicadas far away. No "
+            "music, no voices."
         )),
     "lake": dict(
         painting="backdrop-naarden",

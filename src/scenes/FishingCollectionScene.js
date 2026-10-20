@@ -73,6 +73,9 @@ const BACK_MARGIN  = 18;
 const SWITCH_W = 112;
 const SWITCH_H = 84;
 
+// The room for a card's name and count on its top line, between the pins.
+const TITLE_ROOM = 214;
+
 // A tap on a card says its name; a finger that moved further than this
 // (design px) was scrolling, not tapping.
 const TAP_SLOP = 14;
@@ -420,8 +423,13 @@ export class FishingCollectionScene extends Phaser.Scene {
                                           written(19, info.totalCount > 0 ? COLOR.INK_RED : COLOR.INK_FADED))
       .setOrigin(0, 0.5));
     const gap = 9;
-    name.x = cx - (name.width + gap + count.width) / 2;
-    count.x = name.x + name.width + gap;
+    // A long name ("Mediterrane horsmakreel") is written smaller, so that it
+    // fits between the two pins.
+    const fit = Math.min(1, TITLE_ROOM / (name.width + gap + count.width));
+    name.setScale(fit);
+    count.setScale(fit);
+    name.x = cx - (name.displayWidth + gap * fit + count.displayWidth) / 2;
+    count.x = name.x + name.displayWidth + gap * fit;
 
     // Centerpiece: the biggest specimen ever caught (any size). Helps the
     // player see "my best of this species". If never caught, its faint

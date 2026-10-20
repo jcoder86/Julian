@@ -1,0 +1,46 @@
+{
+  "file": "vissen-gigant-2.mp3",
+  "totalDuration": 32.74,
+  "phrases": {
+    "giant_gilthead": {
+      "start": 0.5,
+      "duration": 2.35
+    },
+    "giant_whitebream": {
+      "start": 3.35,
+      "duration": 2.76
+    },
+    "giant_mullet": {
+      "start": 6.61,
+      "duration": 2.27
+    },
+    "giant_redmullet": {
+      "start": 9.38,
+      "duration": 3.13
+    },
+    "giant_horsemackerel": {
+      "start": 13.01,
+      "duration": 3.26
+    },
+    "giant_barracuda": {
+      "start": 16.77,
+      "duration": 2.98
+    },
+    "giant_bonito": {
+      "start": 20.25,
+      "duration": 2.18
+    },
+    "giant_dentex": {
+      "start": 22.93,
+      "duration": 2.69
+    },
+    "giant_amberjack": {
+      "start": 26.12,
+      "duration": 3.92
+    },
+    "giant_moray": {
+      "start": 30.54,
+      "duration": 1.7
+    }
+  }
+}

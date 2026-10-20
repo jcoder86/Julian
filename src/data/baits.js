@@ -32,10 +32,15 @@
 
 const FRESH = ["lake", "france"];
 const SEA = ["sea"];
+const GREECE = ["greece"];
 
 export const BAITS = [
   // Fresh water
-  { id: "brood",    maps: FRESH, kind: "bait", displayName: "Brood",    nlName: "Brood" },
+  // (Bread is also THE bait for mullet and white bream on the Greek coast.)
+  { id: "brood",    maps: [...FRESH, ...GREECE], kind: "bait", displayName: "Brood", nlName: "Brood" },
+  // The Greek coast, under the float: a little shrimp, a strip of squid.
+  { id: "garnaal",  maps: GREECE, kind: "bait", displayName: "Garnaal",  nlName: "Garnaal" },
+  { id: "inktvis",  maps: GREECE, kind: "bait", displayName: "Inktvis",  nlName: "Inktvis" },
   { id: "mais",     maps: FRESH, kind: "bait", displayName: "Mais",     nlName: "Mais" },
   { id: "maden",    maps: FRESH, kind: "bait", displayName: "Maden",    nlName: "Maden" },
   { id: "wormen",   maps: FRESH, kind: "bait", displayName: "Wormen",   nlName: "Wormen" },
@@ -49,7 +54,7 @@ export const BAITS = [
   // fly floats and is skittered over the surface.
   { id: "spinner",  maps: FRESH, kind: "lure", displayName: "Spinner",  nlName: "Spinner", lengthCm: 8,
     swim: { depth: 0.7, sink: 0.25, sway: 2, roll: 9, beat: 8, flash: true } },
-  { id: "shad",     maps: ["lake"],   kind: "lure", displayName: "Shad",       nlName: "Shad", lengthCm: 10,
+  { id: "shad",     maps: ["lake", ...GREECE], kind: "lure", displayName: "Shad", nlName: "Shad", lengthCm: 10,
     swim: { depth: 1.3, sink: 0.7, sway: 6, roll: 14, beat: 3 } },
   { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg", lengthCm: 3,
     swim: { depth: 0, sink: 0, sway: 3, roll: 6, beat: 2, floats: true } },
@@ -59,12 +64,20 @@ export const BAITS = [
   { id: "aasvisje", maps: SEA,   kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
   // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
   // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
-  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
+  { id: "veren",    maps: [...SEA, ...GREECE], kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
     swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
   { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker", lengthCm: 7,
     swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
   { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker", lengthCm: 12,
     swim: { depth: 1.6, sink: 0.9, sway: 2, roll: 10, beat: 1.4, jig: 0.6, flash: true } },
+
+  // The Greek coast's own lures (also the shad and the feathers above): a
+  // minnow plug that wobbles wide just under the surface and hangs where it
+  // is when left; a casting jig, slim and heavy, jerked deep and fast.
+  { id: "plug",     maps: GREECE, kind: "lure", displayName: "Plug",     nlName: "Plug", lengthCm: 11,
+    swim: { depth: 0.5, sink: 0.08, sway: 6, roll: 22, beat: 4, flash: true } },
+  { id: "werpjig",  maps: GREECE, kind: "lure", displayName: "Werpjig",  nlName: "Werpjig", lengthCm: 9,
+    swim: { depth: 1.5, sink: 1.0, sway: 2, roll: 14, beat: 1.8, jig: 0.5, flash: true } },
 ];
 
 export const BAITS_BY_ID = Object.fromEntries(BAITS.map(b => [b.id, b]));

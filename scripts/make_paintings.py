@@ -44,6 +44,9 @@ PAINTINGS = {
     "catch-guest-sea":   "James and Boaz on the stone quay",
     "catch-julian-france": "Julian and Dirk on the pontoon",
     "catch-guest-france":  "James and Boaz on the pontoon",
+    "backdrop-greece":  "a rocky coast in Greece, from a limestone ledge (map 'greece')",
+    "catch-julian-greece": "Julian and Dirk on the rocks",
+    "catch-guest-greece":  "James and Boaz on the rocks",
 }
 
 

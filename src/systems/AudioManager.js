@@ -79,6 +79,9 @@ export function musicPath(key) {
 //                  data/fish.js)
 //   vissen-4       the roach once more, by the name on its card: Blankvoorn
 //                  (the first recording says "voorn")
+//   vissen-5       the ten fish that are new on the Greek coast, and its name
+//                  (`map_greece`)
+//   vissen-gigant-2  "Wow! Een gigantische ...!" for those ten
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
 //
@@ -86,7 +89,10 @@ export function musicPath(key) {
 // for every species at start-up. None of those files ever existed, so every
 // start asked the server for a hundred sounds that were not there -- and
 // was handed the web page instead, to be decoded as sound and fail. Gone.)
-export const VOICE_ATLASES = ['vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4'];
+export const VOICE_ATLASES = [
+  'vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4',
+  'vissen-5', 'vissen-gigant-2',
+];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
 }

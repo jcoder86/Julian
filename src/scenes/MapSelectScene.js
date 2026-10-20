@@ -25,15 +25,19 @@ import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
  */
 
 // Cards are 4:3 like the paintings, side by side in the design frame: three
-// of them fill its width.
-const CARD_W   = 384;
-const CARD_H   = 288;
-const CARD_GAP = 34;
+// of them fill its width; four (or more) get smaller to fit next to each
+// other, and so do their name plates.
+const FRAME_FILL = 1220;          // the width the row of cards may take
+const CARD_GAP = MAPS.length > 3 ? 24 : 34;
+const CARD_W   = Math.min(384, Math.floor((FRAME_FILL - (MAPS.length - 1) * CARD_GAP) / MAPS.length));
+const CARD_H   = Math.round(CARD_W * 0.75);
 const BORDER   = 8;
+const CARD_SCALE = CARD_W / 384;  // of the plate and its lettering, against three cards
 // The name plate hangs from the frame's lower edge (its picture is 600 x 200).
-const PLATE_W  = 264;
-const PLATE_H  = 88;
+const PLATE_W  = Math.round(264 * Math.max(0.88, CARD_SCALE));
+const PLATE_H  = Math.round(88 * Math.max(0.88, CARD_SCALE));
 const PLATE_DROP = 34;            // from the frame's lower edge to the plate's middle
+const PLATE_TEXT = Math.round(27 * Math.max(0.85, CARD_SCALE));
 // A moment for the name to start sounding before the map opens.
 const ENTER_DELAY_MS = 350;
 
@@ -164,7 +168,7 @@ export class MapSelectScene extends Phaser.Scene {
       if (this.textures.exists(UI.BOARD_LABEL)) {
         this.add.image(x, plateY, UI.BOARD_LABEL).setDisplaySize(PLATE_W, PLATE_H);
       }
-      this.add.text(x, plateY, map.nlName, lettering(27, COLOR.GOLD)).setOrigin(0.5);
+      this.add.text(x, plateY, map.nlName, lettering(PLATE_TEXT, COLOR.GOLD)).setOrigin(0.5);
     }
 
     pressable(this, picture, () => this._enter(map));

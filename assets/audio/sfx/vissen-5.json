@@ -1,0 +1,130 @@
+{
+  "file": "vissen-5.mp3",
+  "totalDuration": 62.46,
+  "phrases": {
+    "small_gilthead": {
+      "start": 0.5,
+      "duration": 1.57
+    },
+    "small_whitebream": {
+      "start": 2.57,
+      "duration": 1.75
+    },
+    "small_mullet": {
+      "start": 4.82,
+      "duration": 1.17
+    },
+    "small_redmullet": {
+      "start": 6.49,
+      "duration": 1.91
+    },
+    "small_horsemackerel": {
+      "start": 8.9,
+      "duration": 2.18
+    },
+    "small_barracuda": {
+      "start": 11.58,
+      "duration": 1.99
+    },
+    "small_bonito": {
+      "start": 14.07,
+      "duration": 1.28
+    },
+    "small_dentex": {
+      "start": 15.85,
+      "duration": 1.55
+    },
+    "small_amberjack": {
+      "start": 17.9,
+      "duration": 1.39
+    },
+    "small_moray": {
+      "start": 19.79,
+      "duration": 1.36
+    },
+    "medium_gilthead": {
+      "start": 21.65,
+      "duration": 1.22
+    },
+    "medium_whitebream": {
+      "start": 23.37,
+      "duration": 1.38
+    },
+    "medium_mullet": {
+      "start": 25.25,
+      "duration": 0.74
+    },
+    "medium_redmullet": {
+      "start": 26.49,
+      "duration": 1.77
+    },
+    "medium_horsemackerel": {
+      "start": 28.76,
+      "duration": 1.91
+    },
+    "medium_barracuda": {
+      "start": 31.17,
+      "duration": 1.65
+    },
+    "medium_bonito": {
+      "start": 33.32,
+      "duration": 1.05
+    },
+    "medium_dentex": {
+      "start": 34.87,
+      "duration": 1.16
+    },
+    "medium_amberjack": {
+      "start": 36.53,
+      "duration": 1.1
+    },
+    "medium_moray": {
+      "start": 38.13,
+      "duration": 0.99
+    },
+    "large_gilthead": {
+      "start": 39.62,
+      "duration": 1.65
+    },
+    "large_whitebream": {
+      "start": 41.77,
+      "duration": 1.8
+    },
+    "large_mullet": {
+      "start": 44.07,
+      "duration": 1.27
+    },
+    "large_redmullet": {
+      "start": 45.84,
+      "duration": 1.94
+    },
+    "large_horsemackerel": {
+      "start": 48.28,
+      "duration": 2.28
+    },
+    "large_barracuda": {
+      "start": 51.06,
+      "duration": 1.94
+    },
+    "large_bonito": {
+      "start": 53.5,
+      "duration": 1.37
+    },
+    "large_dentex": {
+      "start": 55.37,
+      "duration": 1.57
+    },
+    "large_amberjack": {
+      "start": 57.44,
+      "duration": 1.29
+    },
+    "large_moray": {
+      "start": 59.23,
+      "duration": 1.35
+    },
+    "map_greece": {
+      "start": 61.08,
+      "duration": 0.88
+    }
+  }
+}

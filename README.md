@@ -58,9 +58,11 @@ served at the dev-server root. Phaser's loader paths reflect that:
 
 ## Maps
 
-There are three fishing spots, picked on the map-select screen after the
+There are four fishing spots, picked on the map-select screen after the
 title (and reachable again through the compass button in the HUD). Each is
 a framed painting with its name on a plate; tapping one also says the name.
+(Three cards fill the width of the screen; four or more are made smaller to
+fit side by side: `MapSelectScene`.)
 
 * **lake** -- Naarden-Vesting: the moat, from a wooden jetty. Float fishing
   with bread, corn, maggots, worms or a bait fish, or lure fishing with a
@@ -72,6 +74,14 @@ a framed painting with its name on a plate; tapping one also says the name.
 * **sea** -- Noordzee: from a stone harbour pier. Float fishing with a
   lugworm or a bait fish, **or lure fishing** with a feather rig, a spoon or
   a pilk jig.
+* **greece** -- Griekenland: from a flat limestone rock on a warm, clear
+  coast (a headland with pines and a white chapel, islands in the haze).
+  Under the float: bread, a little shrimp or a strip of squid; or lure
+  fishing with a shad, feathers, a minnow plug or a casting jig. Its sea
+  bass and garfish are the North Sea's species with cards of their own
+  (`catchKey`); the other ten live only here. The trophies are the
+  tandbrasem (dentex), the murene (moray, only on squid) and the
+  amberjack (up to 1.90 m, on a jig or squid).
 
 Everything specific to one spot (painting, optional video, sky mask,
 waterline, default bait, music, ambience, name) is one entry in
@@ -430,8 +440,9 @@ for the newcomers, the renamed fish and the names of the maps,
 `stem-spel.mp3` for what the game itself says ("Helaas! De vis is
 ontsnapt!"), `vissen-gigant.mp3` for "Wow! Een gigantische ...!" of every
 species, `vissen-4.mp3` for the roach by the name on its card (Blankvoorn;
-the first recording says "voorn"); the list is `VOICE_ATLASES` in
-`src/systems/AudioManager.js`).
+the first recording says "voorn"), `vissen-5.mp3` for the ten new fish of
+the Greek coast and its name, `vissen-gigant-2.mp3` for their giants; the
+list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
 
 The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except
 where a phrase's loudest moment would then clip: that phrase gets as much
@@ -635,14 +646,16 @@ systems the next rounded or plain font in `UI_FONT` is used.
 ## Sound
 
 Three layers, loudest last: the **music** of the map (`music` in
-`src/data/maps.js`: `ambient.mp3` at the moat, `relaxing.mp3` at sea), the
+`src/data/maps.js`: `ambient.mp3` at the moat, `relaxing.mp3` at sea and
+in Greece), the
 **ambience** of the place, and the game's own sounds (the plop of the
 float, the reel, applause, the voice).
 
 The ambience (`src/systems/Ambience.js`, a map's `ambience`) is a *bed*
-that goes round and round -- birdsong at the moat, waves at the pier -- and
-sounds that *pass* now and then, each after a random wait: a fish jumping
-and the church bells across the water; gulls and a ship's horn far out.
+that goes round and round -- birdsong at the moat, waves at the pier,
+little waves on the rocks in Greece -- and sounds that *pass* now and
+then, each after a random wait: a fish jumping and the church bells across
+the water; gulls and a ship's horn far out; cicadas in the pines.
 How often and how loud is in `maps.js`; each passing sound also comes from
 a slightly different side and at a slightly different volume every time.
 The bed is cross-faded into itself rather than looped, so the sliver of

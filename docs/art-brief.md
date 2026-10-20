@@ -11,6 +11,8 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | De vestinggracht van Naarden-Vesting | `backdrop-naarden.png` | `naarden` |
 | Houten wand achter het kaart-keuzescherm | `mapselect.png` | `mapselect-bg` |
 | Aas en lures voor de zee (5 x 2) | `baits-sea.png` | `sea-baits` |
+| De Griekse kust vanaf een kalkstenen rots | `backdrop-greece.png` | `greece` |
+| Aas en lures voor Griekenland: garnaal, inktvis, plug, werpjig (4 x 2) | `baits-greece.png` | `greece-baits` |
 | Kaart-knop (kompas) | `icon-map.png` | `icon-map` |
 | De twaalf zeevissen, elk klein/middel/groot | `fish-<id>.png` | `fish-<id>` |
 | Startscherm met de drie vrienden en Dirk | `start-friends.png` | `start` |
@@ -177,7 +179,7 @@ beeldjes.
 
 ## Bewegend water
 
-Op beide kaarten beweegt het water. Dat is een korte video van het
+Op alle kaarten beweegt het water. Dat is een korte video van het
 schilderij, gemaakt met **Veo** van Google via de Gemini-sleutel in
 `.env.txt` (in de Julian-map; dat bestand komt niet in git).
 
@@ -217,6 +219,9 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-3.mp3` + `.json` | de nieuwe vissen van Naarden-Vesting en Frankrijk, de vijf vissen met een preciezere naam, en de namen van de kaarten |
 | `assets/audio/sfx/stem-spel.mp3` + `.json` | wat het spel zelf zegt: "Helaas! De vis is ontsnapt!" |
 | `assets/audio/sfx/vissen-gigant.mp3` + `.json` | "Wow! Een gigantische ...!" voor elke vissoort: een vangst binnen 5 % van de grootste lengte van die soort |
+| `assets/audio/sfx/vissen-4.mp3` + `.json` | de blankvoorn, bij de naam op zijn kaartje |
+| `assets/audio/sfx/vissen-5.mp3` + `.json` | de tien nieuwe vissen van Griekenland, en "Griekenland!" |
+| `assets/audio/sfx/vissen-gigant-2.mp3` + `.json` | "Wow! Een gigantische ...!" voor die tien |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.
@@ -255,6 +260,7 @@ Naast de muziek heeft elke kaart haar eigen geluiden
 |---|---|---|
 | Naarden-Vesting | vogels (`lake-birds`) | een plons (`lake-plons`), kerkklokken in de verte (`lake-bells`) |
 | Zee | golven (`sea-waves`) | meeuwen (`sea-gulls`), een scheepshoorn in de verte (`sea-horn`) |
+| Griekenland | golfjes tegen de rotsen (`greece-waves`) | cicaden in de dennen (`greece-cicadas`), meeuwen (`sea-gulls`), de klok van de kapel (`lake-bells`) |
 
 De muziek van de zee is `assets/audio/music/relaxing.mp3`.
 
@@ -296,3 +302,26 @@ Maten, aas en zeldzaamheid staan in `src/data/fish.js`.
 | `shark` | Haai | 80-120 | 150-210 | 260-350 | aasvisje, pilker |
 
 De haai is de zeldzaamste vis van het hele spel.
+
+## De Griekse vissen
+
+Vanaf de rots in Griekenland. Zeebaars en geep zijn dezelfde soorten als op
+de Noordzee (met in het vissenboek een eigen kaartje); de rest leeft alleen
+hier.
+
+| id | Naam | klein | middel | groot | bijt op |
+|---|---|---|---|---|---|
+| `gilthead` | Goudbrasem | 15-22 cm | 26-40 | 45-70 | garnaal, inktvis |
+| `whitebream` | Witte zeebrasem | 10-15 | 18-28 | 32-45 | brood, garnaal, inktvis |
+| `seabass` | Zeebaars | 20-35 | 40-60 | 75-100 | garnaal, inktvis, plug, shad |
+| `mullet` | Harder | 15-22 | 28-45 | 52-75 | brood |
+| `redmullet` | Gestreepte zeebarbeel | 10-14 | 16-24 | 27-40 | garnaal |
+| `barracuda` | Geelstaartbarracuda | 30-45 | 55-80 | 90-128 | plug, shad, werpjig |
+| `garfish` | Geep | 30-45 | 50-70 | 80-100 | garnaal, plug, veertjes |
+| `horsemackerel` | Mediterrane horsmakreel | 12-18 | 20-30 | 35-60 | garnaal, inktvis, veertjes, werpjig |
+| `bonito` | Bonito | 30-40 | 45-62 | 68-91 | werpjig, plug |
+| `dentex` | Tandbrasem | 20-30 | 35-60 | 65-100 | inktvis, shad |
+| `amberjack` | Amberjack | 40-60 | 70-110 | 125-190 | werpjig, inktvis |
+| `moray` | Murene | 40-60 | 70-100 | 110-150 | inktvis |
+
+De amberjack is hier de zeldzaamste, daarna de murene en de tandbrasem.
