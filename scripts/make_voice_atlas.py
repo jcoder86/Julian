@@ -103,6 +103,17 @@ ATLASES = {
     },
     # And what is called out for a giant of each of them: GIANTS_GREECE.
     "vissen-gigant-2": {},
+    # October 2026, with the map of the South Pole: its twelve fish, and its
+    # name. (Written as they should SOUND: "makreel-ijsvis", "puit-aal".)
+    "vissen-6": {
+        "silverfish": "zilvervis", "lanternfish": "lantaarnvis",
+        "mackerelicefish": "makreel-ijsvis", "icefish": "ijsvis", "dragonfish": "draakvis",
+        "plunderfish": "plundervis", "eelpout": "puit-aal", "snailfish": "slakdolf",
+        "rockcod": "gemarmerde rotskabeljauw", "skate": "sterrog",
+        "grenadier": "grenadiervis", "toothfish": "tandvis",
+    },
+    # And their giants: GIANTS_ANTARCTICA.
+    "vissen-gigant-3": {},
 }
 # Every species by the name on its card, for "Wow! Een gigantische ...!"
 # (key `giant_<species>`).
@@ -124,12 +135,14 @@ GIANTS_GREECE = {
     "barracuda": "geelstaartbarracuda", "bonito": "bonito", "dentex": "tandbrasem",
     "amberjack": "amberjack", "moray": "murene",
 }
+# The fish of the South Pole (vissen-gigant-3).
+GIANTS_ANTARCTICA = dict(ATLASES["vissen-6"])
 GIANT_PHRASE = "Wow! Een gigantische {}!"
 # Atlases whose every phrase opens with a short cry ("Wow!") and a pause:
 # how long that cry lasts at most, in seconds. A stretch of sound no longer
 # than this is the opening of the phrase after it. (The pause after "Wow!"
 # is as long as some pauses BETWEEN phrases, so the pauses cannot tell.)
-OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6}
+OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6, "vissen-gigant-3": 0.6}
 # Phrases that are not a fish: (key, text), read out after the fish. The
 # map names are spoken when a map is chosen (key `map_<id>`); `escaped`
 # when a hooked fish gets off.
@@ -142,6 +155,9 @@ EXTRA = {
     "vissen-5": [("map_greece", "Griekenland!")],
     "vissen-gigant-2": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
                         for species, spoken in GIANTS_GREECE.items()],
+    "vissen-6": [("map_antarctica", "Zuidpool!")],
+    "vissen-gigant-3": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
+                        for species, spoken in GIANTS_ANTARCTICA.items()],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}

@@ -23,6 +23,7 @@
 //   jig     a pilker is jerked up and down: by this much (m)
 //   flash   metal: it flashes in the light as it rolls
 //   floats  a dry fly: it stays on the surface
+//   glow    glow paint: it shines by itself, also deep down
 // and `lengthCm` how long it really is, hooks and all: it is drawn to the
 // same scale as everything on the water (PX_PER_CM in constants.js).
 //
@@ -33,14 +34,20 @@
 const FRESH = ["lake", "france"];
 const SEA = ["sea"];
 const GREECE = ["greece"];
+const ICE = ["antarctica"];
 
 export const BAITS = [
+  // The South Pole's own bait, first in its menu: krill, the little shrimp
+  // that nearly every fish down there eats.
+  { id: "krill",    maps: ICE, kind: "bait", displayName: "Krill",    nlName: "Krill" },
+
   // Fresh water
   // (Bread is also THE bait for mullet and white bream on the Greek coast.)
   { id: "brood",    maps: [...FRESH, ...GREECE], kind: "bait", displayName: "Brood", nlName: "Brood" },
   // The Greek coast, under the float: a little shrimp, a strip of squid.
   { id: "garnaal",  maps: GREECE, kind: "bait", displayName: "Garnaal",  nlName: "Garnaal" },
-  { id: "inktvis",  maps: GREECE, kind: "bait", displayName: "Inktvis",  nlName: "Inktvis" },
+  // (Squid is also what the big ones of the South Pole are caught on.)
+  { id: "inktvis",  maps: [...GREECE, ...ICE], kind: "bait", displayName: "Inktvis", nlName: "Inktvis" },
   { id: "mais",     maps: FRESH, kind: "bait", displayName: "Mais",     nlName: "Mais" },
   { id: "maden",    maps: FRESH, kind: "bait", displayName: "Maden",    nlName: "Maden" },
   { id: "wormen",   maps: FRESH, kind: "bait", displayName: "Wormen",   nlName: "Wormen" },
@@ -59,16 +66,17 @@ export const BAITS = [
   { id: "vlieg",    maps: ["france"], kind: "lure", displayName: "Kunstvlieg", nlName: "Kunstvlieg", lengthCm: 3,
     swim: { depth: 0, sink: 0, sway: 3, roll: 6, beat: 2, floats: true } },
 
-  // Sea
-  { id: "zeepier",  maps: SEA,   kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },
-  { id: "aasvisje", maps: SEA,   kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
+  // Sea (the worm and the bait fish, and the pilker below, also on the ice
+  // of the South Pole)
+  { id: "zeepier",  maps: [...SEA, ...ICE], kind: "bait", displayName: "Zeepier",  nlName: "Zeepier" },
+  { id: "aasvisje", maps: [...SEA, ...ICE], kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
   // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
   // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
   { id: "veren",    maps: [...SEA, ...GREECE], kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
     swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
   { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker", lengthCm: 7,
     swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
-  { id: "pilker",   maps: SEA,   kind: "lure", displayName: "Pilker",   nlName: "Pilker", lengthCm: 12,
+  { id: "pilker",   maps: [...SEA, ...ICE], kind: "lure", displayName: "Pilker", nlName: "Pilker", lengthCm: 12,
     swim: { depth: 1.6, sink: 0.9, sway: 2, roll: 10, beat: 1.4, jig: 0.6, flash: true } },
 
   // The Greek coast's own lures (also the shad and the feathers above): a
@@ -78,6 +86,11 @@ export const BAITS = [
     swim: { depth: 0.5, sink: 0.08, sway: 6, roll: 22, beat: 4, flash: true } },
   { id: "werpjig",  maps: GREECE, kind: "lure", displayName: "Werpjig",  nlName: "Werpjig", lengthCm: 9,
     swim: { depth: 1.5, sink: 1.0, sway: 2, roll: 14, beat: 1.8, jig: 0.5, flash: true } },
+
+  // The South Pole's own lure (also the pilker above): a glow jig, painted
+  // with glow paint that shines in the dark, cold water; jigged slowly, deep.
+  { id: "lichtjig", maps: ICE, kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
+    swim: { depth: 1.8, sink: 0.8, sway: 2, roll: 10, beat: 1.3, jig: 0.6, glow: true } },
 ];
 
 export const BAITS_BY_ID = Object.fromEntries(BAITS.map(b => [b.id, b]));

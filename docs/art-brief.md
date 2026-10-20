@@ -13,6 +13,8 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | Aas en lures voor de zee (5 x 2) | `baits-sea.png` | `sea-baits` |
 | De Griekse kust vanaf een kalkstenen rots | `backdrop-greece.png` | `greece` |
 | Aas en lures voor Griekenland: garnaal, inktvis, plug, werpjig (4 x 2) | `baits-greece.png` | `greece-baits` |
+| Het ijs van de Zuidpool, met iglo en vuurkorf | `backdrop-antarctica.png` | `antarctica` |
+| Krill en de lichtjig (2 x 2) | `baits-antarctica.png` | `antarctica-baits` |
 | Kaart-knop (kompas) | `icon-map.png` | `icon-map` |
 | De twaalf zeevissen, elk klein/middel/groot | `fish-<id>.png` | `fish-<id>` |
 | Startscherm met de drie vrienden en Dirk | `start-friends.png` | `start` |
@@ -179,7 +181,8 @@ beeldjes.
 
 ## Bewegend water
 
-Op alle kaarten beweegt het water. Dat is een korte video van het
+Op alle kaarten beweegt het water; op de Zuidpool ook de vlammen van het
+vuur (`flames` bij die kaart in `scripts/make_water.py`). Dat is een korte video van het
 schilderij, gemaakt met **Veo** van Google via de Gemini-sleutel in
 `.env.txt` (in de Julian-map; dat bestand komt niet in git).
 
@@ -222,6 +225,8 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-4.mp3` + `.json` | de blankvoorn, bij de naam op zijn kaartje |
 | `assets/audio/sfx/vissen-5.mp3` + `.json` | de tien nieuwe vissen van Griekenland, en "Griekenland!" |
 | `assets/audio/sfx/vissen-gigant-2.mp3` + `.json` | "Wow! Een gigantische ...!" voor die tien |
+| `assets/audio/sfx/vissen-6.mp3` + `.json` | de twaalf vissen van de Zuidpool, en "Zuidpool!" |
+| `assets/audio/sfx/vissen-gigant-3.mp3` + `.json` | "Wow! Een gigantische ...!" voor die twaalf |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.
@@ -261,6 +266,7 @@ Naast de muziek heeft elke kaart haar eigen geluiden
 | Naarden-Vesting | vogels (`lake-birds`) | een plons (`lake-plons`), kerkklokken in de verte (`lake-bells`) |
 | Zee | golven (`sea-waves`) | meeuwen (`sea-gulls`), een scheepshoorn in de verte (`sea-horn`) |
 | Griekenland | golfjes tegen de rotsen (`greece-waves`) | cicaden in de dennen (`greece-cicadas`), meeuwen (`sea-gulls`), de klok van de kapel (`lake-bells`) |
+| Zuidpool | golfjes en het knisperende vuur (`ice-water`) | een ijsberg die ver weg afbreekt (`ice-calving`) |
 
 De muziek van de zee is `assets/audio/music/relaxing.mp3`.
 
@@ -325,3 +331,28 @@ hier.
 | `moray` | Murene | 40-60 | 70-100 | 110-150 | inktvis |
 
 De amberjack is hier de zeldzaamste, daarna de murene en de tandbrasem.
+
+## De vissen van de Zuidpool
+
+Vanaf de rand van het ijs. Allemaal echte Antarctische soorten; op hun
+kaartje staat alleen hun eigen naam.
+
+| id | Naam | klein | middel | groot | bijt op |
+|---|---|---|---|---|---|
+| `silverfish` | Zilvervis | 8-12 cm | 13-18 | 19-25 | krill |
+| `lanternfish` | Lantaarnvis | 4-6 | 7-9 | 10-12 | krill |
+| `mackerelicefish` | Makreelijsvis | 15-22 | 25-38 | 42-66 | krill, lichtjig |
+| `icefish` | IJsvis | 20-30 | 35-50 | 55-75 | krill, aasvisje, pilker, lichtjig |
+| `dragonfish` | Draakvis | 10-16 | 18-28 | 30-42 | krill, aasvisje, lichtjig |
+| `plunderfish` | Plundervis | 8-12 | 14-20 | 22-30 | zeepier, krill |
+| `eelpout` | Puitaal | 12-18 | 20-30 | 33-45 | zeepier, inktvis |
+| `snailfish` | Slakdolf | 8-12 | 14-20 | 22-30 | zeepier, krill |
+| `rockcod` | Gemarmerde rotskabeljauw | 20-30 | 35-55 | 60-92 | krill, zeepier, inktvis, aasvisje, pilker |
+| `skate` | Sterrog | 30-45 | 50-70 | 75-100 | inktvis, aasvisje, zeepier |
+| `grenadier` | Grenadiervis | 30-45 | 50-72 | 78-105 | inktvis, aasvisje, pilker, lichtjig |
+| `toothfish` | Tandvis | 40-70 | 80-130 | 140-200 | inktvis, aasvisje, pilker, lichtjig |
+
+De tandvis is hier de zeldzaamste, daarna de grenadiervis en de sterrog.
+De doorschijnende vinnen van de ijsvissen lieten het groene scherm door:
+`scripts/split_atlas.py` haalt dat groen er bij deze soorten uit
+(`DESPILL_SPECIES`).

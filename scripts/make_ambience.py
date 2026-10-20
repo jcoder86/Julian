@@ -53,6 +53,17 @@ The descriptions the sounds were generated from:
                 (A chapel bell for the Greek coast came out as tinkling
                 little bells, jingles and a desk bell; the chapel there rings
                 lake-bells.)
+    ice-water   the Greek waves (greece-waves-5) with a campfire mixed in:
+                "A small campfire burning in an iron fire bowl close by: logs
+                crackling and popping softly, the gentle whoosh of the
+                flames, an occasional little snap, steady and cosy, ..."
+                (20 s). (Waves made for the ice itself sounded like a
+                fountain or like rowing.)
+    ice-calving "An iceberg calving far away in Antarctica: a deep, distant
+                boom like faraway thunder, then a long low rumble rolling
+                slowly over the calm sea and fading away. ..."  (7 s)
+                (Penguins were tried twice, and came out as shrill
+                squawking or as no bird at all: the ice has none.)
 """
 
 import subprocess
@@ -70,7 +81,8 @@ RATE = 44100
 # treated. `far`: low-pass cut-off in Hz (None = as recorded). `head`,
 # `tail`: seconds of fade-in and fade-out. `echo`: the sound comes back off
 # the water a few times, and this many seconds are added for that to die
-# away in. `stereo`: beds keep their width.
+# away in. `stereo`: beds keep their width. `mix`: (another source, dB): it
+# is mixed in, that much softer than the main one.
 SOUNDS = {
     "lake-birds":  dict(src="lake-birds-4", bed=True, far=None, stereo=True),
     "lake-bells":  dict(src="lake-bells-1", far=3800, tail=2.2),
@@ -87,6 +99,13 @@ SOUNDS = {
     "greece-waves":   dict(src="greece-waves-5", bed=True, far=None, stereo=True),
     # (Low-passed they turn into rain: their song is all around 6 kHz.)
     "greece-cicadas": dict(src="greece-cicadas-1", far=None, head=1.6, tail=2.2),
+    # The South Pole: small waves and the fire beside the igloo. (Variant 4
+    # is the one that is plainly a campfire; 1 ticks like a clock.)
+    "ice-water":   dict(src="greece-waves-5", bed=True, far=None, stereo=True,
+                        mix=("ice-fire-4", 0.0)),
+    # Variant 2: a boom, then a rumble dying away over six seconds (around
+    # 50 Hz -- a tablet's small speaker gives only a hint of it).
+    "ice-calving": dict(src="ice-calving-2", far=1500, tail=1.5, echo=1.6),
 }
 ECHO = "aecho=0.8:0.65:330|700|1250:0.38|0.24|0.13"
 
@@ -148,6 +167,11 @@ def make(name):
         return
     channels = 2 if spec.get("stereo") else 1
     x = filtered(src, spec.get("far"), channels, spec.get("echo", 0))
+    if spec.get("mix"):
+        other, softer_db = spec["mix"]
+        y = filtered(SRC / f"{other}.wav", None, channels)
+        n = min(len(x), len(y))
+        x = x[:n] + y[:n] * (rms(x[:n]) / rms(y[:n])) * 10 ** (softer_db / 20)
 
     if spec.get("bed"):
         target = BED_RMS_DB

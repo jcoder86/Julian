@@ -58,7 +58,7 @@ served at the dev-server root. Phaser's loader paths reflect that:
 
 ## Maps
 
-There are four fishing spots, picked on the map-select screen after the
+There are five fishing spots, picked on the map-select screen after the
 title (and reachable again through the compass button in the HUD). Each is
 a framed painting with its name on a plate; tapping one also says the name.
 (Three cards fill the width of the screen; four or more are made smaller to
@@ -82,6 +82,15 @@ fit side by side: `MapSelectScene`.)
   (`catchKey`); the other ten live only here. The trophies are the
   tandbrasem (dentex), the murene (moray, only on squid) and the
   amberjack (up to 1.90 m, on a jig or squid).
+* **antarctica** -- Zuidpool: from the edge of the ice, beside an igloo and
+  a fire in an iron bowl (its flames move in the video too), with penguins
+  on the shore and polar bears on a floe (`floes`: not water either).
+  Under the float: krill -- what nearly every fish there eats --, a
+  lugworm, a strip of squid or a bait fish; lures: the pilker and a glow
+  jig (`glow` in `baits.js`: it hardly fades with depth and a soft spot of
+  light pulses around it). Twelve real Antarctic fish, on their cards by
+  their own name only (Tandvis, not Antarctische tandvis); the trophy is
+  the tandvis (toothfish), up to two metres.
 
 Everything specific to one spot (painting, optional video, sky mask,
 waterline, default bait, music, ambience, name) is one entry in
@@ -441,7 +450,8 @@ for the newcomers, the renamed fish and the names of the maps,
 ontsnapt!"), `vissen-gigant.mp3` for "Wow! Een gigantische ...!" of every
 species, `vissen-4.mp3` for the roach by the name on its card (Blankvoorn;
 the first recording says "voorn"), `vissen-5.mp3` for the ten new fish of
-the Greek coast and its name, `vissen-gigant-2.mp3` for their giants; the
+the Greek coast and its name, `vissen-gigant-2.mp3` for their giants,
+`vissen-6.mp3` and `vissen-gigant-3.mp3` the same for the South Pole; the
 list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
 
 The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except
@@ -653,9 +663,10 @@ float, the reel, applause, the voice).
 
 The ambience (`src/systems/Ambience.js`, a map's `ambience`) is a *bed*
 that goes round and round -- birdsong at the moat, waves at the pier,
-little waves on the rocks in Greece -- and sounds that *pass* now and
-then, each after a random wait: a fish jumping and the church bells across
-the water; gulls and a ship's horn far out; cicadas in the pines.
+little waves on the rocks in Greece, waves and the crackling fire on the
+ice -- and sounds that *pass* now and then, each after a random wait: a
+fish jumping and the church bells across the water; gulls and a ship's
+horn far out; cicadas in the pines; an iceberg breaking off far away.
 How often and how loud is in `maps.js`; each passing sound also comes from
 a slightly different side and at a slightly different volume every time.
 The bed is cross-faded into itself rather than looped, so the sliver of

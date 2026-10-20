@@ -202,6 +202,67 @@ FISH.update({
               "\nThe body is drawn straight and horizontal, with at most a gentle wave."),
 })
 
+# The fish of the ice at the South Pole (map "antarctica", October 2026).
+# All are real Antarctic species; the game calls them by their own name
+# only ("Tandvis", not "Antarctische tandvis").
+FISH.update({
+    "toothfish": ("an Antarctic toothfish (Dissostichus mawsoni): a huge, heavy, elongated "
+                  "cod-like fish, dark grey-brown to blackish with a faint mottled pattern, "
+                  "a large broad head with a big mouth and small sharp teeth, a large eye, "
+                  "two dorsal fins (the second one long), a long anal fin and a broad, "
+                  "almost square tail", SIDE, ""),
+    "icefish": ("a blackfin icefish (Chaenocephalus aceratus), the fish with clear blood: a "
+                "ghostly, almost translucent pale whitish-grey fish with faint darker bands, "
+                "a long, flat, crocodile-like head with a big toothy jaw, a large eye, and "
+                "very large, fan-shaped BLACKISH pectoral and pelvic fins; a dark first "
+                "dorsal fin and a long second one", SIDE, ""),
+    "mackerelicefish": ("a mackerel icefish (Champsocephalus gunnari): a slim, silvery, "
+                        "semi-translucent icefish with a long, pointed, flat crocodile-like "
+                        "snout, a large eye, pale silver-grey sides with faint dark vertical "
+                        "bars, a tall first dorsal fin, a long second dorsal fin and a "
+                        "slightly forked tail", SIDE, ""),
+    "dragonfish": ("an Antarctic dragonfish (Parachaenichthys charcoti): a long, slender, "
+                   "cylindrical bottom fish with a long, flat, duck-bill-like snout and a "
+                   "jutting lower jaw, a single long soft dorsal fin and a long anal fin, "
+                   "olive-brown back with dark mottled saddles, a pale belly and a rounded "
+                   "tail", SIDE, "\nThe body is drawn straight and horizontal."),
+    "plunderfish": ("a barbeled plunderfish (Pogonophryne): a squat, chunky bottom fish with "
+                    "a huge, broad, flat head and a wide mouth, a fleshy barbel hanging from "
+                    "the chin, a short spiny first dorsal fin, big fan-like pectoral fins, "
+                    "dark brown-grey body richly blotched and marbled with paler spots",
+                    SIDE, ""),
+    "silverfish": ("an Antarctic silverfish (Pleuragramma antarcticum): a small, slim, "
+                   "herring-like schooling fish with a translucent, glittering silvery body "
+                   "with a faint pinkish tinge, a large eye, a small pointed head and a forked "
+                   "tail", SIDE, ""),
+    "snailfish": ("an Antarctic snailfish (Paraliparis): a soft, tadpole-shaped, jelly-like "
+                  "fish with a big round head, a small eye and a body that tapers into a long "
+                  "thin tail; loose, smooth, translucent PINKISH-lilac skin without scales, "
+                  "long soft dorsal and anal fins that run into the tail fin", SIDE, ""),
+    "eelpout": ("an Antarctic eelpout (Lycodichthys dearborni): an eel-like, elongated fish "
+                "with a big blunt head, fleshy lips, small eyes and large pectoral fins; the "
+                "long dorsal and anal fins run together around the pointed tail; mottled "
+                "grey-brown with darker blotches and a pale belly", SIDE,
+                "\nThe body is drawn straight and horizontal, with at most a gentle wave."),
+    "skate": ("an Antarctic starry skate (Amblyraja georgiana): kite-shaped flat body with "
+              "broad wings, grey-brown upper side scattered with small pale and dark spots, "
+              "a row of sharp thorns along the middle of the back and the tail, a thin tail",
+              ABOVE, "\nThe snout points right and the thin tail points left."),
+    "rockcod": ("a marbled rockcod (Notothenia rossii): a robust, heavy-bodied fish with a "
+                "big head, a wide mouth with thick lips and a large eye, olive-brown to "
+                "bronze MARBLED all over with darker irregular blotches and a golden sheen, "
+                "two dorsal fins, broad pectoral fins and a rounded tail", SIDE, ""),
+    "lanternfish": ("an Antarctic lanternfish (Electrona antarctica): a small, rather deep "
+                    "bodied fish with a VERY large eye, a dark blue-black back, silvery sides, "
+                    "and rows of small round glowing light organs along the belly and the "
+                    "flanks, shining pale blue; a small adipose fin and a forked tail", SIDE, ""),
+    "grenadier": ("an Antarctic grenadier (Macrourus whitsoni): a rattail -- a big head with "
+                  "large eyes, a ridged snout and an underslung mouth with a short chin "
+                  "barbel, a tall pointed first dorsal fin, and a body that tapers into a "
+                  "very long, thin, pointed rat-like tail without a tail fin; grey-brown "
+                  "with a silvery sheen", SIDE, "\nThe body is drawn straight and horizontal."),
+})
+
 # ---------------------------------------------------------------------------
 # Paintings
 # ---------------------------------------------------------------------------
@@ -360,6 +421,48 @@ No people, no animals, no boats, no text. Bright midday summer light.
 4:3 landscape.
 """
 
+ANTARCTICA_BACKDROP = """\
+Repaint the attached picture (a view over the sea from a rock on a coast)
+as the ICE of Antarctica on a bright, clear polar day. Keep the same camera
+position, the same composition and the same rich, detailed painting style.
+
+THE ICE EDGE. In the lower-left corner, exactly where the rock is in the
+reference -- same position, same size, same viewing angle, same footprint
+-- there is now the edge of a thick, flat sheet of ice covered in packed,
+wind-sculpted white snow. Its top is level and smooth. Its front drops
+into the sea as a low cliff of glassy blue-white ice with a few icicles;
+at the waterline the ice glows turquoise.
+
+THE CAMP. Right at the LEFT edge of the picture, on the ice and partly cut
+off by the frame: a small round IGLOO of snow blocks with a dark arched
+entrance. In the bottom-left corner, in front of the igloo and close to the
+viewer, a small cheerful CAMPFIRE in a round black iron fire bowl standing
+on three short legs on the snow, with a few logs and bright orange flames,
+a warm orange glow on the snow around it and a thin wisp of grey smoke
+rising. Between the igloo and the cliff edge, the flat middle of the ice
+stays clear and empty (two children and a dog are added there later):
+nothing in the area from one tenth to one third of the width, at the
+height of the ice top.
+
+THE WATER. Dark, deep, icy blue-teal, calm, with a gentle ripple and a few
+sparkles of sunlight; near the ice edge it is clearer and turquoise. Only a
+few small chunks of floating ice. All the open water stays open.
+
+FURTHER OUT. On the left, in the middle distance, a low snowy shore of ice
+with a group of about eight EMPEROR PENGUINS standing together, one fluffy
+grey chick among them. On the right, in the middle distance, a flat white
+ice floe with two POLAR BEARS on it, a mother and a cub. A few big, white
+and blue icebergs scattered further out. Small, as far away as they are.
+
+THE HORIZON. A HIGH, level horizon about one quarter of the way down from
+the top edge, with a long line of white glaciers and snowy mountains on it.
+
+THE SKY. Clear, pale polar blue with NO clouds at all, a soft golden glow
+low down from a low sun.
+
+No ships, no people, no text. 4:3 landscape.
+"""
+
 MAPSELECT_BACKGROUND = """\
 A background painting for the "choose your fishing spot" screen of a
 children's fishing game: the inside wall of a cosy fishing cabin, made of
@@ -414,9 +517,12 @@ SKY_LIGHT = {
                "their shade"),
     "greece": ("a brilliant, hot Mediterranean summer day -- dazzling white fair-weather "
                "clouds with soft blue-grey shading, hazy and pale near the horizon"),
+    "antarctica": ("a crisp, clear polar day with a low sun -- bright white clouds with cool "
+                   "blue-grey shading and a faint golden-pink glow on their sunny side"),
 }
 SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png",
-                "france": "assets/raw/backdrop-france.png", "greece": "assets/raw/backdrop-greece.png"}
+                "france": "assets/raw/backdrop-france.png", "greece": "assets/raw/backdrop-greece.png",
+                "antarctica": "assets/raw/backdrop-antarctica.png"}
 
 # The near layer: a few big clouds, high up.  The far layer: small ones, low.
 SKY_LAYERS = {
@@ -645,6 +751,11 @@ CATCH_GROUND = {
                "flat, weathered, with cracks, a small rock pool and a coil of rope -- and "
                "crystal clear TURQUOISE seawater over pale stones and sea grass along the top",
                "assets/raw/catch-sea.png"),
+    "antarctica": ("packed white SNOW on the flat ice of Antarctica instead of the stone "
+                   "slabs -- with footprints, a few lumps of clear blue ice and a coil of "
+                   "rope -- and dark, icy blue-teal water with small floating chunks of ice "
+                   "along the top, the ice edge glowing turquoise",
+                   "assets/raw/catch-sea.png"),
 }
 
 # ---------------------------------------------------------------------------
@@ -844,6 +955,34 @@ overlaps or touches. No shadows on the background, no text, no labels, no
 grid lines. Crisp edges. Landscape, about 3:2.
 """
 
+# The South Pole: krill under the float, and a glow jig.
+ANTARCTICA_BAITS = """\
+A sprite sheet of fishing bait and a lure for a game, in exactly the same
+realistic painting style and the same kind of layout as the attached
+reference sheet: here 2 columns by 2 rows on a solid flat pure green
+(#00FF00) chroma-key background.
+
+Columns, left to right:
+  1. krill -- three small Antarctic krill: shrimp-like, translucent
+     ORANGE-PINK crustaceans with big black eyes, long feelers and many
+     little legs
+  2. a glow jig -- a slim, heavy metal jigging lure, as long as a finger,
+     painted with LUMINOUS PALE ICE-BLUE glow paint that seems to shine,
+     white dots and a red eye, with a treble hook at its lower end
+
+TOP ROW, each item hanging vertically "on the line":
+  1. the krill threaded on a single small steel hook, eye at the top
+  2. the jig hanging from a steel ring at its top end, treble hook below
+
+BOTTOM ROW, the same two items lying flat and horizontal: 1. the krill
+alone  2. the jig, its line ring at the LEFT end.
+
+Nothing on any item is green. Every item is one solid, connected object,
+clearly separated from its neighbour by plenty of plain green; nothing
+overlaps or touches. No shadows on the background, no text, no labels, no
+grid lines. Crisp edges. Landscape, about 3:2.
+"""
+
 MAP_ICON = """\
 A game HUD button in exactly the same style, size and framing as the
 attached reference icon: a round, glossy blue button with a polished
@@ -875,6 +1014,11 @@ JOBS = {
                          brief=GREECE_BACKDROP),
     "greece-baits": dict(out="assets/raw/baits-greece.png",
                          refs=["assets/raw/baits-sea.png"], brief=GREECE_BAITS),
+    # The ice of the South Pole, from the composition of the Greek coast.
+    "antarctica":   dict(out="assets/raw/backdrop-antarctica.png",
+                         refs=["assets/raw/backdrop-greece.png"], brief=ANTARCTICA_BACKDROP),
+    "antarctica-baits": dict(out="assets/raw/baits-antarctica.png",
+                             refs=["assets/raw/baits-greece.png"], brief=ANTARCTICA_BAITS),
     "mapselect-bg": dict(out="assets/raw/mapselect.png", refs=[], brief=MAPSELECT_BACKGROUND),
     "sea-baits":    dict(out="assets/raw/baits-sea.png",
                          refs=["assets/raw/baits.png"], brief=SEA_BAITS),

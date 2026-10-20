@@ -82,6 +82,12 @@ const FLOAT_RING_MS = 1500;    // a fly lying still on the surface
 // A metal lure (spinner, spoon, pilker) flashes as it turns in the light.
 const FLASH_MS = 220;
 const FLASH_SIZE = 15;
+// A glow lure shines by itself: deep down it hardly fades, and a soft halo
+// of its light pulses around it (design px across at full scale, colour).
+const GLOW_KEEP = 0.25;        // of the usual fading and tinting with depth
+const GLOW_W = 60;             // (shrinks with distance like a ripple: RING_KEEP)
+const GLOW_COLOR = 0xe6ffcc;     // glow paint: a pale, phosphor green-white
+const GLOW_PULSE_S = 1.6;
 
 // The fish that follows: drawn to scale (opts.pxPerCm), within bounds
 // (design px at full scale); how far behind the lure it starts and ends (in
@@ -95,6 +101,24 @@ const FOLLOWER_ALPHA = 0.5;
 const FOLLOWER_DEEPER = 0.35;  // m below the lure
 
 const lerp = (a, b, t) => a + (b - a) * t;
+
+/** A round spot of light, white in the middle and fading out: made once. */
+function glowTexture(scene) {
+  const key = 'lure-glow';
+  if (!scene.textures.exists(key)) {
+    const size = 64;
+    const canvas = scene.textures.createCanvas(key, size, size);
+    const ctx = canvas.getContext();
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, 'rgba(255,255,255,0.9)');
+    g.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    canvas.refresh();
+  }
+  return key;
+}
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
 export class LureSwim {
@@ -149,6 +173,12 @@ export class LureSwim {
     container.setAlpha(1);
     this.dimple = scene.add.ellipse(start.x, start.y, DIMPLE_W, DIMPLE_W * 0.4, 0xffffff, 0.55).setDepth(7);
     this.dimple.setVisible(false);
+    // (A soft spot of light, drawn normally: the water is a video behind
+    // the canvas, so light ADDED in the canvas would show nothing.)
+    this.halo = this.swim.glow
+      ? scene.add.image(start.x, start.y, glowTexture(scene)).setTint(GLOW_COLOR)
+        .setAlpha(0).setDepth((container.depth || 0) - 0.1)
+      : null;
 
     this._splash(this.start, 1);
     this.update(0, { progress: 0, cranking: false });
@@ -220,8 +250,8 @@ export class LureSwim {
     this.sprite.setFlipY(Math.cos(rotation) < 0);
     this.sprite.setScale(this._spriteScale * lerp(1, FORESHORTEN, Math.abs(this.dir.y)), this._spriteScale);
 
-    // Under water: fainter, the water's colour.
-    const deep = clamp01(depth / SEE_DEPTH);
+    // Under water: fainter, the water's colour -- a glow lure much less so.
+    const deep = clamp01(depth / SEE_DEPTH) * (swim.glow ? GLOW_KEEP : 1);
     this.sprite.setAlpha(lerp(ALPHA_TOP, ALPHA_DEEP, deep));
     const c = Phaser.Display.Color.Interpolate.ColorWithColor(
       Phaser.Display.Color.ValueToColor(0xffffff), this.waterTint, 100, Math.round(deep * TINT_DEEP * 100));
@@ -246,6 +276,15 @@ export class LureSwim {
       this.entry.x = x;
       this.entry.y = y;
     }
+    if (this.halo) {
+      // Its own light around it, a little stronger the deeper and darker.
+      const pulse = 0.5 + 0.5 * Math.sin(this._time * Math.PI * 2 / GLOW_PULSE_S);
+      this.halo.setPosition(x, y);
+      const size = GLOW_W * scale ** (1 - RING_KEEP) * (0.9 + 0.2 * pulse);
+      this.halo.setDisplaySize(size, size * 0.6);
+      this.halo.setAlpha(0.45 + 0.25 * pulse + 0.2 * clamp01(depth / SEE_DEPTH));
+    }
+
     const underWater = depth > 0.15;
     this.dimple.setVisible(underWater);
     if (underWater) {
@@ -491,6 +530,8 @@ export class LureSwim {
     this.follower = null;
     if (this.dimple) this.dimple.destroy();
     this.dimple = null;
+    if (this.halo) this.halo.destroy();
+    this.halo = null;
     const s = this.sprite;
     if (s && s.active) {
       s.clearTint();

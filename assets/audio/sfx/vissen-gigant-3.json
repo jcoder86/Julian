@@ -1,0 +1,54 @@
+{
+  "file": "vissen-gigant-3.mp3",
+  "totalDuration": 35.34,
+  "phrases": {
+    "giant_silverfish": {
+      "start": 0.5,
+      "duration": 2.2
+    },
+    "giant_lanternfish": {
+      "start": 3.2,
+      "duration": 2.31
+    },
+    "giant_mackerelicefish": {
+      "start": 6.01,
+      "duration": 2.59
+    },
+    "giant_icefish": {
+      "start": 9.1,
+      "duration": 2.35
+    },
+    "giant_dragonfish": {
+      "start": 11.95,
+      "duration": 2.15
+    },
+    "giant_plunderfish": {
+      "start": 14.6,
+      "duration": 2.22
+    },
+    "giant_eelpout": {
+      "start": 17.32,
+      "duration": 2.14
+    },
+    "giant_snailfish": {
+      "start": 19.96,
+      "duration": 2.15
+    },
+    "giant_rockcod": {
+      "start": 22.61,
+      "duration": 3.28
+    },
+    "giant_skate": {
+      "start": 26.39,
+      "duration": 2.37
+    },
+    "giant_grenadier": {
+      "start": 29.26,
+      "duration": 2.61
+    },
+    "giant_toothfish": {
+      "start": 32.37,
+      "duration": 2.47
+    }
+  }
+}

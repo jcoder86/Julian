@@ -1,0 +1,154 @@
+{
+  "file": "vissen-6.mp3",
+  "totalDuration": 71.0,
+  "phrases": {
+    "small_silverfish": {
+      "start": 0.5,
+      "duration": 1.47
+    },
+    "small_lanternfish": {
+      "start": 2.47,
+      "duration": 1.54
+    },
+    "small_mackerelicefish": {
+      "start": 4.51,
+      "duration": 1.82
+    },
+    "small_icefish": {
+      "start": 6.83,
+      "duration": 1.31
+    },
+    "small_dragonfish": {
+      "start": 8.64,
+      "duration": 1.34
+    },
+    "small_plunderfish": {
+      "start": 10.48,
+      "duration": 1.38
+    },
+    "small_eelpout": {
+      "start": 12.36,
+      "duration": 1.28
+    },
+    "small_snailfish": {
+      "start": 14.14,
+      "duration": 1.31
+    },
+    "small_rockcod": {
+      "start": 15.95,
+      "duration": 2.08
+    },
+    "small_skate": {
+      "start": 18.53,
+      "duration": 1.26
+    },
+    "small_grenadier": {
+      "start": 20.29,
+      "duration": 1.59
+    },
+    "small_toothfish": {
+      "start": 22.38,
+      "duration": 1.35
+    },
+    "medium_silverfish": {
+      "start": 24.23,
+      "duration": 1.12
+    },
+    "medium_lanternfish": {
+      "start": 25.85,
+      "duration": 1.12
+    },
+    "medium_mackerelicefish": {
+      "start": 27.47,
+      "duration": 1.39
+    },
+    "medium_icefish": {
+      "start": 29.36,
+      "duration": 1.02
+    },
+    "medium_dragonfish": {
+      "start": 30.88,
+      "duration": 1.12
+    },
+    "medium_plunderfish": {
+      "start": 32.5,
+      "duration": 1.12
+    },
+    "medium_eelpout": {
+      "start": 34.12,
+      "duration": 1.15
+    },
+    "medium_snailfish": {
+      "start": 35.77,
+      "duration": 1.2
+    },
+    "medium_rockcod": {
+      "start": 37.47,
+      "duration": 1.93
+    },
+    "medium_skate": {
+      "start": 39.9,
+      "duration": 0.88
+    },
+    "medium_grenadier": {
+      "start": 41.28,
+      "duration": 1.31
+    },
+    "medium_toothfish": {
+      "start": 43.09,
+      "duration": 1.0
+    },
+    "large_silverfish": {
+      "start": 44.59,
+      "duration": 1.56
+    },
+    "large_lanternfish": {
+      "start": 46.65,
+      "duration": 1.56
+    },
+    "large_mackerelicefish": {
+      "start": 48.71,
+      "duration": 1.99
+    },
+    "large_icefish": {
+      "start": 51.2,
+      "duration": 1.52
+    },
+    "large_dragonfish": {
+      "start": 53.22,
+      "duration": 1.46
+    },
+    "large_plunderfish": {
+      "start": 55.18,
+      "duration": 1.55
+    },
+    "large_eelpout": {
+      "start": 57.23,
+      "duration": 1.37
+    },
+    "large_snailfish": {
+      "start": 59.1,
+      "duration": 1.44
+    },
+    "large_rockcod": {
+      "start": 61.04,
+      "duration": 2.3
+    },
+    "large_skate": {
+      "start": 63.84,
+      "duration": 1.31
+    },
+    "large_grenadier": {
+      "start": 65.65,
+      "duration": 1.67
+    },
+    "large_toothfish": {
+      "start": 67.82,
+      "duration": 1.46
+    },
+    "map_antarctica": {
+      "start": 69.78,
+      "duration": 0.72
+    }
+  }
+}

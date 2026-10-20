@@ -230,6 +230,56 @@ export const FISH_SPECIES = [
     lengthCm: { small: [40, 60], medium: [70, 110], large: [125, 190] }, maxReelTurns: 13 },
   { id: "moray",    nlName: "Murene",    baits: ["inktvis"],                                   speciesWeight:   5, sizeWeights: [45, 40, 15],
     lengthCm: { small: [40, 60], medium: [70, 100], large: [110, 150] }, maxReelTurns: 12 },
+
+  // ===========================================================================
+  // The ice of the South Pole
+  // ===========================================================================
+  // Fishing from the edge of the ice, into water just below freezing. The
+  // fish here live nowhere else: most of them belong to the "ice fish"
+  // family, with antifreeze in their blood. (Some really live deep down; in
+  // the game they come up.) Under the float: krill -- what nearly everything
+  // here eats --, a worm, a strip of squid or a bait fish; lures: the pilker
+  // and a glow jig. Their cards say just their own name: Tandvis, not
+  // Antarctische tandvis.
+
+  // The little ones that swarm under the ice, on krill.
+  { id: "silverfish", nlName: "Zilvervis", baits: ["krill"],                                  speciesWeight: 100, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [ 8, 12], medium: [13, 18], large: [ 19,  25] } },
+  // A glowing little deep-sea fish that comes up at night: krill only.
+  { id: "lanternfish", nlName: "Lantaarnvis", baits: ["krill"],                               speciesWeight:  16, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [ 4,  6], medium: [ 7,  9], large: [ 10,  12] } },
+  // A schooling icefish, silvery and slim: krill, or a glow jig.
+  { id: "mackerelicefish", nlName: "Makreelijsvis", baits: ["krill", "lichtjig"],             speciesWeight:  60, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [15, 22], medium: [25, 38], large: [ 42,  66] } },
+  // THE icefish: ghostly pale, with clear blood and a crocodile's head. A
+  // hunter that also eats krill.
+  { id: "icefish",  nlName: "IJsvis",    baits: ["krill", "aasvisje", "pilker", "lichtjig"],   speciesWeight:  35, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [20, 30], medium: [35, 50], large: [ 55,  75] } },
+  { id: "dragonfish", nlName: "Draakvis", baits: ["krill", "aasvisje", "lichtjig"],           speciesWeight:  25, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [10, 16], medium: [18, 28], large: [ 30,  42] } },
+
+  // On the bottom: worms and krill; the eelpout also takes squid.
+  { id: "plunderfish", nlName: "Plundervis", baits: ["zeepier", "krill"],                     speciesWeight:  55, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [ 8, 12], medium: [14, 20], large: [ 22,  30] } },
+  { id: "eelpout",  nlName: "Puitaal",   baits: ["zeepier", "inktvis"],                        speciesWeight:  45, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 33,  45] } },
+  // Soft and pink as jelly, the strangest of them.
+  { id: "snailfish", nlName: "Slakdolf", baits: ["zeepier", "krill"],                         speciesWeight:  25, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [ 8, 12], medium: [14, 20], large: [ 22,  30] } },
+  // The South Pole's "cod": big, common, and it bites at everything.
+  { id: "rockcod",  nlName: "Gemarmerde rotskabeljauw", baits: ["krill", "zeepier", "inktvis", "aasvisje", "pilker"], speciesWeight: 55, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [20, 30], medium: [35, 55], large: [ 60,  92] } },
+
+  // Bigger and rarer: squid and bait fish on the bottom, or a jig.
+  { id: "skate",    nlName: "Sterrog",   baits: ["inktvis", "aasvisje", "zeepier"],            speciesWeight:  10, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 75, 100] }, maxReelTurns: 11 },
+  { id: "grenadier", nlName: "Grenadiervis", baits: ["inktvis", "aasvisje", "pilker", "lichtjig"], speciesWeight: 6, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [30, 45], medium: [50, 72], large: [ 78, 105] }, maxReelTurns: 12 },
+
+  // The trophy of the ice: the toothfish, two metres long and as heavy as a
+  // grown man, that can live for fifty years. Squid, a bait fish or a jig.
+  { id: "toothfish", nlName: "Tandvis",  baits: ["inktvis", "aasvisje", "pilker", "lichtjig"], speciesWeight: 1.5, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [40, 70], medium: [80, 130], large: [140, 200] }, maxReelTurns: 14 },
 ];
 
 /**
@@ -250,6 +300,9 @@ export const MAP_SPECIES = {
         "seabass", "cod", "ray", "conger", "tuna", "shark"],
   greece: ["gilthead", "whitebream", "seabass", "mullet", "redmullet", "barracuda",
            "garfish", "horsemackerel", "bonito", "dentex", "amberjack", "moray"],
+  antarctica: ["silverfish", "lanternfish", "mackerelicefish", "icefish", "dragonfish",
+               "plunderfish", "eelpout", "snailfish", "rockcod", "skate", "grenadier",
+               "toothfish"],
 };
 
 /** All species of one map, in display order. */
@@ -337,6 +390,10 @@ export const OLDEST_YEARS = {
   // The Greek coast
   gilthead: 11, whitebream: 12, mullet: 20, redmullet: 11, horsemackerel: 12,
   barracuda: 12, bonito: 5, dentex: 30, amberjack: 17, moray: 30,
+  // The ice of the South Pole: cold water, slow lives, old fish.
+  silverfish: 14, lanternfish: 4, mackerelicefish: 12, icefish: 15, dragonfish: 10,
+  plunderfish: 8, eelpout: 15, snailfish: 8, rockcod: 20, skate: 20, grenadier: 40,
+  toothfish: 45,
 };
 // A species that is not in the list is taken for an ordinary one.
 const OLDEST_YEARS_UNKNOWN = 15;

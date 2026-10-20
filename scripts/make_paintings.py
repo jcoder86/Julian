@@ -47,6 +47,9 @@ PAINTINGS = {
     "backdrop-greece":  "a rocky coast in Greece, from a limestone ledge (map 'greece')",
     "catch-julian-greece": "Julian and Dirk on the rocks",
     "catch-guest-greece":  "James and Boaz on the rocks",
+    "backdrop-antarctica": "the ice of the South Pole, with an igloo and a fire (map 'antarctica')",
+    "catch-julian-antarctica": "Julian and Dirk on the snow",
+    "catch-guest-antarctica":  "James and Boaz on the snow",
 }
 
 

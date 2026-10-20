@@ -1316,9 +1316,9 @@ export class FishingScene extends Phaser.Scene {
     g.fillPath();
     g.strokePath();
 
-    // ...minus the jetty or pier, in red; and the landing spot, a dot.
-    const dry = this.map.dry || [];
-    if (dry.length) {
+    // ...minus the jetty or pier (and any floes), in red; and the landing
+    // spot, a dot.
+    for (const dry of this.map.dryParts) {
       g.fillStyle(0xff3030, 0.35);
       g.lineStyle(2, 0xff3030, 0.9);
       g.beginPath();

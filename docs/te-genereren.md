@@ -70,6 +70,26 @@ verstaan zoals geschreven.
 
 Niets.
 
+## Ronde van 20 oktober 2026 (avond): de Zuidpool
+
+Alles hieronder is op 20 oktober 2026 gemaakt en zit in het spel.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Kaart Zuidpool: de rand van het ijs met een iglo en een vuurkorf, pinguins, ijsberen op een schots, ijsbergen | Codex, `antarctica` | ja |
+| Vangstscherm Zuidpool, beide duo's | Codex, `catch-julian-antarctica`, `catch-guest-antarctica` | ja |
+| Wolken Zuidpool | Codex, `clouds-antarctica-front-1..2`, `clouds-antarctica-back-1..2` | ja |
+| Bewegend water en vuur (Veo, betaald) | `python scripts/make_water.py antarctica` | ja |
+| Krill en de lichtjig | Codex, `antarctica-baits`, daarna `python scripts/split_atlas.py baits-antarctica` | ja |
+| Twaalf vissen: zilvervis, lantaarnvis, makreelijsvis, ijsvis, draakvis, plundervis, puitaal, slakdolf, gemarmerde rotskabeljauw, sterrog, grenadiervis, tandvis | Codex, `fish-<id>` | ja |
+| Stem: de twaalf vissen (klein, gewoon, groot) en "Zuidpool!" | ElevenLabs, `vissen-6` | ja |
+| Stem: "Wow! Een gigantische ...!" voor die twaalf | ElevenLabs, `vissen-gigant-3` | ja |
+| Knisperend vuur (gemengd met de Griekse golfjes), een afbrekende ijsberg | ElevenLabs Sound Effects, `ice-water`, `ice-calving` | ja |
+
+Niet gelukt, en daarom weggelaten: pinguingeluid (kwam uit als schel
+gekrijs of als geen vogel) en golfjes speciaal voor het ijs (klonken als
+een fontein of als roeien).
+
 ## Ronde van 20 oktober 2026: Griekenland
 
 Alles hieronder is op 20 oktober 2026 gemaakt en zit in het spel.

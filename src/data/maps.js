@@ -1,6 +1,7 @@
 // Fishing spots. Each map is a 4:3 painting with something to fish from in
 // its lower-left corner -- a jetty (the moat), a floating pontoon (the
-// French lake), a stone pier (the sea) or a flat rock (the Greek coast);
+// French lake), a stone pier (the sea), a flat rock (the Greek coast) or
+// the edge of the ice (the South Pole);
 // everything a scene needs
 // to know about ONE spot lives here, so FishingScene itself contains no
 // "lake" or "sea" specifics.
@@ -49,6 +50,17 @@ const GREECE_HORIZON_Y = WORLD_TOP + GREECE_HORIZON * WORLD_HEIGHT;
 const GREECE_WATERLINE = [
   [   0, 150], [ 110, 142], [ 200, 137], [ 290, 120], [ 365, 110],
   [ 380, GREECE_HORIZON_Y], [1280, GREECE_HORIZON_Y],
+];
+
+// The South Pole, traced from assets/raw/backdrop-antarctica.png. From
+// x = 400 on, the open sea runs up to the glaciers on the horizon; left of
+// that the water ends at the ice shore where the penguins stand.
+const ICE_SKY = 0.212;
+const ICE_HORIZON = ICE_SKY + 0.005;
+const ICE_HORIZON_Y = WORLD_TOP + ICE_HORIZON * WORLD_HEIGHT;
+const ICE_WATERLINE = [
+  [   0, 143], [ 100, 137], [ 250, 125], [ 390, 115],
+  [ 400, ICE_HORIZON_Y], [1280, ICE_HORIZON_Y],
 ];
 
 /**
@@ -113,6 +125,8 @@ function makeWaterTopAt(samples) {
 //   dry             the jetty or pier as it stands in the picture -- top,
 //                   front and posts -- as a polygon of [x, y] points: below
 //                   the waterline, but not water. A float cannot land on it.
+//   floes           optional: more such polygons out on the water (an ice
+//                   floe with polar bears on it)
 //   waterline       see above
 //   depthFarY       design y where a cast counts as "far away" (the float
 //                   is drawn smallest there, full size at the jetty)
@@ -293,6 +307,51 @@ const MAP_DEFS = [
       ],
     },
   },
+  {
+    // The South Pole: the edge of the ice, with an igloo and a fire in an
+    // iron bowl to keep warm by, dark icy water with icebergs, penguins on
+    // the shore and polar bears on a floe. (Polar bears really live at the
+    // North Pole; here they keep the penguins company.)
+    id: 'antarctica',
+    nlName: 'Zuidpool',
+    backdropKey: 'backdrop-antarctica',
+    backdropImage: 'clean/backdrop-antarctica.jpg',
+    backdropVideo: 'clean/backdrop-antarctica.mp4',
+    skyMask: 'clean/sky-mask-antarctica.png',
+    skyMaskFraction: 320 / 720,
+    clouds: [
+      { src: 'clean/clouds-antarctica-back.png',  height: ICE_SKY * WORLD_HEIGHT, speed: 1.2, alpha: 0.9 },
+      { src: 'clean/clouds-antarctica-front.png', height: ICE_SKY * WORLD_HEIGHT, speed: 3.2, alpha: 1 },
+    ],
+    // On the flat snow, between the igloo and the edge of the ice; the fire
+    // burns at their left.
+    seat: { x: 270, y: 580 },
+    landing: { x: 770, y: 640 },
+    // The igloo and the ice: its flat top and the cliff with its icicles.
+    dry: [
+      [0, 240], [40, 242], [95, 275], [130, 330], [140, 425], [300, 430], [460, 440],
+      [560, 470], [700, 495], [715, 530], [712, 640], [650, 680], [560, 720], [530, 780],
+      [520, 840], [0, 840],
+    ],
+    // The floe with the polar bears.
+    floes: [
+      [[1022, 145], [1120, 108], [1250, 140], [1252, 172], [1030, 172]],
+    ],
+    waterline: ICE_WATERLINE,
+    depthFarY: ICE_HORIZON_Y,
+    waterTint: 0x23708f,          // polar water: deep, cold blue-teal
+    defaultBait: 'krill',
+    music: 'ambient',
+    voiceVolume: 1.1,
+    ambience: {
+      // Small waves against the ice, and the fire crackling beside the crew.
+      bed: { name: 'ice-water', volume: 0.65 },
+      passing: [
+        // Far away an iceberg breaks off: a boom, and a long rumble.
+        { name: 'ice-calving', every: [120, 260], first: [40, 100], volume: [0.4, 0.55], vary: 0.05 },
+      ],
+    },
+  },
 ];
 
 /** Is (x, y) inside the polygon? (Even-odd rule.) */
@@ -308,13 +367,15 @@ function insidePolygon(points, x, y) {
 
 export const MAPS = MAP_DEFS.map((def) => {
   const waterTopAt = makeWaterTopAt(def.waterline);
-  const dry = def.dry || [];
+  const dryParts = [def.dry || [], ...(def.floes || [])].filter((p) => p.length >= 3);
   return Object.freeze({
     ...def,
     /** Design y where water starts at design x. */
     waterTopAt,
+    /** Every outline on the water that is not water: the jetty, and any floes. */
+    dryParts,
     /** Can something float at design (x, y)? Below the waterline, not on the jetty. */
-    isWater: (x, y) => y >= waterTopAt(x) && !insidePolygon(dry, x, y),
+    isWater: (x, y) => y >= waterTopAt(x) && !dryParts.some((p) => insidePolygon(p, x, y)),
     /** Highest point of the waterline (smallest y). */
     waterMinY: Math.min(...def.waterline.map((p) => p[1])),
   });

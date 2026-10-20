@@ -17,6 +17,7 @@ Atlases handled:
     baits-sea.png  -- 2 sea baits + 3 lures, same layout        = 10 cells
     lures-fresh.png -- 3 fresh-water lures, same two rows       =  6 cells
     baits-greece.png -- 2 Greek baits + 2 lures, same two rows  =  8 cells
+    baits-antarctica.png -- krill + the glow jig, same two rows   =  4 cells
     floats.png     -- 5 floats x 2 parts  (full/tip)            = 10 cells
     rod.png, icon-*.png, play.png
 
@@ -347,6 +348,19 @@ FISH_STRIPS = [
     ("fish-dentex", "dentex"),       # tandbrasem
     ("fish-amberjack", "amberjack"),     # amberjack
     ("fish-moray", "moray"),         # murene
+    # The ice of the South Pole.
+    ("fish-silverfish", "silverfish"),   # zilvervis
+    ("fish-lanternfish", "lanternfish"),     # lantaarnvis
+    ("fish-mackerelicefish", "mackerelicefish"),   # makreelijsvis
+    ("fish-icefish", "icefish"),     # ijsvis
+    ("fish-dragonfish", "dragonfish"),   # draakvis
+    ("fish-plunderfish", "plunderfish"),     # plundervis
+    ("fish-eelpout", "eelpout"),     # puitaal
+    ("fish-snailfish", "snailfish"),     # slakdolf
+    ("fish-rockcod", "rockcod"),     # gemarmerde rotskabeljauw
+    ("fish-skate", "skate"),         # sterrog
+    ("fish-grenadier", "grenadier"),     # grenadiervis
+    ("fish-toothfish", "toothfish"),     # tandvis
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 
@@ -367,6 +381,13 @@ STRIP_CHROMA_HIGH = 190
 # on it can only be green screen showing through a translucent fin.
 CORE_FISH_EXCESS = 30
 CORE_SCREEN_EXCESS = 70
+# Fish with big see-through fins (the ice fish) and nothing green of their
+# own: the green screen that shows through a fin is taken out of its colour
+# altogether, so the fin is grey-clear instead of green.
+DESPILL_SPECIES = {"icefish", "mackerelicefish", "snailfish", "silverfish", "lanternfish",
+                   "dragonfish", "plunderfish", "eelpout", "rockcod", "skate",
+                   "grenadier", "toothfish"}
+DESPILL_ALLOWANCE = 6          # how much greener than red/blue a pixel may stay
 
 
 def _line_runs(is_line: np.ndarray) -> list[tuple[int, int]]:
@@ -428,6 +449,14 @@ def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3) -> I
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), mode="RGBA")
 
 
+def _despill(cell: Image.Image) -> Image.Image:
+    """No pixel greener than its red and blue (DESPILL_ALLOWANCE)."""
+    arr = np.asarray(cell.convert("RGBA")).astype(np.float32)
+    cap = np.maximum(arr[..., 0], arr[..., 2]) + DESPILL_ALLOWANCE
+    arr[..., 1] = np.minimum(arr[..., 1], cap)
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), mode="RGBA")
+
+
 def process_fish_strip(atlas_path: Path, species: str, only=None) -> int:
     """
     Cut a three-box species strip into small / medium / large sprites
@@ -460,6 +489,8 @@ def process_fish_strip(atlas_path: Path, species: str, only=None) -> int:
         box = img.crop((x0, y0, x1, y1))
         cell = chromakey_remove(box, chroma_high=STRIP_CHROMA_HIGH)
         cell = auto_crop(_keep_main_sprite(_solidify_core(cell, box)))
+        if species in DESPILL_SPECIES:
+            cell = _despill(cell)
         out = CLEAN_DIR / f"fish_{species}_{size}.png"
         cell.save(out, "PNG")
         print(f"[info] {atlas_path.name} -> {out.name} ({cell.width}x{cell.height})")
@@ -527,6 +558,25 @@ def process_baits_greece(atlas_path: Path) -> int:
         out_pattern=lambda r, c: CLEAN_DIR / f"bait_{GREECE_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
         atlas_name="baits-greece.png",
         # Feelers, trebles and an assist hook on its cord: keep them together.
+        morph=SEA_BAIT_MERGE_PX,
+    )
+
+
+# The South Pole (raw/baits-antarctica.png): krill for under the float and
+# a glow jig. 2 columns, the same rows.
+ANTARCTICA_BAIT_NAMES = ["krill", "lichtjig"]
+
+
+def process_baits_antarctica(atlas_path: Path) -> int:
+    img = Image.open(atlas_path)
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    return _process_grid_via_blobs(
+        cleaned,
+        rows=len(BAIT_ROW_LABELS),
+        cols=len(ANTARCTICA_BAIT_NAMES),
+        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{ANTARCTICA_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
+        atlas_name="baits-antarctica.png",
+        # The krill's feelers and legs, the jig's treble: keep them together.
         morph=SEA_BAIT_MERGE_PX,
     )
 
@@ -722,6 +772,7 @@ def main():
         ("baits-sea.png", process_baits_sea),   # sea baits + lures
         ("lures-fresh.png", process_lures_fresh),   # spinner, shad, fly
         ("baits-greece.png", process_baits_greece),   # shrimp, squid, plug, jig
+        ("baits-antarctica.png", process_baits_antarctica),   # krill, glow jig
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]

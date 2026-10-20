@@ -10,6 +10,7 @@ exactly the still painting: razor sharp and rock solid under Julian.
     python scripts/make_water.py sea            # generate (costs money) + compose
     python scripts/make_water.py lake
     python scripts/make_water.py greece
+    python scripts/make_water.py antarctica    # the fire flickers too
     python scripts/make_water.py sea --compose  # only redo the composing
 
 Step by step
@@ -148,6 +149,26 @@ WATER = {
             " Sound: small waves lapping against rock, cicadas far away. No "
             "music, no voices."
         )),
+    # The ice: the water, and the fire in its bowl beside the igloo.
+    "antarctica": dict(
+        painting="backdrop-antarctica",
+        flames=[[[0, 470], [170, 470], [170, 650], [0, 650]],      # the fire
+                [[135, 250], [205, 250], [205, 470], [140, 470]]],  # its smoke
+        prompt=(
+            "A calm polar sea at the edge of the Antarctic ice, gently alive. "
+            "Small ripples drift slowly across the dark blue water and the low "
+            "sun glitters on it; in the clear turquoise water at the foot of the "
+            "ice cliff the light plays softly; tiny wavelets lap against the ice "
+            "with a little white foam. In the bottom-left corner the small fire in "
+            "the black iron bowl burns: its orange flames flicker and dance, and "
+            "a thin wisp of grey smoke drifts up and away. The motion of the water "
+            "is the same, gentle and regular, all the way through: no big wave, no "
+            "splash. The ice, the igloo, the iron bowl, the icebergs, the "
+            "mountains, the penguins and the polar bears do not move. "
+            + STILL_RULES +
+            " Sound: small waves lapping against ice, the crackle of a small "
+            "fire, penguins calling far away. No music, no voices."
+        )),
     "lake": dict(
         painting="backdrop-naarden",
         prompt=(
@@ -180,13 +201,19 @@ def dry_land(map_id, width, height):
     src/data/maps.js), as a mask in painting pixels: True = not water.
     """
     js = ("import('./src/data/maps.js').then((m) => "
-          "console.log(JSON.stringify(m.getMap(process.argv[1]).dry || [])))")
+          "console.log(JSON.stringify(m.getMap(process.argv[1]).dryParts)))")
     out = subprocess.run(["node", "--input-type=module", "-e", js, map_id],
                          cwd=ROOT, check=True, capture_output=True, text=True).stdout
-    points = [(x * width / 1280.0, (y + 120.0) * height / 960.0) for x, y in json.loads(out)]
+    return polygons_mask(json.loads(out), width, height)
+
+
+def polygons_mask(polygons, width, height):
+    """Polygons in design coordinates -> a mask in painting pixels."""
     mask = Image.new("L", (width, height), 0)
-    if len(points) >= 3:
-        ImageDraw.Draw(mask).polygon(points, fill=255)
+    for polygon in polygons:
+        points = [(x * width / 1280.0, (y + 120.0) * height / 960.0) for x, y in polygon]
+        if len(points) >= 3:
+            ImageDraw.Draw(mask).polygon(points, fill=255)
     return np.asarray(mask) > 0
 
 
@@ -252,6 +279,14 @@ def compose(map_id):
     # Never what the anglers sit on: a floating pontoon bobs in the film, and
     # even a fixed jetty's planks shimmer a little. It stays the painting.
     water &= ~ndimage.binary_dilation(dry_land(map_id, width, height), iterations=DRY_MARGIN_PX)
+    # A fire on the ice (`flames`, design coordinates): there, too, the film
+    # -- where it moves: the flames and the smoke, not the iron bowl.
+    if spec.get("flames"):
+        lively = np.zeros((height, width), dtype=bool)
+        lively[top:top + rows * k, :cols * k] = np.kron(
+            ndimage.binary_closing(blocks.std(axis=0) > MOTION_MIN, iterations=2),
+            np.ones((k, k), dtype=bool))
+        water |= polygons_mask(spec["flames"], width, height) & lively
     # ...then pull the edge in a little and soften it.
     pad = MASK_FEATHER_PX * 4
     water = ndimage.binary_erosion(np.pad(water, pad, mode="edge"), iterations=MASK_FEATHER_PX)
