@@ -200,6 +200,24 @@ FISH.update({
               "with yellow-cream spots, a slightly open mouth with small sharp teeth and a "
               "small eye; the low fin runs along back and belly into the pointed tail", SIDE,
               "\nThe body is drawn straight and horizontal, with at most a gentle wave."),
+    # October 2026, second round: the Greek coast gets three fish that look
+    # like nothing else in the game (instead of the North Sea's sea bass and
+    # garfish and the tuna-like bonito).
+    "parrotfish": ("a Mediterranean parrotfish (Sparisoma cretense), a female in her bright "
+                   "colours: an oval, robust fish with large scales, a vivid SCARLET-RED head "
+                   "and body, a broad steel-grey band over the back, a bright YELLOW saddle "
+                   "patch behind the head, and a small beak-like mouth of fused teeth",
+                   SIDE, ""),
+    "lionfish": ("a devil firefish / lionfish (Pterois miles): a spectacular fish banded all "
+                 "over in red-brown and white zebra stripes, with a FAN of very long, separate, "
+                 "feathery venomous spines on its back and huge wing-like striped pectoral "
+                 "fins spread wide, little fleshy tentacles above the eyes", SIDE,
+                 "\nAll spines and fins stay inside the box."),
+    "swordfish": ("a broadbill swordfish (Xiphias gladius): a huge, powerful, streamlined "
+                  "fish with a very long, flat, sword-like bill -- a third of its length --, a "
+                  "big eye, a tall, rigid, sickle-shaped first dorsal fin, dark bronze-purple "
+                  "back, silvery-grey belly, and a big crescent tail", SIDE,
+                  "\nThe body and the sword are drawn straight and horizontal."),
 })
 
 # The fish of the ice at the South Pole (map "antarctica", October 2026).
@@ -261,6 +279,64 @@ FISH.update({
                   "barbel, a tall pointed first dorsal fin, and a body that tapers into a "
                   "very long, thin, pointed rat-like tail without a tail fin; grey-brown "
                   "with a silvery sheen", SIDE, "\nThe body is drawn straight and horizontal."),
+})
+
+# October 2026, second round: the South Pole made stranger, after the poster
+# the user showed ("juist de exotische uitschieters zijn het leukst"). These
+# replace the first paintings of the same ids, and four newcomers take the
+# places of fish that looked like those of other maps.
+FISH.update({
+    "toothfish": ("an Antarctic toothfish (Dissostichus mawsoni), a fearsome deep-water "
+                  "giant: a massive, heavy, elongated body, dark slate-grey to almost black "
+                  "with a faint marbling, a huge head with a big GAPING mouth showing rows of "
+                  "sharp teeth, a large pale eye, two dorsal fins (the second long), a long "
+                  "anal fin and a broad tail", SIDE, ""),
+    "icefish": ("a blackfin icefish (Chaenocephalus aceratus), the ghost of the ice: its "
+                "body is almost TRANSPARENT and glassy white -- its blood is clear, not red "
+                "--, so the pale backbone and the fine ribs show faintly through it; a long, "
+                "flat, crocodile-like head with a big toothy jaw, a large dark eye, and very "
+                "large, fan-shaped, smoky black pectoral and pelvic fins", SIDE, ""),
+    "dragonfish": ("a black dragonfish (Idiacanthus atlanticus) of the deep Southern Ocean: "
+                   "a long, slender, eel-like, JET-BLACK body with rows of tiny glowing "
+                   "blue-violet light organs along its sides, a huge mouth full of long, "
+                   "needle-sharp, curved fangs, and a long barbel hanging from its chin with "
+                   "a glowing blue bulb at the end", SIDE,
+                   "\nThe body is drawn straight and horizontal, with at most a gentle wave."),
+    "plunderfish": ("a spiny barbeled plunderfish (Pogonophryne) from the deep: a squat, "
+                    "warty little monster with an enormous broad head, a HUGE gaping mouth "
+                    "full of small teeth, a thick fleshy barbel on the chin, spiky dorsal "
+                    "fins, big fan-like pectoral fins, and a mottled brown body covered in "
+                    "pale warts and bumps", SIDE, ""),
+    "rockcod": ("a marbled rockcod, painted as a striking reef-like fish: a robust body with "
+                "a big head, a wide mouth with thick lips and a large eye, a vivid RED-ORANGE "
+                "colour boldly marbled with cream-white blotches, a tall spiny first dorsal "
+                "fin, and spiky red fins", SIDE, ""),
+    "lanternfish": ("a deep-sea lanternfish with a LANTERN: a slim, dark blue-black fish with "
+                    "a very large shining eye, silvery flanks with rows of small round glowing "
+                    "blue light spots, and -- its trademark -- a thin stalk growing from its "
+                    "forehead that ends in a little glowing bulb of pale blue light, like a "
+                    "lantern held out in front", SIDE, ""),
+    "hatchetfish": ("a deep-sea hatchetfish (Argyropelecus): a tiny, extremely flat, deep and "
+                    "short fish shaped like the blade of a hatchet, bright mirror-SILVER, with "
+                    "big tubular eyes looking upward, a row of glowing blue light organs along "
+                    "its sharp belly edge and a thin tail stalk", SIDE, ""),
+    "chimaera": ("a ghost shark (a chimaera, Hydrolagus): a smooth, scaleless, pale "
+                 "silvery-lilac fish with HUGE glowing green eyes, a rounded rabbit-like "
+                 "snout with plate-like front teeth, big wing-like pectoral fins, a tall "
+                 "spine in front of the first dorsal fin, and a body that tapers into a "
+                 "long, thin whip of a tail", SIDE,
+                 "\nThe body is drawn straight and horizontal."),
+    "opah": ("a southern opah (Lampris immaculatus): a big, ROUND, disc-shaped fish, its "
+             "body deep blue-silver above shading to rosy pink below, without spots, with "
+             "bright CRIMSON-red fins, lips and jaws, a large golden eye and a tall "
+             "sickle-shaped red dorsal fin", SIDE, ""),
+    "oarfish": ("a giant oarfish (Regalecus glesne), the sea serpent: an extremely long, "
+                "flat, ribbon-like silver body with a few faint dark streaks, a bright "
+                "CRIMSON crest of long rays rising from the top of its head, a red dorsal fin "
+                "running the whole length of its back, and two long red oar-like pelvic fin "
+                "rays below the head", SIDE,
+                "\nThe ribbon of a body is drawn straight and horizontal, filling its box from "
+                "end to end."),
 })
 
 # ---------------------------------------------------------------------------

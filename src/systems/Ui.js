@@ -42,6 +42,22 @@ export const COLOR = Object.freeze({
  * @param {number} size   font size in design px
  * @param {string} color  one of COLOR.*
  */
+// The name plate's picture (UI.BOARD_LABEL) is 600 x 200; its two ends --
+// the rope and the nails -- are this wide.
+const PLATE_PICTURE_H = 200;
+const PLATE_END_W = 100;
+
+/**
+ * A name plate of any length: its ends (rope, nails) keep their shape, only
+ * the planks in between grow. `w` x `h` in design px, centred on (x, y).
+ */
+export function addPlate(scene, x, y, w, h) {
+  const k = h / PLATE_PICTURE_H;
+  const width = Math.max(w / k, PLATE_END_W * 2 + 1);
+  return scene.add.nineslice(x, y, UI.BOARD_LABEL, undefined, width, PLATE_PICTURE_H,
+    PLATE_END_W, PLATE_END_W, 0, 0).setScale(k);
+}
+
 export function lettering(size, color = COLOR.CREAM) {
   return {
     fontFamily: UI_FONT,

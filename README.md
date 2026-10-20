@@ -77,20 +77,29 @@ fit side by side: `MapSelectScene`.)
 * **greece** -- Griekenland: from a flat limestone rock on a warm, clear
   coast (a headland with pines and a white chapel, islands in the haze).
   Under the float: bread, a little shrimp or a strip of squid; or lure
-  fishing with a shad, feathers, a minnow plug or a casting jig. Its sea
-  bass and garfish are the North Sea's species with cards of their own
-  (`catchKey`); the other ten live only here. The trophies are the
-  tandbrasem (dentex), the murene (moray, only on squid) and the
-  amberjack (up to 1.90 m, on a jig or squid).
+  fishing with a shad, a minnow plug or a casting jig. All twelve fish live
+  only here, among them the strange and colourful ones children like best:
+  the red-and-yellow papegaaivis (parrotfish), the koraalduivel (lionfish)
+  with its crown of spines, and -- the biggest and rarest, as the
+  porbeagle is of the North Sea -- the zwaardvis (swordfish, up to 4.5 m).
 * **antarctica** -- Zuidpool: from the edge of the ice, beside an igloo and
   a fire in an iron bowl (its flames move in the video too), with penguins
   on the shore and polar bears on a floe (`floes`: not water either).
   Under the float: krill -- what nearly every fish there eats --, a
   lugworm, a strip of squid or a bait fish; lures: the pilker and a glow
   jig (`glow` in `baits.js`: it hardly fades with depth and a soft spot of
-  light pulses around it). Twelve real Antarctic fish, on their cards by
-  their own name only (Tandvis, not Antarctische tandvis); the trophy is
-  the tandvis (toothfish), up to two metres.
+  light pulses around it). Twelve fish of the cold southern seas, on their
+  cards by their own name only (Tandvis, not Antarctische tandvis), and the
+  stranger the better: the glassy ijsvis with its bones showing, the
+  fanged black draakvis, the lantaarnvis with its lantern, the spookhaai,
+  the round red-finned koningsvis; the trophy is the tandvis (toothfish,
+  up to two metres), the legend the riemvis (oarfish, up to eight).
+
+A species that is taken off a map keeps its id and its catches: they stay
+in the save, just no longer on a page. (In October 2026 the Greek coast's
+sea bass, garfish and bonito and the ice's silverfish, mackerel icefish,
+eelpout and skate went, a day after they came, for looking too much like
+fish of other maps.)
 
 Everything specific to one spot (painting, optional video, sky mask,
 waterline, default bait, music, ambience, name) is one entry in
@@ -451,7 +460,8 @@ ontsnapt!"), `vissen-gigant.mp3` for "Wow! Een gigantische ...!" of every
 species, `vissen-4.mp3` for the roach by the name on its card (Blankvoorn;
 the first recording says "voorn"), `vissen-5.mp3` for the ten new fish of
 the Greek coast and its name, `vissen-gigant-2.mp3` for their giants,
-`vissen-6.mp3` and `vissen-gigant-3.mp3` the same for the South Pole; the
+`vissen-6.mp3` and `vissen-gigant-3.mp3` the same for the South Pole,
+`vissen-7.mp3` and `vissen-gigant-4.mp3` for the strange newcomers of both; the
 list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
 
 The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except

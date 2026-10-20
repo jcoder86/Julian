@@ -156,12 +156,12 @@ export const FISH_SPECIES = [
     lengthCm: { small: [15, 25], medium: [28, 40], large: [ 50,  95] } },
 
   // Hunters near the surface and around the jetty.
-  // (Both also live on the Greek coast, where they take a shrimp and a plug
-  // -- the sea bass also a squid strip and a shad -- and are a little rarer.)
-  { id: "garfish",  nlName: "Geep",      baits: ["aasvisje", "veren", "blinker", "garnaal", "plug"], speciesWeight:  55, sizeWeights: [50, 35, 15],
-    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 80, 100] }, weightOn: { greece: 50 } },
-  { id: "seabass",  nlName: "Zeebaars",  baits: ["zeepier", "aasvisje", "blinker", "pilker", "garnaal", "inktvis", "plug", "shad"], speciesWeight:  45, sizeWeights: [45, 40, 15],
-    lengthCm: { small: [20, 35], medium: [40, 60], large: [ 75, 100] }, weightOn: { greece: 30 } },
+  // (For a day in October 2026 both also lived on the Greek coast; their
+  // catches there are kept under "garfish@greece" and "seabass@greece".)
+  { id: "garfish",  nlName: "Geep",      baits: ["aasvisje", "veren", "blinker"],              speciesWeight:  55, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 80, 100] } },
+  { id: "seabass",  nlName: "Zeebaars",  baits: ["zeepier", "aasvisje", "blinker", "pilker"],  speciesWeight:  45, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [20, 35], medium: [40, 60], large: [ 75, 100] } },
   { id: "cod",      nlName: "Kabeljauw", baits: ["zeepier", "aasvisje", "veren", "pilker"],    speciesWeight:  40, sizeWeights: [45, 35, 20],
     lengthCm: { small: [25, 40], medium: [50, 80], large: [100, 180] } },
 
@@ -192,9 +192,8 @@ export const FISH_SPECIES = [
   // The rocky coast in Greece
   // ===========================================================================
   // Clear, warm water off pale limestone. Under the float: bread (the
-  // mullet), a shrimp or a strip of squid; or a lure: feathers, a minnow
-  // plug, a casting jig, a shad. The sea bass and the garfish are the North
-  // Sea's (above).
+  // mullet), a shrimp or a strip of squid; or a lure: a minnow plug, a
+  // casting jig, a shad. Every one of them is a fish of this coast only.
 
   // Along the rocks -- bread, a shrimp, a strip of squid.
   { id: "whitebream", nlName: "Witte zeebrasem", baits: ["brood", "garnaal", "inktvis"],      speciesWeight: 100, sizeWeights: [60, 30, 10],
@@ -209,13 +208,15 @@ export const FISH_SPECIES = [
     lengthCm: { small: [10, 14], medium: [16, 24], large: [ 27,  40] } },
   // Shoals in mid-water: a shrimp, a bit of squid, a string of feathers or
   // a small jig.
-  { id: "horsemackerel", nlName: "Mediterrane horsmakreel", baits: ["garnaal", "inktvis", "veren", "werpjig"], speciesWeight: 85, sizeWeights: [55, 35, 10],
+  { id: "horsemackerel", nlName: "Mediterrane horsmakreel", baits: ["garnaal", "inktvis", "werpjig"], speciesWeight: 85, sizeWeights: [55, 35, 10],
     lengthCm: { small: [12, 18], medium: [20, 30], large: [ 35,  60] } },
 
   // Hunters, out in the blue -- lures.
   { id: "barracuda", nlName: "Geelstaartbarracuda", baits: ["plug", "shad", "werpjig"],       speciesWeight:  25, sizeWeights: [45, 40, 15],
     lengthCm: { small: [30, 45], medium: [55, 80], large: [ 90, 128] }, maxReelTurns: 10 },
-  // A small tuna that races through: a fast jig or plug.
+  // A small tuna that races through. (Taken off the Greek coast again in
+  // October 2026: it looked too much like the North Sea's tuna. Its id stays,
+  // and so do any catches made under it.)
   { id: "bonito",   nlName: "Bonito",    baits: ["werpjig", "plug"],                           speciesWeight:  12, sizeWeights: [40, 45, 15],
     lengthCm: { small: [30, 40], medium: [45, 62], large: [ 68,  91] }, maxReelTurns: 10 },
   // The big sea bream of the rocks: a big shad, or squid on the bottom.
@@ -231,6 +232,19 @@ export const FISH_SPECIES = [
   { id: "moray",    nlName: "Murene",    baits: ["inktvis"],                                   speciesWeight:   5, sizeWeights: [45, 40, 15],
     lengthCm: { small: [40, 60], medium: [70, 100], large: [110, 150] }, maxReelTurns: 12 },
 
+  // The colourful and the strange, which children like best: the red-and-
+  // yellow parrotfish that grazes the weed on the rocks (bread, a shrimp);
+  // the lionfish, striped and with a crown of venomous spines, that hunts
+  // small fish and shrimp; and -- the biggest and rarest of the coast, as
+  // the porbeagle is of the North Sea -- the swordfish, on a squid at
+  // night or a casting jig.
+  { id: "parrotfish", nlName: "Mediterrane papegaaivis", baits: ["brood", "garnaal"],         speciesWeight:  60, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 33,  50] } },
+  { id: "lionfish", nlName: "Koraalduivel", baits: ["garnaal", "inktvis", "plug"],            speciesWeight:  18, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [10, 15], medium: [17, 25], large: [ 27,  38] } },
+  { id: "swordfish", nlName: "Zwaardvis", baits: ["inktvis", "werpjig"],                      speciesWeight: 0.7, sizeWeights: [58, 29, 13],
+    lengthCm: { small: [80, 120], medium: [140, 220], large: [250, 455] }, maxReelTurns: 15 },
+
   // ===========================================================================
   // The ice of the South Pole
   // ===========================================================================
@@ -242,44 +256,64 @@ export const FISH_SPECIES = [
   // and a glow jig. Their cards say just their own name: Tandvis, not
   // Antarctische tandvis.
 
-  // The little ones that swarm under the ice, on krill.
-  { id: "silverfish", nlName: "Zilvervis", baits: ["krill"],                                  speciesWeight: 100, sizeWeights: [55, 35, 10],
-    lengthCm: { small: [ 8, 12], medium: [13, 18], large: [ 19,  25] } },
-  // A glowing little deep-sea fish that comes up at night: krill only.
+  // The little ones of the deep, that come up under the ice at night: on
+  // krill. The hatchetfish is a silver blade with eyes looking up; the
+  // lanternfish carries its own little lantern.
+  { id: "hatchetfish", nlName: "Bijlvis", baits: ["krill"],                                   speciesWeight:  45, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [ 3,  5], medium: [ 6,  8], large: [  9,  12] } },
   { id: "lanternfish", nlName: "Lantaarnvis", baits: ["krill"],                               speciesWeight:  16, sizeWeights: [50, 38, 12],
-    lengthCm: { small: [ 4,  6], medium: [ 7,  9], large: [ 10,  12] } },
-  // A schooling icefish, silvery and slim: krill, or a glow jig.
-  { id: "mackerelicefish", nlName: "Makreelijsvis", baits: ["krill", "lichtjig"],             speciesWeight:  60, sizeWeights: [50, 38, 12],
-    lengthCm: { small: [15, 22], medium: [25, 38], large: [ 42,  66] } },
-  // THE icefish: ghostly pale, with clear blood and a crocodile's head. A
-  // hunter that also eats krill.
-  { id: "icefish",  nlName: "IJsvis",    baits: ["krill", "aasvisje", "pilker", "lichtjig"],   speciesWeight:  35, sizeWeights: [45, 40, 15],
-    lengthCm: { small: [20, 30], medium: [35, 50], large: [ 55,  75] } },
-  { id: "dragonfish", nlName: "Draakvis", baits: ["krill", "aasvisje", "lichtjig"],           speciesWeight:  25, sizeWeights: [50, 38, 12],
-    lengthCm: { small: [10, 16], medium: [18, 28], large: [ 30,  42] } },
+    lengthCm: { small: [ 6,  9], medium: [10, 13], large: [ 14,  18] } },
 
-  // On the bottom: worms and krill; the eelpout also takes squid.
+  // On the bottom: worms and krill. The plunderfish is a warty little
+  // monster with an enormous mouth; the snailfish is soft and pink as jelly.
   { id: "plunderfish", nlName: "Plundervis", baits: ["zeepier", "krill"],                     speciesWeight:  55, sizeWeights: [55, 35, 10],
     lengthCm: { small: [ 8, 12], medium: [14, 20], large: [ 22,  30] } },
-  { id: "eelpout",  nlName: "Puitaal",   baits: ["zeepier", "inktvis"],                        speciesWeight:  45, sizeWeights: [50, 38, 12],
-    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 33,  45] } },
-  // Soft and pink as jelly, the strangest of them.
   { id: "snailfish", nlName: "Slakdolf", baits: ["zeepier", "krill"],                         speciesWeight:  25, sizeWeights: [55, 35, 10],
     lengthCm: { small: [ 8, 12], medium: [14, 20], large: [ 22,  30] } },
-  // The South Pole's "cod": big, common, and it bites at everything.
+
+  // THE icefish: glassy, with clear blood -- its bones show through -- and a
+  // crocodile's head. A hunter that also eats krill.
+  { id: "icefish",  nlName: "IJsvis",    baits: ["krill", "aasvisje", "pilker", "lichtjig"],   speciesWeight:  35, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [20, 30], medium: [35, 50], large: [ 55,  75] } },
+  // The black dragonfish of the deep: jet black, with lights along its body,
+  // a mouth full of fangs and a glowing lure on its chin.
+  { id: "dragonfish", nlName: "Draakvis", baits: ["krill", "aasvisje", "lichtjig"],           speciesWeight:  25, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 34,  50] } },
+  // Red and marbled, big and common, and it bites at everything.
   { id: "rockcod",  nlName: "Gemarmerde rotskabeljauw", baits: ["krill", "zeepier", "inktvis", "aasvisje", "pilker"], speciesWeight: 55, sizeWeights: [50, 38, 12],
     lengthCm: { small: [20, 30], medium: [35, 55], large: [ 60,  92] } },
 
-  // Bigger and rarer: squid and bait fish on the bottom, or a jig.
-  { id: "skate",    nlName: "Sterrog",   baits: ["inktvis", "aasvisje", "zeepier"],            speciesWeight:  10, sizeWeights: [45, 40, 15],
-    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 75, 100] }, maxReelTurns: 11 },
+  // Bigger and rarer. The ghost shark -- no shark, a chimaera -- with its
+  // huge green eyes and whip of a tail, on the bottom; the round, red-finned
+  // opah, which eats krill and squid; the grenadier with its rat's tail.
+  { id: "chimaera", nlName: "Spookhaai", baits: ["inktvis", "zeepier", "aasvisje"],          speciesWeight:  10, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [30, 45], medium: [50, 75], large: [ 80, 120] }, maxReelTurns: 11 },
   { id: "grenadier", nlName: "Grenadiervis", baits: ["inktvis", "aasvisje", "pilker", "lichtjig"], speciesWeight: 6, sizeWeights: [45, 40, 15],
     lengthCm: { small: [30, 45], medium: [50, 72], large: [ 78, 105] }, maxReelTurns: 12 },
+  { id: "opah",     nlName: "Koningsvis", baits: ["inktvis", "krill", "lichtjig"],             speciesWeight:   7, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [40, 55], medium: [60, 80], large: [ 85, 110] }, maxReelTurns: 12 },
 
   // The trophy of the ice: the toothfish, two metres long and as heavy as a
   // grown man, that can live for fifty years. Squid, a bait fish or a jig.
   { id: "toothfish", nlName: "Tandvis",  baits: ["inktvis", "aasvisje", "pilker", "lichtjig"], speciesWeight: 1.5, sizeWeights: [50, 35, 15],
     lengthCm: { small: [40, 70], medium: [80, 130], large: [140, 200] }, maxReelTurns: 14 },
+  // And the legend: the oarfish, the sea serpent, a silver ribbon of up to
+  // eight metres with a red crest. It eats krill -- and once in a very long
+  // while, it rises to a glow jig.
+  { id: "oarfish",  nlName: "Riemvis",   baits: ["krill", "lichtjig"],                         speciesWeight: 0.5, sizeWeights: [55, 30, 15],
+    lengthCm: { small: [150, 250], medium: [300, 450], large: [500, 800] }, maxReelTurns: 16 },
+
+  // Four fish lived on the ice for a day in October 2026 and were taken off
+  // again because they looked like fish of other maps (herring, garfish,
+  // eel, ray). Their ids stay, and so do any catches made under them.
+  { id: "silverfish", nlName: "Zilvervis", baits: ["krill"],                                  speciesWeight: 100, sizeWeights: [55, 35, 10],
+    lengthCm: { small: [ 8, 12], medium: [13, 18], large: [ 19,  25] } },
+  { id: "mackerelicefish", nlName: "Makreelijsvis", baits: ["krill", "lichtjig"],             speciesWeight:  60, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [15, 22], medium: [25, 38], large: [ 42,  66] } },
+  { id: "eelpout",  nlName: "Puitaal",   baits: ["zeepier", "inktvis"],                        speciesWeight:  45, sizeWeights: [50, 38, 12],
+    lengthCm: { small: [12, 18], medium: [20, 30], large: [ 33,  45] } },
+  { id: "skate",    nlName: "Sterrog",   baits: ["inktvis", "aasvisje", "zeepier"],            speciesWeight:  10, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [30, 45], medium: [50, 70], large: [ 75, 100] }, maxReelTurns: 11 },
 ];
 
 /**
@@ -298,11 +332,10 @@ export const MAP_SPECIES = {
            "trout", "rainbowtrout", "char", "salmon", "sturgeon", "catfish"],
   sea: ["herring", "whiting", "mackerel", "flounder", "plaice", "garfish",
         "seabass", "cod", "ray", "conger", "tuna", "shark"],
-  greece: ["gilthead", "whitebream", "seabass", "mullet", "redmullet", "barracuda",
-           "garfish", "horsemackerel", "bonito", "dentex", "amberjack", "moray"],
-  antarctica: ["silverfish", "lanternfish", "mackerelicefish", "icefish", "dragonfish",
-               "plunderfish", "eelpout", "snailfish", "rockcod", "skate", "grenadier",
-               "toothfish"],
+  greece: ["gilthead", "whitebream", "mullet", "redmullet", "parrotfish", "horsemackerel",
+           "lionfish", "barracuda", "dentex", "moray", "amberjack", "swordfish"],
+  antarctica: ["hatchetfish", "lanternfish", "plunderfish", "snailfish", "icefish", "dragonfish",
+               "rockcod", "chimaera", "grenadier", "opah", "toothfish", "oarfish"],
 };
 
 /** All species of one map, in display order. */
@@ -391,9 +424,11 @@ export const OLDEST_YEARS = {
   gilthead: 11, whitebream: 12, mullet: 20, redmullet: 11, horsemackerel: 12,
   barracuda: 12, bonito: 5, dentex: 30, amberjack: 17, moray: 30,
   // The ice of the South Pole: cold water, slow lives, old fish.
-  silverfish: 14, lanternfish: 4, mackerelicefish: 12, icefish: 15, dragonfish: 10,
+  silverfish: 14, lanternfish: 4, mackerelicefish: 12, icefish: 15, dragonfish: 4,
   plunderfish: 8, eelpout: 15, snailfish: 8, rockcod: 20, skate: 20, grenadier: 40,
-  toothfish: 45,
+  toothfish: 45, hatchetfish: 2, chimaera: 30, opah: 11, oarfish: 20,
+  // The Greek coast, second round
+  parrotfish: 15, lionfish: 15, swordfish: 20,
 };
 // A species that is not in the list is taken for an ordinary one.
 const OLDEST_YEARS_UNKNOWN = 15;

@@ -227,6 +227,8 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-gigant-2.mp3` + `.json` | "Wow! Een gigantische ...!" voor die tien |
 | `assets/audio/sfx/vissen-6.mp3` + `.json` | de twaalf vissen van de Zuidpool, en "Zuidpool!" |
 | `assets/audio/sfx/vissen-gigant-3.mp3` + `.json` | "Wow! Een gigantische ...!" voor die twaalf |
+| `assets/audio/sfx/vissen-7.mp3` + `.json` | de nieuwkomers van de tweede ronde: papegaaivis, koraalduivel, zwaardvis; bijlvis, spookhaai, koningsvis, riemvis |
+| `assets/audio/sfx/vissen-gigant-4.mp3` + `.json` | "Wow! Een gigantische ...!" voor die zeven |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.
@@ -311,48 +313,50 @@ De haai is de zeldzaamste vis van het hele spel.
 
 ## De Griekse vissen
 
-Vanaf de rots in Griekenland. Zeebaars en geep zijn dezelfde soorten als op
-de Noordzee (met in het vissenboek een eigen kaartje); de rest leeft alleen
-hier.
+Vanaf de rots in Griekenland; alle twaalf leven alleen hier.
 
 | id | Naam | klein | middel | groot | bijt op |
 |---|---|---|---|---|---|
 | `gilthead` | Goudbrasem | 15-22 cm | 26-40 | 45-70 | garnaal, inktvis |
 | `whitebream` | Witte zeebrasem | 10-15 | 18-28 | 32-45 | brood, garnaal, inktvis |
-| `seabass` | Zeebaars | 20-35 | 40-60 | 75-100 | garnaal, inktvis, plug, shad |
 | `mullet` | Harder | 15-22 | 28-45 | 52-75 | brood |
 | `redmullet` | Gestreepte zeebarbeel | 10-14 | 16-24 | 27-40 | garnaal |
+| `parrotfish` | Mediterrane papegaaivis | 12-18 | 20-30 | 33-50 | brood, garnaal |
+| `horsemackerel` | Mediterrane horsmakreel | 12-18 | 20-30 | 35-60 | garnaal, inktvis, werpjig |
+| `lionfish` | Koraalduivel | 10-15 | 17-25 | 27-38 | garnaal, inktvis, plug |
 | `barracuda` | Geelstaartbarracuda | 30-45 | 55-80 | 90-128 | plug, shad, werpjig |
-| `garfish` | Geep | 30-45 | 50-70 | 80-100 | garnaal, plug, veertjes |
-| `horsemackerel` | Mediterrane horsmakreel | 12-18 | 20-30 | 35-60 | garnaal, inktvis, veertjes, werpjig |
-| `bonito` | Bonito | 30-40 | 45-62 | 68-91 | werpjig, plug |
 | `dentex` | Tandbrasem | 20-30 | 35-60 | 65-100 | inktvis, shad |
-| `amberjack` | Amberjack | 40-60 | 70-110 | 125-190 | werpjig, inktvis |
 | `moray` | Murene | 40-60 | 70-100 | 110-150 | inktvis |
+| `amberjack` | Amberjack | 40-60 | 70-110 | 125-190 | werpjig, inktvis |
+| `swordfish` | Zwaardvis | 80-120 | 140-220 | 250-455 | inktvis, werpjig |
 
-De amberjack is hier de zeldzaamste, daarna de murene en de tandbrasem.
+De zwaardvis is hier de zeldzaamste (zoals de haringhaai op de Noordzee),
+daarna de amberjack en de murene. Zeebaars, geep en bonito stonden hier een
+dag en gingen er weer uit: ze leken te veel op vissen van andere kaarten.
 
 ## De vissen van de Zuidpool
 
-Vanaf de rand van het ijs. Allemaal echte Antarctische soorten; op hun
-kaartje staat alleen hun eigen naam.
+Vanaf de rand van het ijs: vissen van de koude zuidelijke zeeen, en hoe
+vreemder hoe beter. Op hun kaartje staat alleen hun eigen naam.
 
 | id | Naam | klein | middel | groot | bijt op |
 |---|---|---|---|---|---|
-| `silverfish` | Zilvervis | 8-12 cm | 13-18 | 19-25 | krill |
-| `lanternfish` | Lantaarnvis | 4-6 | 7-9 | 10-12 | krill |
-| `mackerelicefish` | Makreelijsvis | 15-22 | 25-38 | 42-66 | krill, lichtjig |
-| `icefish` | IJsvis | 20-30 | 35-50 | 55-75 | krill, aasvisje, pilker, lichtjig |
-| `dragonfish` | Draakvis | 10-16 | 18-28 | 30-42 | krill, aasvisje, lichtjig |
+| `hatchetfish` | Bijlvis | 3-5 cm | 6-8 | 9-12 | krill |
+| `lanternfish` | Lantaarnvis (met lantaarntje) | 6-9 | 10-13 | 14-18 | krill |
 | `plunderfish` | Plundervis | 8-12 | 14-20 | 22-30 | zeepier, krill |
-| `eelpout` | Puitaal | 12-18 | 20-30 | 33-45 | zeepier, inktvis |
 | `snailfish` | Slakdolf | 8-12 | 14-20 | 22-30 | zeepier, krill |
+| `icefish` | IJsvis (glazig, met zichtbaar skelet) | 20-30 | 35-50 | 55-75 | krill, aasvisje, pilker, lichtjig |
+| `dragonfish` | Draakvis (zwart, met hoektanden en lichtjes) | 12-18 | 20-30 | 34-50 | krill, aasvisje, lichtjig |
 | `rockcod` | Gemarmerde rotskabeljauw | 20-30 | 35-55 | 60-92 | krill, zeepier, inktvis, aasvisje, pilker |
-| `skate` | Sterrog | 30-45 | 50-70 | 75-100 | inktvis, aasvisje, zeepier |
+| `chimaera` | Spookhaai | 30-45 | 50-75 | 80-120 | inktvis, zeepier, aasvisje |
 | `grenadier` | Grenadiervis | 30-45 | 50-72 | 78-105 | inktvis, aasvisje, pilker, lichtjig |
+| `opah` | Koningsvis | 40-55 | 60-80 | 85-110 | inktvis, krill, lichtjig |
 | `toothfish` | Tandvis | 40-70 | 80-130 | 140-200 | inktvis, aasvisje, pilker, lichtjig |
+| `oarfish` | Riemvis | 150-250 | 300-450 | 500-800 | krill, lichtjig |
 
-De tandvis is hier de zeldzaamste, daarna de grenadiervis en de sterrog.
-De doorschijnende vinnen van de ijsvissen lieten het groene scherm door:
+De riemvis is de legende (nog zeldzamer dan de tandvis), daarna de
+tandvis en de grenadiervis. Zilvervis, makreelijsvis, puitaal en sterrog
+stonden hier een dag en gingen er weer uit: ze leken op haring, geep,
+paling en rog. De doorschijnende vinnen lieten het groene scherm door:
 `scripts/split_atlas.py` haalt dat groen er bij deze soorten uit
 (`DESPILL_SPECIES`).

@@ -72,14 +72,14 @@ export const BAITS = [
   { id: "aasvisje", maps: [...SEA, ...ICE], kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
   // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
   // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
-  { id: "veren",    maps: [...SEA, ...GREECE], kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
+  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
     swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
   { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker", lengthCm: 7,
     swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
   { id: "pilker",   maps: [...SEA, ...ICE], kind: "lure", displayName: "Pilker", nlName: "Pilker", lengthCm: 12,
     swim: { depth: 1.6, sink: 0.9, sway: 2, roll: 10, beat: 1.4, jig: 0.6, flash: true } },
 
-  // The Greek coast's own lures (also the shad and the feathers above): a
+  // The Greek coast's own lures (also the shad above): a
   // minnow plug that wobbles wide just under the surface and hangs where it
   // is when left; a casting jig, slim and heavy, jerked deep and fast.
   { id: "plug",     maps: GREECE, kind: "lure", displayName: "Plug",     nlName: "Plug", lengthCm: 11,

@@ -361,6 +361,14 @@ FISH_STRIPS = [
     ("fish-skate", "skate"),         # sterrog
     ("fish-grenadier", "grenadier"),     # grenadiervis
     ("fish-toothfish", "toothfish"),     # tandvis
+    # October 2026, second round: the strange ones.
+    ("fish-hatchetfish", "hatchetfish"),     # bijlvis
+    ("fish-chimaera", "chimaera"),   # spookhaai
+    ("fish-opah", "opah"),           # koningsvis
+    ("fish-oarfish", "oarfish"),     # riemvis
+    ("fish-parrotfish", "parrotfish"),   # mediterrane papegaaivis
+    ("fish-lionfish", "lionfish"),   # koraalduivel
+    ("fish-swordfish", "swordfish"),     # zwaardvis
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 
@@ -386,8 +394,10 @@ CORE_SCREEN_EXCESS = 70
 # altogether, so the fin is grey-clear instead of green.
 DESPILL_SPECIES = {"icefish", "mackerelicefish", "snailfish", "silverfish", "lanternfish",
                    "dragonfish", "plunderfish", "eelpout", "rockcod", "skate",
-                   "grenadier", "toothfish"}
+                   "grenadier", "toothfish", "hatchetfish", "opah", "oarfish",
+                   "parrotfish", "lionfish", "swordfish"}
 DESPILL_ALLOWANCE = 6          # how much greener than red/blue a pixel may stay
+# (Not the ghost shark, "chimaera": its big eyes are green.)
 
 
 def _line_runs(is_line: np.ndarray) -> list[tuple[int, int]]:

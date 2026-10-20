@@ -85,6 +85,10 @@ export function musicPath(key) {
 //   vissen-6       the twelve fish of the South Pole, and its name
 //                  (`map_antarctica`)
 //   vissen-gigant-3  "Wow! Een gigantische ...!" for those twelve
+//   vissen-7       the strange newcomers of Greece and the South Pole
+//                  (papegaaivis, koraalduivel, zwaardvis; bijlvis, spookhaai,
+//                  koningsvis, riemvis)
+//   vissen-gigant-4  "Wow! Een gigantische ...!" for those seven
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
 //
@@ -94,7 +98,7 @@ export function musicPath(key) {
 // was handed the web page instead, to be decoded as sound and fail. Gone.)
 export const VOICE_ATLASES = [
   'vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4',
-  'vissen-5', 'vissen-gigant-2', 'vissen-6', 'vissen-gigant-3',
+  'vissen-5', 'vissen-gigant-2', 'vissen-6', 'vissen-gigant-3', 'vissen-7', 'vissen-gigant-4',
 ];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;

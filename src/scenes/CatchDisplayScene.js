@@ -9,7 +9,7 @@ import { AudioManager, SFX } from '../systems/AudioManager.js';
 import { getMap, catchBgKey } from '../data/maps.js';
 import { getTeam, lookTeamId } from '../data/teams.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
-import { UI, COLOR, lettering, addGlow, addHalo, addRays, addGlints, pressable } from '../systems/Ui.js';
+import { UI, COLOR, lettering, addGlow, addHalo, addRays, addGlints, addPlate, pressable } from '../systems/Ui.js';
 
 /**
  * Catch display: shown when a fish is caught. Renders catch.png full-screen
@@ -69,6 +69,11 @@ const FISH_Y_FRACTION = 0.59;
 const BOARD_W = 372;
 const BOARD_H = 124;               // the board's picture is 600 x 200
 const BOARD_GAP = 26;
+// A long name ("Gemarmerde rotskabeljauw") gets a longer board, up to this
+// wide; past that its letters get smaller. Room between the name and the
+// board's rope ends, on each side:
+const BOARD_MAX_W = 660;
+const BOARD_NAME_PAD = 74;
 // Breathing room kept between the catch block and the screen edges.
 const CATCH_EDGE_MARGIN = 14;
 
@@ -193,18 +198,22 @@ export class CatchDisplayScene extends Phaser.Scene {
         const nlName = speciesNlName(species);
         const boardY = halfH + BOARD_GAP + BOARD_H / 2;
         let blockBottom = halfH;
+        let boardW = BOARD_W;
         if (nlName || lengthCm) {
-          if (this.textures.exists(UI.BOARD_LABEL)) {
-            const board = this.add.image(0, boardY, UI.BOARD_LABEL);
-            board.setDisplaySize(BOARD_W, BOARD_H);
-            group.add(board);
-          }
-          // Both lines, or just the one there is, centred on the board.
+          // Both lines, or just the one there is, centred on the board --
+          // which is as long as the name needs.
           const both = nlName && lengthCm;
-          if (nlName) {
-            group.add(this.add.text(0, boardY - (both ? 21 : 0), nlName, lettering(40, COLOR.GOLD))
-              .setOrigin(0.5));
+          const name = nlName
+            ? this.add.text(0, boardY - (both ? 21 : 0), nlName, lettering(40, COLOR.GOLD)).setOrigin(0.5)
+            : null;
+          const room = BOARD_MAX_W - 2 * BOARD_NAME_PAD;
+          if (name && name.width > room) name.setScale(room / name.width);
+          boardW = Phaser.Math.Clamp((name ? name.displayWidth : 0) + 2 * BOARD_NAME_PAD,
+                                     BOARD_W, BOARD_MAX_W);
+          if (this.textures.exists(UI.BOARD_LABEL)) {
+            group.add(addPlate(this, 0, boardY, boardW, BOARD_H));
           }
+          if (name) group.add(name);
           if (lengthCm) {
             group.add(this.add.text(0, boardY + (both ? 27 : 0), `${lengthCm} cm`,
                                     lettering(giant ? 32 : 29, giant ? COLOR.GOLD : COLOR.CREAM))
@@ -220,7 +229,7 @@ export class CatchDisplayScene extends Phaser.Scene {
 
         // A giant: its word above it, and glints on and all around it.
         let blockTop = halfH;
-        let blockHalfW = Math.max(halfW, BOARD_W / 2);
+        let blockHalfW = Math.max(halfW, boardW / 2);
         if (giant) {
           const word = this._addGiantWord(group, -halfH - GIANT_WORD_GAP);
           blockTop = halfH + GIANT_WORD_GAP + GIANT_WORD_SIZE * 0.7;

@@ -114,6 +114,14 @@ ATLASES = {
     },
     # And their giants: GIANTS_ANTARCTICA.
     "vissen-gigant-3": {},
+    # The next day: the strange newcomers -- three on the Greek coast, four
+    # on the ice -- and their giants (GIANTS_STRANGE).
+    "vissen-7": {
+        "parrotfish": "mediterrane papegaaivis", "lionfish": "koraalduivel",
+        "swordfish": "zwaardvis", "hatchetfish": "bijlvis", "chimaera": "spookhaai",
+        "opah": "koningsvis", "oarfish": "riemvis",
+    },
+    "vissen-gigant-4": {},
 }
 # Every species by the name on its card, for "Wow! Een gigantische ...!"
 # (key `giant_<species>`).
@@ -137,12 +145,14 @@ GIANTS_GREECE = {
 }
 # The fish of the South Pole (vissen-gigant-3).
 GIANTS_ANTARCTICA = dict(ATLASES["vissen-6"])
+GIANTS_STRANGE = dict(ATLASES["vissen-7"])
 GIANT_PHRASE = "Wow! Een gigantische {}!"
 # Atlases whose every phrase opens with a short cry ("Wow!") and a pause:
 # how long that cry lasts at most, in seconds. A stretch of sound no longer
 # than this is the opening of the phrase after it. (The pause after "Wow!"
 # is as long as some pauses BETWEEN phrases, so the pauses cannot tell.)
-OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6, "vissen-gigant-3": 0.6}
+OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6, "vissen-gigant-3": 0.6,
+                 "vissen-gigant-4": 0.6}
 # Phrases that are not a fish: (key, text), read out after the fish. The
 # map names are spoken when a map is chosen (key `map_<id>`); `escaped`
 # when a hooked fish gets off.
@@ -158,6 +168,8 @@ EXTRA = {
     "vissen-6": [("map_antarctica", "Zuidpool!")],
     "vissen-gigant-3": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
                         for species, spoken in GIANTS_ANTARCTICA.items()],
+    "vissen-gigant-4": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
+                        for species, spoken in GIANTS_STRANGE.items()],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}

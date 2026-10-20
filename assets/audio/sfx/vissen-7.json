@@ -1,0 +1,90 @@
+{
+  "file": "vissen-7.mp3",
+  "totalDuration": 41.68,
+  "phrases": {
+    "small_parrotfish": {
+      "start": 0.5,
+      "duration": 2.47
+    },
+    "small_lionfish": {
+      "start": 3.47,
+      "duration": 1.53
+    },
+    "small_swordfish": {
+      "start": 5.5,
+      "duration": 1.45
+    },
+    "small_hatchetfish": {
+      "start": 7.45,
+      "duration": 1.38
+    },
+    "small_chimaera": {
+      "start": 9.33,
+      "duration": 1.3
+    },
+    "small_opah": {
+      "start": 11.13,
+      "duration": 1.49
+    },
+    "small_oarfish": {
+      "start": 13.12,
+      "duration": 1.38
+    },
+    "medium_parrotfish": {
+      "start": 15.0,
+      "duration": 2.02
+    },
+    "medium_lionfish": {
+      "start": 17.52,
+      "duration": 1.16
+    },
+    "medium_swordfish": {
+      "start": 19.18,
+      "duration": 1.1
+    },
+    "medium_hatchetfish": {
+      "start": 20.78,
+      "duration": 1.03
+    },
+    "medium_chimaera": {
+      "start": 22.31,
+      "duration": 1.07
+    },
+    "medium_opah": {
+      "start": 23.88,
+      "duration": 1.21
+    },
+    "medium_oarfish": {
+      "start": 25.59,
+      "duration": 0.99
+    },
+    "large_parrotfish": {
+      "start": 27.08,
+      "duration": 2.31
+    },
+    "large_lionfish": {
+      "start": 29.89,
+      "duration": 1.62
+    },
+    "large_swordfish": {
+      "start": 32.01,
+      "duration": 1.53
+    },
+    "large_hatchetfish": {
+      "start": 34.04,
+      "duration": 1.38
+    },
+    "large_chimaera": {
+      "start": 35.92,
+      "duration": 1.39
+    },
+    "large_opah": {
+      "start": 37.81,
+      "duration": 1.52
+    },
+    "large_oarfish": {
+      "start": 39.83,
+      "duration": 1.35
+    }
+  }
+}

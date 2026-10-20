@@ -70,6 +70,20 @@ verstaan zoals geschreven.
 
 Niets.
 
+## Ronde van 20 oktober 2026 (later): exotischer
+
+Op verzoek ("juist de exotische uitschieters zijn het leukst"): vissen die
+op andere kaarten al voorkwamen of erop leken eruit, vreemde en kleurige
+erin. Alles hieronder is gemaakt en zit in het spel.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Griekenland erbij: mediterrane papegaaivis, koraalduivel, zwaardvis | Codex, `fish-parrotfish`, `fish-lionfish`, `fish-swordfish` | ja |
+| Zuidpool erbij: bijlvis, spookhaai, koningsvis, riemvis | Codex, `fish-hatchetfish`, `fish-chimaera`, `fish-opah`, `fish-oarfish` | ja |
+| Zuidpool opnieuw geschilderd, naar de poster: lantaarnvis (met lantaarntje), ijsvis (glazig), draakvis (zwart, hoektanden), plundervis, rotskabeljauw (rood), tandvis | Codex, `fish-<id>` | ja |
+| Stem: de zeven nieuwkomers (klein, gewoon, groot) | ElevenLabs, `vissen-7` | ja |
+| Stem: "Wow! Een gigantische ...!" voor die zeven | ElevenLabs, `vissen-gigant-4` | ja |
+
 ## Ronde van 20 oktober 2026 (avond): de Zuidpool
 
 Alles hieronder is op 20 oktober 2026 gemaakt en zit in het spel.
