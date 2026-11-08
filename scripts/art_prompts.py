@@ -594,40 +594,54 @@ No ships, no people, no text. 4:3 landscape.
 """
 
 OCEAN_BACKDROP = """\
-Repaint the attached picture (a view over the sea from a rock on a coast)
-as the OPEN OCEAN, seen from the back deck of a big-game fishing boat that
-is sailing at speed. Keep the same camera position, the same composition
-and the same rich, detailed painting style.
+A painting for a children's fishing game, in exactly the same rich,
+detailed, warm painting style as the FIRST attached image: the OPEN
+OCEAN, seen from the open back deck (the cockpit) of a white big-game
+sport-fishing boat that is sailing at speed.
 
-THE BOAT. In the lower-left corner, exactly where the rock is in the
-reference -- same position, same size, same viewing angle, same footprint
--- there is now the open back deck of a white sport-fishing boat: a flat,
-clean deck of light teak planks with a low white gunwale around it, the
-square stern at the right edge of the deck. On the deck stands a sturdy
-big-game FIGHTING CHAIR of polished chrome and white leather with a foot
-rest, at the far left; heavy fishing rods with big gold reels stand upright
-in rod holders along the gunwale; a tall OUTRIGGER pole rises up out of the
-left edge of the picture. The middle of the deck, from one sixth to one
-third of the width, stays clear and empty (two children and a dog are
-added there later).
+The SECOND attached image is a LAYOUT GUIDE made of flat colour blocks.
+Follow it exactly for WHERE everything is -- the horizon, the deck, the
+boat's walls, the wake -- but paint everything for real: nothing of the
+guide's flat colours or straight block edges may show.
+- light blue (top): the sky
+- dark blue: the open ocean
+- white: the boat's wake
+- tan: the teak deck of the cockpit
+- light grey: the boat's white fibreglass walls
+- pink: part of the teak deck that must stay COMPLETELY EMPTY (two
+  children and a dog are added there later)
 
-THE WAKE. From the stern a broad trail of churning WHITE FOAM and pale
-turquoise bubbly water streams away behind the boat, straight back toward
-the horizon, getting narrower and fainter with distance -- the boat is
-clearly moving fast.
+THE BOAT. We stand in the cockpit and look toward the back of the boat.
+The teak deck fills the lower left. Behind it, across the picture, runs
+the low white side wall of the boat (the gunwale) with a varnished teak
+cap rail and a few small, EMPTY chrome rod-holder tubes set flush into it;
+over it we look out over the open sea. On the right the deck ends at the
+STERN: the low white back wall of the boat (the transom), seen from inside
+at an angle, with a teak cap rail, running from the far corner down to the
+bottom edge of the picture. NOTHING stands on the deck: no fighting chair,
+no rods, no poles, no outriggers, no buckets, no ropes, no people -- only
+the clean, empty teak deck with its fine planks, a flush hatch and a
+chrome deck drain. Nothing rises above the walls anywhere.
+
+THE WAKE. Right behind the stern a broad trail of churning WHITE FOAM and
+pale turquoise bubbling water streams away from the boat, straight back
+toward the horizon, getting narrower and fainter with distance. It starts
+right at the transom and fills the lower right of the picture, as in the
+guide: the boat is clearly moving fast.
 
 THE OCEAN. Deep, saturated cobalt and ultramarine blue tropical ocean
-everywhere else, with long, smooth swells, small white caps and dazzling
-sparkles of sunlight; no land nearby.
+everywhere else, with long swells, small white caps and dazzling sparkles
+of sunlight.
 
-FAR AWAY. A HIGH, level horizon about one quarter of the way down from the
-top edge; on it, small and far, a green tropical island with a volcano,
-and a flock of seabirds diving over the water in the right half.
+FAR AWAY. A HIGH, level horizon about one fifth of the way down from the
+top edge, exactly where the guide has it; on it, small and far, a green
+tropical island with a volcano in the left half, and a flock of seabirds
+diving over the water far away in the right half.
 
 THE SKY. Clear, bright tropical blue with NO clouds at all, hazy just
 above the horizon.
 
-No people, no other boats, no text. 4:3 landscape.
+No people, no animals, no other boats, no text. 4:3 landscape.
 """
 
 WEIGH_BACKDROP = """\
@@ -1279,7 +1293,8 @@ JOBS = {
     # The big ocean, from the back deck of a boat under way; its weighing
     # station in the harbour, where a catch is shown; the scale; the baits.
     "ocean":        dict(out="assets/raw/backdrop-ocean.png",
-                         refs=["assets/raw/backdrop-greece.png"], brief=OCEAN_BACKDROP),
+                         refs=["assets/raw/backdrop-greece.png", "assets/raw/layout-ocean.png"],
+                         brief=OCEAN_BACKDROP),
     "weigh":        dict(out="assets/raw/weigh-ocean.png",
                          refs=["assets/raw/backdrop-greece.png"], brief=WEIGH_BACKDROP),
     "ui-scale":     dict(out="assets/raw/ui-scale.png", refs=[], brief=UI_SCALE),

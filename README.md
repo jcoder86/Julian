@@ -96,9 +96,13 @@ below the row, bigger, in a golden frame with rays of light behind it.
   fanged black draakvis, the lantaarnvis with its lantern, the spookhaai,
   the round red-finned koningsvis; the trophy is the tandvis (toothfish,
   up to two metres), the legend the riemvis (oarfish, up to eight).
-* **ocean** -- Grote oceaan: from the back deck of a sport-fishing boat
-  sailing over the open ocean, rods in their holders along the rail. It
-  plays differently from every other spot: lures are **trolled** behind the
+* **ocean** -- Grote oceaan: in the cockpit of a sport-fishing boat
+  sailing over the open ocean. The children sit on its teak deck facing
+  the stern; behind the stern the wake streams away to the horizon. (The
+  first painting, with a fighting chair under the dog and rods where the
+  rod swings back, was redone from a colour-block layout guide:
+  `scripts/make_layout_ocean.py`.) It plays differently from every other
+  spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Five trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
@@ -288,8 +292,12 @@ The last level fishes differently (`fishing: 'troll'` and `trophy:
 'weigh'` on the map; the code is the "Trolling" part of `FishingScene.js`,
 FishFight's `BIG` and `src/scenes/TrophyScene.js`).
 
-* **Trolling.** The cast lets the lure out into the boat's wake; there it
-  skips and weaves and throws up spray. Then: wait. A strike comes after
+* **Trolling.** A tap anywhere on the water lobs the lure over the stern
+  (`wake.drop` in `maps.js`); the sea takes it back into the wake while
+  the reel pays out line, to a spot along it (`wake.from` -> `wake.to`).
+  There it is pulled along on a taut line: it weaves, sways as the boat
+  yaws, dives for a moment and skips out with a splash, and leaves a trail
+  of foam that streams away with the sea. Then: wait. A strike comes after
   20 to 45 seconds (`TROLL_WAIT_MIN/MAX`); before it, a fin or two cuts
   the water behind the lure -- a fish having a look. The strike: the water
   explodes, the reel screams, "Vis aan!" -- and the music turns exciting.
@@ -305,7 +313,9 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   swordfish, mako, white shark) leap clear of the water at the start of
   most runs.
 * **The last leap.** Brought alongside, the fish makes one slow leap out of
-  the sea beside the boat, and a camera flash freezes it at the top.
+  the sea behind the stern -- all of it over open water, never over the
+  deck -- and a camera flash freezes it at the top. Jumps during the fight
+  also go out over open water, away from the boat.
 * **The weighing station** (`TrophyScene`). At sunset in the harbour the
   fish hangs by its tail from a big brass scale, head down. The needle
   swings round to its weight (`weightKg` in `fish.js`: a species' `kg` is

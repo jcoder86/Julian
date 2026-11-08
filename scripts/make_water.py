@@ -157,14 +157,14 @@ WATER = {
         all_water=True,
         prompt=(
             "In a single continuous shot, the camera locked off on the boat: "
-            "the open tropical ocean seen from the back deck of a big-game "
-            "fishing boat that is sailing forward at a steady speed. The broad "
-            "white wake behind the boat churns, foams and boils and streams "
-            "steadily away toward the horizon; the deep blue swells on both "
-            "sides roll past, small white caps break and sunlight glitters on "
-            "the water. The motion is lively but steady and regular all the "
-            "way through. The boat's deck, gunwale, fighting chair, rods, "
-            "reels and outrigger, the island and the birds do not move: the "
+            "the open tropical ocean seen from the cockpit of a big-game "
+            "fishing boat that is sailing forward at a steady speed. Right "
+            "behind the stern the broad white wake churns, foams and boils and "
+            "streams steadily away toward the horizon; the deep blue swells "
+            "beside it roll past, small white caps break and sunlight glitters "
+            "on the water. The motion is lively but steady and regular all the "
+            "way through. The boat's teak deck, its white walls and varnished "
+            "rails, the island and the birds do not move: the "
             "camera is fixed to the boat. " + STILL_RULES +
             " Sound: the steady rumble of boat engines and rushing, churning "
             "water. No music, no voices."

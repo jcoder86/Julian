@@ -158,3 +158,15 @@ Niet gelukt: een gillende reel uit ElevenLabs (werd een zoemer, een
 telefoon, vogels, een ballon of een spuitbus) en een "zware ijzeren
 ketting" (werd een sleutelbos; de gebruikte is een krakende veer met een
 klap van metaal).
+
+## Ronde van 8 november 2026 (later): de boot logisch
+
+Na het eerste testen: de visstoel stond onder Dirk, de hengels in de
+houders stonden precies waar de hengel naar achteren zwaait, en je wierp
+dwars van de boot af. Alles hieronder is gemaakt en zit in het spel.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Nieuw schilderij: de kuip met een leeg dek, de jongens kijken naar de spiegel, het kielzog erachter | Codex, `ocean` (met de indelingsschets `layout-ocean.png`), daarna `make_paintings.py`, `make_sky_mask.py` | ja |
+| Bewegend water voor het nieuwe schilderij | Gemini Omni, `python scripts/make_water.py ocean` | ja |
+| De vijf sleepazen opnieuw geknipt (de kleine plaatjes hadden een stuk van de grote erbij) | `python scripts/split_atlas.py baits-ocean` | ja |

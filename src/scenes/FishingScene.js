@@ -244,10 +244,15 @@ const LURE_REFUSE_TO = 0.8;
 // Trolling (the big ocean)
 // ---------------------------------------------------------------------------
 // What is on the line is let out behind the boat as it sails, and trolled
-// there: no float, no reeling it back. The lure skips in the wake; now and
-// then a fin cuts the water behind it (a fish having a look); and after a
-// long wait -- the big ones are few -- the strike: the water explodes, the
-// reel screams, "Vis aan!". Then a long, hard fight (FishFight's big game):
+// there: no float, no reeling it back. A tap anywhere on the water lobs it
+// over the stern (the map's `wake.drop`); the sea takes it back into the
+// wake while the reel pays out line, to a spot along the wake (`wake.from`
+// -> `wake.to`, at `TROLL_AT` of the way). There it is pulled along: it
+// weaves, dives and skips out again, and leaves a trail of foam that
+// streams away with the sea. Now and then a fin cuts the water behind it
+// (a fish having a look); and after a long wait -- the big ones are few --
+// the strike: the water explodes, the reel screams, "Vis aan!". Then a
+// long, hard fight (FishFight's big game):
 // runs, in which only holding on helps, a tired fish, which must be cranked
 // in, and some that leap clear of the water. Brought alongside, the fish
 // makes one last leap -- in slow motion, caught by a camera flash -- and is
@@ -257,9 +262,20 @@ const LURE_REFUSE_TO = 0.8;
 const TROLL_WAIT_MIN = 20000;           // ms from the lure landing to the strike
 const TROLL_WAIT_MAX = 45000;
 const TROLL_TEASERS = [1, 3];           // fins seen behind the lure before it
-const TROLL_WEAVE_PX = 7;               // the lure weaves in the wake (at full scale)
-const TROLL_WEAVE_MS = 2600;
-const TROLL_SPRAY_MS = 170;             // a puff of spray off the skipping lure
+const TROLL_AT = [0.17, 0.3];           // how far along the wake the lure is trolled
+const TROLL_SIDE_PX = 30;               // ...and how far to one side of its middle
+const TROLL_DROPBACK_MS = 3200;         // from the stern back to that spot
+const TROLL_WEAVE_PX = 16;              // the lure weaves in the wake (at full scale)
+const TROLL_WEAVE_MS = 2300;
+const TROLL_DRIFT_PX = 26;              // ...and the whole spot sways as the boat yaws
+const TROLL_DRIFT_MS = 9000;
+const TROLL_SPRAY_MS = 120;             // a puff of its foam trail this often
+const TROLL_TRAIL_PX = 70;              // ...which streams this far away with the sea
+const TROLL_SKIP_MS = [1400, 2600];     // between dives: under for a moment, then out with a splash
+const TROLL_DIVE_MS = 420;
+// Spray and foam on the ocean get a thin blue-grey rim, so that they show
+// on the white of the wake too.
+const FOAM_RIM = 0x3f86b8;
 const TROLL_STRIKE_MS = 700;            // from the strike to the fight
 // Reel turns of a big-game fight: a few plus one per this many cm, within
 // [min, max]; a slow drain when nobody cranks (share of the fight per s).
@@ -388,6 +404,7 @@ export class FishingScene extends Phaser.Scene {
     this.cloudDomLayers = [];
     this._skyMaskReady = false;
     this._skyMaskProbe = null;
+    this._jumping = null;          // a fish in the air during the fight
     this._sceneListeners = [];
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       for (const [event, fn] of this._sceneListeners) this.events.off(event, fn);
@@ -1420,7 +1437,12 @@ export class FishingScene extends Phaser.Scene {
 
     switch (this.state) {
       case STATE.READY:
-        if (this._isInsideWater(x, y)) this._beginCast(x, y);
+        if (this._isInsideWater(x, y)) {
+          // Behind a boat the lure goes over the stern, wherever the tap was.
+          const drop = this._isTrollMode() && this.map.wake ? this.map.wake.drop : null;
+          if (drop) this._beginCast(drop.x, drop.y);
+          else this._beginCast(x, y);
+        }
         break;
 
       case STATE.CASTING:
@@ -2074,14 +2096,27 @@ export class FishingScene extends Phaser.Scene {
     // The fish itself, seen for the first and last time: a dark shape under
     // the water that darts away from the jetty and is gone.
     const key = pick ? fishTextureKey(pick.species, pick.size) : null;
-    if (key && this.textures.exists(key)) {
+    // (One in the air right now is seen getting away already: no shadow too.)
+    if (key && this.textures.exists(key) && !this._jumping) {
       const home = this._reelHome();
       const away = new Phaser.Math.Vector2(at.x - home.x, at.y - home.y);
+      if (this._isTrollMode() && this._trollFlow) {
+        // Behind a boat: away from it, out along the wake.
+        away.set(this._trollFlow.x + 0.9, this._trollFlow.y);
+      }
       if (away.lengthSq() < 1) away.set(1, -0.3);
       away.normalize();
-      const shape = this.add.image(at.x, at.y, key).setDepth(5);
       const length = Phaser.Math.Clamp(
         (pick.lengthCm || 30) * PX_PER_CM, ESCAPE_SHAPE_MIN, ESCAPE_SHAPE_MAX);
+      // Its tail must be in the water too, not over the jetty or the boat:
+      // a long one is seen a little further out.
+      const half = (length * depthScale) / 2 * 1.15 + 20;
+      const from = { x: at.x, y: at.y };
+      for (let i = 0; i < 30 && !this.map.isWater(from.x - away.x * half, from.y - away.y * half * 0.5); i++) {
+        from.x += away.x * 10;
+        from.y += away.y * 5;
+      }
+      const shape = this.add.image(from.x, from.y, key).setDepth(5);
       shape.setScale(length * depthScale / shape.width);
       shape.setTintFill(0x06202e);
       shape.setAlpha(0.5);
@@ -2090,8 +2125,8 @@ export class FishingScene extends Phaser.Scene {
       shape.setRotation(Math.atan2(away.y, Math.abs(away.x)) * (away.x < 0 ? -1 : 1) * 0.6);
       this.tweens.add({
         targets: shape,
-        x: at.x + away.x * ESCAPE_DART_PX * depthScale,
-        y: at.y + away.y * ESCAPE_DART_PX * depthScale * 0.5,
+        x: from.x + away.x * ESCAPE_DART_PX * depthScale,
+        y: from.y + away.y * ESCAPE_DART_PX * depthScale * 0.5,
         alpha: 0,
         duration: ESCAPE_DART_MS,
         ease: 'Cubic.easeIn',
@@ -2174,7 +2209,11 @@ export class FishingScene extends Phaser.Scene {
   // Trolling (the big ocean)
   // ---------------------------------------------------------------------------
 
-  /** The lure has landed in the wake: troll it, and wait for the strike. */
+  /**
+   * The lure has landed behind the stern: the sea takes it back into the
+   * wake while the reel pays out line; there it is trolled, waiting for
+   * the strike.
+   */
   _enterTrolling(x, y) {
     this.state = STATE.TROLLING;
     this.crew.mood('wait');
@@ -2186,7 +2225,27 @@ export class FishingScene extends Phaser.Scene {
     this.bobberHomeY = y;
     this.bobber.setScale(this._bobberDepthScale(y));
     this._pointLureAtRod();
-    this._troll = { x, y, t: 0, sprayIn: 0, timers: [] };
+    // Where it is trolled: along the wake, a little to one side.
+    const wake = this.map.wake;
+    let spot = { x, y };
+    if (wake) {
+      const f = Phaser.Math.FloatBetween(...TROLL_AT);
+      const dx = wake.to.x - wake.from.x;
+      const dy = wake.to.y - wake.from.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const side = Phaser.Math.FloatBetween(-1, 1) * TROLL_SIDE_PX;
+      spot = { x: wake.from.x + dx * f - (dy / len) * side, y: wake.from.y + dy * f + (dx / len) * side };
+      // (The sea runs from the boat toward the horizon: the way the foam goes.)
+      this._trollFlow = { x: dx / len, y: dy / len };
+    } else {
+      this._trollFlow = { x: 0, y: -1 };
+    }
+    this._troll = {
+      x: spot.x, y: spot.y, from: { x, y }, back: 0,
+      t: 0, sprayIn: 0, skipIn: Phaser.Math.Between(...TROLL_SKIP_MS), diving: 0, timers: [],
+    };
+    // Line runs off the reel while the lure drops back.
+    this.audio.startReelLoop();
 
     const wait = Phaser.Math.Between(TROLL_WAIT_MIN, TROLL_WAIT_MAX);
     this.biteTimer = this.time.delayedCall(wait, () => this._trollStrike());
@@ -2198,27 +2257,96 @@ export class FishingScene extends Phaser.Scene {
     }
   }
 
-  /** The lure skips and weaves in the wake, throwing up spray. */
+  /**
+   * The lure behind the boat: first dropping back from the stern, then
+   * pulled along in the wake -- weaving, diving and skipping out again,
+   * with a trail of foam that streams away with the sea.
+   */
   _updateTroll(delta) {
     const tr = this._troll;
     tr.t += delta;
-    const scale = this._bobberDepthScale(tr.y);
-    const weave = Math.sin(tr.t / TROLL_WEAVE_MS * Math.PI * 2) * TROLL_WEAVE_PX * scale;
+    // Dropping back: from where it landed to its spot, slowing as the line
+    // comes tight.
+    let baseX = tr.x;
+    let baseY = tr.y;
+    if (tr.back < 1) {
+      tr.back = Math.min(1, tr.back + delta / TROLL_DROPBACK_MS);
+      const e = 1 - (1 - tr.back) ** 3;
+      baseX = Phaser.Math.Linear(tr.from.x, tr.x, e);
+      baseY = Phaser.Math.Linear(tr.from.y, tr.y, e);
+      if (tr.back >= 1) this.audio.stopReelLoop();
+    }
+    const scale = this._bobberDepthScale(baseY);
+    this.bobber.setScale(scale);
+    const settled = Phaser.Math.Clamp(tr.back * 1.5 - 0.5, 0, 1);
+    const weave = Math.sin(tr.t / TROLL_WEAVE_MS * Math.PI * 2) * TROLL_WEAVE_PX * scale * settled;
+    const drift = Math.sin(tr.t / TROLL_DRIFT_MS * Math.PI * 2) * TROLL_DRIFT_PX * scale * settled;
     const bob = Math.sin(tr.t / 230) * 1.6 * scale;
-    this.bobber.x = tr.x + weave;
-    this.bobber.y = tr.y + bob;
+    // Across the wake: at right angles to the way the sea runs.
+    const flow = this._trollFlow;
+    this.bobber.x = baseX - flow.y * (weave + drift);
+    this.bobber.y = baseY + flow.x * (weave + drift) + bob;
     this._pointLureAtRod();
+
+    // Now and then it dives for a moment and skips out with a splash.
+    if (settled >= 1) {
+      tr.skipIn -= delta;
+      if (tr.skipIn <= 0 && !tr.diving) {
+        tr.diving = TROLL_DIVE_MS;
+        tr.skipIn = Phaser.Math.Between(...TROLL_SKIP_MS);
+      }
+    }
+    if (tr.diving) {
+      tr.diving = Math.max(0, tr.diving - delta);
+      const p = 1 - tr.diving / TROLL_DIVE_MS;          // 0..1 through the dive
+      this.bobber.setAlpha(1 - 0.75 * Math.sin(p * Math.PI));
+      this.bobber.y += Math.sin(p * Math.PI) * 4 * scale;
+      if (!tr.diving) this._skipSplash(this.bobber.x, this.bobber.y, scale);
+    }
+
+    // Its trail: foam that streams away from it, toward the horizon.
     tr.sprayIn -= delta;
     if (tr.sprayIn <= 0) {
       tr.sprayIn = TROLL_SPRAY_MS;
-      this._spray(this.bobber.x, this.bobber.y, scale, 0.55);
+      this._trail(this.bobber.x, this.bobber.y, scale, tr.diving ? 0.3 : 0.75);
     }
+  }
+
+  /** A puff of the lure's foam trail: it streams away with the sea and spreads. */
+  _trail(x, y, scale, strength) {
+    const k = scale ** 0.6;
+    const flow = this._trollFlow;
+    const side = Phaser.Math.FloatBetween(-4, 4) * k;
+    const puff = this.add.ellipse(x, y, 9 * k, 4 * k, 0xffffff, 0.8 * strength).setDepth(19);
+    this.tweens.add({
+      targets: puff,
+      x: x + flow.x * TROLL_TRAIL_PX * scale - flow.y * side,
+      y: y + flow.y * TROLL_TRAIL_PX * scale + flow.x * side,
+      scaleX: 3.2, scaleY: 1.6,
+      alpha: 0,
+      duration: 900,
+      ease: 'Sine.easeOut',
+      onComplete: () => puff.destroy(),
+    });
+  }
+
+  /** The lure skips out of the water: a splash and a ring. */
+  _skipSplash(x, y, scale) {
+    for (let i = 0; i < 4; i++) this._spray(x + Phaser.Math.Between(-6, 6) * scale, y, scale, 0.9);
+    const k = scale ** 0.7;
+    const ring = this.add.ellipse(x, y, 30 * k, 10 * k).setDepth(19);
+    ring.setStrokeStyle(Math.max(1.5, 2.5 * k), FOAM_RIM, 0.9);
+    this.tweens.add({
+      targets: ring, scale: { from: 0.5, to: 1.9 }, alpha: { from: 0.9, to: 0 }, duration: 600,
+      ease: 'Sine.easeOut', onComplete: () => ring.destroy(),
+    });
   }
 
   /** A puff of white water at (x, y), drifting off. */
   _spray(x, y, scale, strength = 1) {
     const k = scale ** 0.6;
     const puff = this.add.ellipse(x, y, 16 * k, 6 * k, 0xffffff, 0.7 * strength).setDepth(19);
+    puff.setStrokeStyle(Math.max(1, 1.4 * k), FOAM_RIM, 0.45 * strength);
     this.tweens.add({
       targets: puff,
       x: x + Phaser.Math.FloatBetween(-10, 10) * k,
@@ -2298,6 +2426,8 @@ export class FishingScene extends Phaser.Scene {
   _stopTroll() {
     if (!this._troll) return;
     for (const t of this._troll.timers) t.remove(false);
+    if (this._troll.back < 1) this.audio.stopReelLoop();
+    if (this.bobber) this.bobber.setAlpha(1);
     this._troll = null;
   }
 
@@ -2308,9 +2438,15 @@ export class FishingScene extends Phaser.Scene {
     if (!this.textures.exists(key)) return;
     const scale = this._bobberDepthScale(y);
     const fish = this.add.image(x, y, key).setDepth(23);
+    this._jumping = fish;
     const width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
     fish.setScale(width / fish.width);
-    const dir = Math.random() < 0.5 ? -1 : 1;
+    // It leaps out over open water, never back over the boat: a way where
+    // the water goes on under its whole arc.
+    const open = (d) => [0.15, 0.3, 0.45, 0.6].every((f) => this.map.isWater(x + d * width * f, y));
+    const right = open(1);
+    const left = open(-1);
+    const dir = right && left ? (Math.random() < 0.5 ? -1 : 1) : (left ? -1 : 1);
     fish.setFlipX(dir < 0);
     const height = width * 0.55 + 30 * scale;
     const t = { p: 0 };
@@ -2329,6 +2465,7 @@ export class FishingScene extends Phaser.Scene {
         for (let i = 0; i < 10; i++) {
           this._spray(fish.x + Phaser.Math.Between(-30, 30) * scale, y, scale, 1);
         }
+        if (this._jumping === fish) this._jumping = null;
         fish.destroy();
       },
     });
@@ -2356,15 +2493,19 @@ export class FishingScene extends Phaser.Scene {
     if (!this.textures.exists(key)) { go(); return; }
 
     const scale = this._bobberDepthScale(home.y);
-    const fish = this.add.image(home.x, home.y + 30, key).setDepth(30);
-    const width = Math.min(TROPHY_LEAP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
+    // All of it over open water: from the side of the boat, where the
+    // water begins, out toward the edge of the picture -- never over the deck.
+    let edge = home.x;
+    while (edge > WORLD_LEFT && this.map.isWater(edge - 10, home.y)) edge -= 10;
+    const room = WORLD_RIGHT - edge - 30;
+    const width = Math.min(TROPHY_LEAP_MAX_PX, room, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
+    const startX = edge + width * 0.5;
+    const endX = Math.min(startX + width * 0.12, WORLD_RIGHT - width * 0.5);
+    const fish = this.add.image(startX, home.y + 30, key).setDepth(30);
     fish.setScale(width / fish.width);
-    // Toward the open water, away from the boat.
-    const startX = home.x;
-    const endX = Math.min(home.x + width * 0.35, WORLD_RIGHT - width * 0.3);
     const peakY = home.y - width * 0.32 - 80;
     for (let i = 0; i < 14; i++) {
-      this._spray(home.x + Phaser.Math.Between(-60, 60) * scale, home.y, Math.max(scale, 0.8), 1);
+      this._spray(startX + Phaser.Math.Between(-60, 60) * scale, home.y, Math.max(scale, 0.8), 1);
     }
     const t = { p: 0 };
     this.tweens.add({

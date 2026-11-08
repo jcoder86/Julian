@@ -622,17 +622,45 @@ OCEAN_BAIT_NAMES = ["rokjeslure", "duikplug", "ballyhoo", "makreel", "haaienaas"
 
 
 def process_baits_ocean(atlas_path: Path) -> int:
+    """
+    The ocean's sheet: five columns, the big hanging bait on top and the
+    small one lying flat below it. The hanging ones are so long that they
+    reach down almost to the small ones -- a split down the middle cut off
+    their ends and gave the small ones a piece of them (November 2026).
+    So per column every separate piece goes to the row its middle is in:
+    the small ones lie in the bottom quarter of the sheet.
+    """
+    from scipy import ndimage
     img = Image.open(atlas_path)
     cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
-    return _process_grid_via_blobs(
-        cleaned,
-        rows=len(BAIT_ROW_LABELS),
-        cols=len(OCEAN_BAIT_NAMES),
-        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{OCEAN_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
-        atlas_name="baits-ocean.png",
-        # Tentacles, trebles, wire: keep them together.
-        morph=SEA_BAIT_MERGE_PX,
-    )
+    arr = np.asarray(cleaned.convert("RGBA"))
+    height, width = arr.shape[:2]
+    solid = arr[..., 3] > 32
+    small_from = height * 0.75
+    saved = 0
+    for c, name in enumerate(OCEAN_BAIT_NAMES):
+        x0, x1 = round(width * c / len(OCEAN_BAIT_NAMES)), round(width * (c + 1) / len(OCEAN_BAIT_NAMES))
+        column = solid[:, x0:x1]
+        # Tentacles, trebles, wire: parts this close together are one piece.
+        near = ndimage.binary_dilation(column, iterations=SEA_BAIT_MERGE_PX)
+        labels, n = ndimage.label(near)
+        labels = np.where(column, labels, 0)
+        keep = {0: np.zeros_like(column), 1: np.zeros_like(column)}
+        for i in range(1, n + 1):
+            piece = labels == i
+            if piece.sum() < 300:
+                continue
+            ys = np.nonzero(piece)[0]
+            keep[1 if ys.mean() >= small_from else 0] |= piece
+        for row, label in enumerate(BAIT_ROW_LABELS):
+            part = arr[:, x0:x1].copy()
+            part[..., 3] = np.where(keep[row], part[..., 3], 0)
+            cell = auto_crop(Image.fromarray(part, "RGBA"))
+            out = CLEAN_DIR / f"bait_{name}_{label}.png"
+            cell.save(out, "PNG")
+            print(f"[info] baits-ocean.png -> {out.name} ({cell.width}x{cell.height})")
+            saved += 1
+    return saved
 
 
 def process_baits(atlas_path: Path) -> int:

@@ -58,7 +58,7 @@ const GREECE_WATERLINE = [
 // that the water ends at the ice shore where the penguins stand.
 // The big ocean, from assets/raw/backdrop-ocean.png: open sea to the
 // horizon everywhere.
-const OCEAN_SKY = 0.218;
+const OCEAN_SKY = 0.203;
 const OCEAN_HORIZON = OCEAN_SKY + 0.005;
 
 const ICE_SKY = 0.212;
@@ -147,6 +147,11 @@ function makeWaterTopAt(samples) {
 //   nlName          what the place is called: spoken when it is chosen
 //                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
+//   wake            only where `fishing` is 'troll': where the lure goes. A
+//                   tap on the water lobs it over the stern to `drop`; the
+//                   sea takes it back along the wake, the line from `from`
+//                   (just behind the stern) to `to` (where the wake meets
+//                   the horizon), to be trolled there
 //   fightMusic      optional: the exciting version of it, cross-faded in
 //                   when a fish strikes and out again once it is landed
 //                   or gone (the big ocean)
@@ -369,11 +374,14 @@ const MAP_DEFS = [
     },
   },
   {
-    // The big ocean -- the last, biggest level. On the back deck of a
-    // big-game fishing boat under way, with its fighting chair, its rods
-    // and outriggers, the wake streaming away behind it; an island with a
-    // volcano and diving seabirds far off. Fished by trolling; a catch is
-    // weighed in the harbour.
+    // The big ocean -- the last, biggest level. In the cockpit of a
+    // big-game fishing boat under way: the children sit on its teak deck
+    // facing the stern, and behind the stern the wake streams away to the
+    // horizon; an island with a volcano and diving seabirds far off.
+    // Nothing on deck in the way of the rod's swing (November 2026: the
+    // first painting had the fighting chair under the dog and rods where
+    // the rod swings back). Fished by trolling; a catch is weighed in the
+    // harbour.
     id: 'ocean',
     nlName: 'Grote oceaan',
     featured: true,
@@ -388,13 +396,16 @@ const MAP_DEFS = [
       { src: 'clean/clouds-ocean-back.png',  height: OCEAN_SKY * WORLD_HEIGHT, speed: 1.6, alpha: 0.95 },
       { src: 'clean/clouds-ocean-front.png', height: OCEAN_SKY * WORLD_HEIGHT, speed: 4.2, alpha: 1 },
     ],
-    // On the teak deck, between the fighting chair and the stern.
-    seat: { x: 380, y: 700 },
-    // Brought alongside the stern, in the white of the wake.
-    landing: { x: 770, y: 640 },
-    // The boat: its deck, gunwale and stern.
+    // On the teak deck, facing the stern.
+    seat: { x: 290, y: 680 },
+    // Brought up to the stern, in the white of the wake.
+    landing: { x: 780, y: 640 },
+    // Over the stern, back into the wake.
+    wake: { drop: { x: 790, y: 585 }, from: { x: 840, y: 600 }, to: { x: 1015, y: 85 } },
+    // The boat: its deck, the gunwale behind the children and the stern.
     dry: [
-      [0, 415], [30, 415], [180, 435], [660, 485], [672, 630], [690, 840], [0, 840],
+      [0, 414], [300, 425], [600, 438], [690, 446], [720, 455], [738, 470], [732, 520],
+      [724, 600], [712, 700], [700, 800], [696, 840], [0, 840],
     ],
     waterline: flatHorizon(OCEAN_HORIZON),
     depthFarY: WORLD_TOP + OCEAN_HORIZON * WORLD_HEIGHT,

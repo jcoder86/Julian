@@ -15,7 +15,7 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | Aas en lures voor Griekenland: garnaal, inktvis, plug, werpjig (4 x 2) | `baits-greece.png` | `greece-baits` |
 | Het ijs van de Zuidpool, met iglo en vuurkorf | `backdrop-antarctica.png` | `antarctica` |
 | Krill en de lichtjig (2 x 2) | `baits-antarctica.png` | `antarctica-baits` |
-| De Grote oceaan vanaf het achterdek van een sportvisboot | `backdrop-ocean.png` | `ocean` |
+| De Grote oceaan vanuit de kuip van een sportvisboot (naar de indelingsschets `layout-ocean.png`, die `python scripts/make_layout_ocean.py` tekent) | `backdrop-ocean.png` | `ocean` |
 | De weegplaats in de haven, bij zonsondergang | `weigh-ocean.png` | `weigh` |
 | De koperen hangweegschaal | `ui-scale.png` | `ui-scale` |
 | De vijf sleepazen (5 x 2) | `baits-ocean.png` | `ocean-baits` |
