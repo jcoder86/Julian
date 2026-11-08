@@ -242,8 +242,11 @@ export const FISH_SPECIES = [
     lengthCm: { small: [12, 18], medium: [20, 30], large: [ 33,  50] } },
   { id: "lionfish", nlName: "Koraalduivel", baits: ["garnaal", "inktvis", "plug"],            speciesWeight:  18, sizeWeights: [45, 40, 15],
     lengthCm: { small: [10, 15], medium: [17, 25], large: [ 27,  38] } },
-  { id: "swordfish", nlName: "Zwaardvis", baits: ["inktvis", "werpjig"],                      speciesWeight: 0.7, sizeWeights: [58, 29, 13],
-    lengthCm: { small: [80, 120], medium: [140, 220], large: [250, 455] }, maxReelTurns: 15 },
+  // (It also lives on the big ocean, where it takes a ballyhoo or a live
+  // mackerel trolled behind the boat, and is less rare: weightOn.)
+  { id: "swordfish", nlName: "Zwaardvis", baits: ["inktvis", "werpjig", "ballyhoo", "makreel"], speciesWeight: 0.7, sizeWeights: [58, 29, 13],
+    lengthCm: { small: [80, 120], medium: [140, 220], large: [250, 455] }, maxReelTurns: 15,
+    weightOn: { ocean: 9 }, kg: [455, 650], jumps: true },
 
   // ===========================================================================
   // The ice of the South Pole
@@ -303,6 +306,46 @@ export const FISH_SPECIES = [
   { id: "oarfish",  nlName: "Riemvis",   baits: ["krill", "lichtjig"],                         speciesWeight: 0.5, sizeWeights: [55, 30, 15],
     lengthCm: { small: [150, 250], medium: [300, 450], large: [500, 800] }, maxReelTurns: 16 },
 
+  // ===========================================================================
+  // The big ocean -- the last, biggest level
+  // ===========================================================================
+  // Fished from the back deck of a boat under way: whatever is on the line
+  // is TROLLED behind it -- a skirted lure, a diving plug, a ballyhoo, a
+  // live mackerel or a chunk of bait for the sharks (data/baits.js). The
+  // fish are the giants of the open sea, and every one of them is a long
+  // fight (FishFight's big-game mode). `kg`: what a fish of that length
+  // weighs, for the scale at the weighing station (weightKg, below); `jumps`:
+  // it leaps out of the water during the fight.
+  { id: "mahimahi", nlName: "Goudmakreel", baits: ["rokjeslure", "duikplug", "ballyhoo"],     speciesWeight: 100, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [50, 75], medium: [80, 115], large: [120, 210] }, kg: [210, 40], jumps: true },
+  { id: "wahoo",    nlName: "Wahoo",     baits: ["duikplug", "rokjeslure"],                    speciesWeight:  60, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [60, 95], medium: [100, 145], large: [150, 250] }, kg: [250, 83] },
+  { id: "yellowfin", nlName: "Geelvintonijn", baits: ["rokjeslure", "duikplug", "makreel"],  speciesWeight:  70, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [50, 85], medium: [90, 145], large: [150, 240] }, kg: [240, 200] },
+  { id: "sailfish", nlName: "Zeilvis",   baits: ["ballyhoo", "rokjeslure"],                    speciesWeight:  40, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [100, 155], medium: [160, 230], large: [240, 340] }, kg: [340, 100], jumps: true },
+  { id: "bluemarlin", nlName: "Blauwe marlijn", baits: ["rokjeslure", "ballyhoo", "makreel"], speciesWeight:  14, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [150, 230], medium: [240, 350], large: [360, 500] }, kg: [500, 820], jumps: true },
+  // The sharks: on a live mackerel or a chunk of bait (the mako, the
+  // fastest of them, also on a plug -- and it jumps).
+  { id: "mako",     nlName: "Mako-haai", baits: ["makreel", "duikplug", "haaienaas"],          speciesWeight:  20, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [120, 185], medium: [200, 290], large: [300, 445] }, kg: [445, 570], jumps: true },
+  { id: "hammerhead", nlName: "Hamerhaai", baits: ["haaienaas", "makreel"],                  speciesWeight:  16, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [150, 230], medium: [240, 360], large: [370, 610] }, kg: [610, 580] },
+  { id: "tigershark", nlName: "Tijgerhaai", baits: ["haaienaas", "makreel"],                 speciesWeight:  12, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [150, 230], medium: [250, 360], large: [370, 550] }, kg: [550, 900] },
+  // The ocean sunfish, the heaviest fish with bones: it eats jellyfish, and
+  // a skirted lure looks like one.
+  { id: "sunfish",  nlName: "Maanvis",   baits: ["rokjeslure", "haaienaas"],                   speciesWeight:   8, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [80, 125], medium: [140, 210], large: [220, 333] }, kg: [333, 2300] },
+  // The trophy: the great white shark.
+  { id: "whiteshark", nlName: "Witte haai", baits: ["haaienaas", "makreel"],                 speciesWeight:   3, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [200, 290], medium: [300, 430], large: [450, 640] }, kg: [640, 2000], jumps: true },
+  // And the legend: the whale shark, the biggest fish in the world, drawn
+  // by the smell of the shark bait's chum.
+  { id: "whaleshark", nlName: "Walvishaai", baits: ["haaienaas"],                            speciesWeight: 1.0, sizeWeights: [55, 30, 15],
+    lengthCm: { small: [400, 620], medium: [700, 1000], large: [1100, 1880] }, kg: [1500, 15000] },
+
   // Four fish lived on the ice for a day in October 2026 and were taken off
   // again because they looked like fish of other maps (herring, garfish,
   // eel, ray). Their ids stay, and so do any catches made under them.
@@ -336,6 +379,8 @@ export const MAP_SPECIES = {
            "lionfish", "barracuda", "dentex", "moray", "amberjack", "swordfish"],
   antarctica: ["hatchetfish", "lanternfish", "plunderfish", "snailfish", "icefish", "dragonfish",
                "rockcod", "chimaera", "grenadier", "opah", "toothfish", "oarfish"],
+  ocean: ["mahimahi", "wahoo", "yellowfin", "sailfish", "bluemarlin", "swordfish",
+          "mako", "hammerhead", "tigershark", "sunfish", "whiteshark", "whaleshark"],
 };
 
 /** All species of one map, in display order. */
@@ -429,6 +474,9 @@ export const OLDEST_YEARS = {
   toothfish: 45, hatchetfish: 2, chimaera: 30, opah: 11, oarfish: 20,
   // The Greek coast, second round
   parrotfish: 15, lionfish: 15, swordfish: 20,
+  // The big ocean
+  mahimahi: 5, wahoo: 9, yellowfin: 9, sailfish: 13, bluemarlin: 27, mako: 32,
+  hammerhead: 44, tigershark: 40, sunfish: 23, whiteshark: 70, whaleshark: 130,
 };
 // A species that is not in the list is taken for an ordinary one.
 const OLDEST_YEARS_UNKNOWN = 15;
@@ -448,6 +496,20 @@ export function oldOneRange(species) {
 }
 
 /** Convenience helper returning the Dutch display name for a species id. */
+/**
+ * What a fish of this length weighs, in kg, for the scale at the weighing
+ * station: from the species' `kg` = [cm, kg] (one fish of known length and
+ * weight), as weight grows with the cube of length. Null for a species
+ * without one.
+ */
+export function weightKg(speciesId, lengthCm) {
+  const ref = FISH_BY_ID[speciesId]?.kg;
+  if (!ref || !lengthCm) return null;
+  const [cm, kg] = ref;
+  const w = kg * (lengthCm / cm) ** 3;
+  return w >= 100 ? Math.round(w) : Math.round(w * 10) / 10;
+}
+
 export function speciesNlName(speciesId) {
   return FISH_BY_ID[speciesId]?.nlName ?? speciesId;
 }

@@ -69,6 +69,27 @@ const SWIM_DEPTH_SHARE = 0.45;
 const WAKE_SPEED = 70;
 const WAKE_MS = 70;
 
+// BIG GAME (the big ocean, `bigGame`): a giant of the open sea fights much
+// longer and harder, but fairly. It makes many runs, each of seconds: then
+// cranking is worth next to nothing and the reel shows red -- wait. After
+// each run it is tired for a while and the reel shows green -- crank now!
+// Runs take back more of the fight, but all together never more than half.
+// Some fish leap clear of the water as they start a run (`jumps`).
+// Who keeps cranking hard while it runs (more than `overcrankTurns` turns
+// in one run) strains the line: that run is counted (`overcranks`), and
+// the scene may let the hook tear out (FishingScene's OVERCRANK_ESCAPE).
+const BIG = {
+  powerFullCm: 420,
+  cmPerRun: 70, minRuns: 3, maxRuns: 8,
+  takeMin: 0.06, takeMax: 0.1, takeTotal: 0.5,
+  runMsMin: 1800, runMsMax: 3400,
+  crankGain: 0.05,
+  from: 0.08, until: 0.9,
+  restMs: 2200,
+  jumpChance: 0.65,
+  overcrankTurns: 1.5,
+};
+
 const RING_MS = 520;           // one ring this often...
 const RING_MS_RUNNING = 170;   // ...and during a run
 const RING_DEPTH = 19;         // just under whatever is on the end of the line
@@ -83,8 +104,12 @@ export class FishFight {
    * @param opts.depthScale  (y) => how big things look at that distance (0..1)
    * @param opts.isWater     (x, y) => can a fish be there?
    * @param opts.onRun       (running: boolean) => void
+   * @param opts.bigGame     a giant of the open sea: see BIG above
+   * @param opts.jumps       it leaps out of the water at the start of a run...
+   * @param opts.onJump      ...and this is told where: (x, y) => void
    */
-  constructor(scene, { pick, reel, start, home, depthScale, isWater, onRun }) {
+  constructor(scene, { pick, reel, start, home, depthScale, isWater, onRun,
+                       bigGame = false, jumps = false, onJump = null }) {
     this.scene = scene;
     this.reel = reel;
     this.start = { x: start.x, y: start.y };
@@ -95,19 +120,33 @@ export class FishFight {
     this.x = start.x;
     this.y = start.y;
     this.running = false;
+    this.bigGame = bigGame;
+    this.jumps = jumps;
+    this.onJump = onJump;
+    this.tired = false;
+    // Runs in which the angler cranked hard against the fish (big game).
+    this.overcranks = 0;
+    this._runCrankFrom = 0;
+    this._overcranked = false;
 
     const cm = pick.lengthCm ?? 30;
-    this.power = Phaser.Math.Clamp((cm - POWER_FROM_CM) / (POWER_FULL_CM - POWER_FROM_CM), 0, 1);
+    const fullCm = bigGame ? BIG.powerFullCm : POWER_FULL_CM;
+    this.power = Phaser.Math.Clamp((cm - POWER_FROM_CM) / (fullCm - POWER_FROM_CM), 0, 1);
 
     // The runs: where along the fight each one starts.
-    const count = Phaser.Math.Clamp(Math.floor(cm / CM_PER_RUN), 0, MAX_RUNS);
+    const count = bigGame
+      ? Phaser.Math.Clamp(Math.round(cm / BIG.cmPerRun) + 2, BIG.minRuns, BIG.maxRuns)
+      : Phaser.Math.Clamp(Math.floor(cm / CM_PER_RUN), 0, MAX_RUNS);
+    const [takeMin, takeMax, takeTotal] = bigGame
+      ? [BIG.takeMin, BIG.takeMax, BIG.takeTotal] : [RUN_TAKE_MIN, RUN_TAKE_MAX, RUN_TAKE_TOTAL];
     this._take = count
-      ? Math.min(Phaser.Math.Linear(RUN_TAKE_MIN, RUN_TAKE_MAX, this.power), RUN_TAKE_TOTAL / count)
+      ? Math.min(Phaser.Math.Linear(takeMin, takeMax, this.power), takeTotal / count)
       : 0;
+    const [from, until] = bigGame ? [BIG.from, BIG.until] : [RUN_FROM, RUN_UNTIL];
     this._runs = [];
     for (let i = 0; i < count; i++) {
       const jitter = Phaser.Math.FloatBetween(-0.25, 0.25);
-      this._runs.push(RUN_FROM + ((i + 0.5 + jitter) / count) * (RUN_UNTIL - RUN_FROM));
+      this._runs.push(from + ((i + 0.5 + jitter) / count) * (until - from));
     }
     this._nextRun = 0;
     this._runLeft = 0;       // ms of the current run still to go
@@ -143,12 +182,20 @@ export class FishFight {
       const after = this._runLeft / this._runMs;
       const ease = (t) => (1 - Math.cos(Math.PI * t)) / 2;
       reel.takeLine((ease(before) - ease(after)) * this._take);
+      if (this.bigGame && !this._overcranked
+          && reel.crankedRadians - this._runCrankFrom > BIG.overcrankTurns * Math.PI * 2) {
+        this._overcranked = true;
+        this.overcranks++;
+      }
       if (this._runLeft === 0) this._setRunning(false);
     } else {
       this._rest = Math.max(0, this._rest - dt);
+      if (this.tired && this._rest === 0) this._setTired(false);
       if (this._nextRun < this._runs.length && p >= this._runs[this._nextRun] && this._rest === 0) {
         this._nextRun++;
-        this._runMs = Phaser.Math.Between(RUN_MS_MIN, RUN_MS_MAX);
+        this._runMs = this.bigGame
+          ? Phaser.Math.Between(BIG.runMsMin, Math.round(Phaser.Math.Linear(BIG.runMsMin + 600, BIG.runMsMax, this.power)))
+          : Phaser.Math.Between(RUN_MS_MIN, RUN_MS_MAX);
         this._runLeft = this._runMs;
         this._setRunning(true);
       }
@@ -239,15 +286,31 @@ export class FishFight {
 
   _setRunning(running) {
     this.running = running;
-    this.reel.resistance = running ? RUN_CRANK_GAIN : 1;
+    this.reel.resistance = running ? (this.bigGame ? BIG.crankGain : RUN_CRANK_GAIN) : 1;
     this.reel.setStrained(running);
     if (running) {
+      this._setTired(false);
+      this._runCrankFrom = this.reel.crankedRadians ?? 0;
+      this._overcranked = false;
       this._turnIn = 0;                    // it bolts: off to the side at once
       this._boil();
+      if (this.jumps && this.onJump && Math.random() < BIG.jumpChance) {
+        // (After the boil has begun, a moment later.)
+        this.scene.time.delayedCall(260, () => {
+          if (this.reel) this.onJump(this.x, this.y);
+        });
+      }
     } else {
-      this._rest = RUN_REST_MS;
+      this._rest = this.bigGame ? BIG.restMs : RUN_REST_MS;
+      // A big one is tired after its run: now is the moment to crank.
+      if (this.bigGame) this._setTired(true);
     }
     if (this.onRun) this.onRun(running);
+  }
+
+  _setTired(tired) {
+    this.tired = tired;
+    if (this.reel && this.reel.setTired) this.reel.setTired(tired);
   }
 
   _ring() {
@@ -330,6 +393,7 @@ export class FishFight {
     if (this.reel) {
       this.reel.resistance = 1;
       this.reel.setStrained(false);
+      if (this.reel.setTired) this.reel.setTired(false);
     }
     this.reel = null;
   }

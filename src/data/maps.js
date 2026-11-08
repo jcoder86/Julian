@@ -1,7 +1,8 @@
 // Fishing spots. Each map is a 4:3 painting with something to fish from in
 // its lower-left corner -- a jetty (the moat), a floating pontoon (the
-// French lake), a stone pier (the sea), a flat rock (the Greek coast) or
-// the edge of the ice (the South Pole);
+// French lake), a stone pier (the sea), a flat rock (the Greek coast),
+// the edge of the ice (the South Pole) or the back deck of a boat (the big
+// ocean);
 // everything a scene needs
 // to know about ONE spot lives here, so FishingScene itself contains no
 // "lake" or "sea" specifics.
@@ -55,6 +56,11 @@ const GREECE_WATERLINE = [
 // The South Pole, traced from assets/raw/backdrop-antarctica.png. From
 // x = 400 on, the open sea runs up to the glaciers on the horizon; left of
 // that the water ends at the ice shore where the penguins stand.
+// The big ocean, from assets/raw/backdrop-ocean.png: open sea to the
+// horizon everywhere.
+const OCEAN_SKY = 0.218;
+const OCEAN_HORIZON = OCEAN_SKY + 0.005;
+
 const ICE_SKY = 0.212;
 const ICE_HORIZON = ICE_SKY + 0.005;
 const ICE_HORIZON_Y = WORLD_TOP + ICE_HORIZON * WORLD_HEIGHT;
@@ -127,6 +133,13 @@ function makeWaterTopAt(samples) {
 //                   the waterline, but not water. A float cannot land on it.
 //   floes           optional: more such polygons out on the water (an ice
 //                   floe with polar bears on it)
+//   fishing         optional: 'troll' -- whatever is on the line is let out
+//                   behind a boat under way and trolled there (FishingScene:
+//                   no float, no retrieve; a long wait, then a long fight)
+//   trophy          optional: 'weigh' -- a catch is shown at the weighing
+//                   station (TrophyScene) instead of the catch screen
+//   featured        optional: on the map screen this card hangs apart,
+//                   bigger and in gold -- the last, biggest level
 //   waterline       see above
 //   depthFarY       design y where a cast counts as "far away" (the float
 //                   is drawn smallest there, full size at the jetty)
@@ -134,6 +147,9 @@ function makeWaterTopAt(samples) {
 //   nlName          what the place is called: spoken when it is chosen
 //                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
+//   fightMusic      optional: the exciting version of it, cross-faded in
+//                   when a fish strikes and out again once it is landed
+//                   or gone (the big ocean)
 //   waterTint       the colour something takes on deep in this water (a
 //                   lure being reeled in: systems/LureSwim.js)
 //   voiceVolume     how loud the voice speaks here, as a share of its usual
@@ -349,6 +365,49 @@ const MAP_DEFS = [
       passing: [
         // Far away an iceberg breaks off: a boom, and a long rumble.
         { name: 'ice-calving', every: [120, 260], first: [40, 100], volume: [0.4, 0.55], vary: 0.05 },
+      ],
+    },
+  },
+  {
+    // The big ocean -- the last, biggest level. On the back deck of a
+    // big-game fishing boat under way, with its fighting chair, its rods
+    // and outriggers, the wake streaming away behind it; an island with a
+    // volcano and diving seabirds far off. Fished by trolling; a catch is
+    // weighed in the harbour.
+    id: 'ocean',
+    nlName: 'Grote oceaan',
+    featured: true,
+    fishing: 'troll',
+    trophy: 'weigh',
+    backdropKey: 'backdrop-ocean',
+    backdropImage: 'clean/backdrop-ocean.jpg',
+    skyMask: 'clean/sky-mask-ocean.png',
+    skyMaskFraction: 320 / 720,
+    clouds: [
+      { src: 'clean/clouds-ocean-back.png',  height: OCEAN_SKY * WORLD_HEIGHT, speed: 1.6, alpha: 0.95 },
+      { src: 'clean/clouds-ocean-front.png', height: OCEAN_SKY * WORLD_HEIGHT, speed: 4.2, alpha: 1 },
+    ],
+    // On the teak deck, between the fighting chair and the stern.
+    seat: { x: 380, y: 700 },
+    // Brought alongside the stern, in the white of the wake.
+    landing: { x: 770, y: 640 },
+    // The boat: its deck, gunwale and stern.
+    dry: [
+      [0, 415], [30, 415], [180, 435], [660, 485], [672, 630], [690, 840], [0, 840],
+    ],
+    waterline: flatHorizon(OCEAN_HORIZON),
+    depthFarY: WORLD_TOP + OCEAN_HORIZON * WORLD_HEIGHT,
+    waterTint: 0x1d4f9a,          // the open ocean: deep cobalt blue
+    defaultBait: 'rokjeslure',
+    music: 'ocean',
+    fightMusic: 'ocean-fight',
+    voiceVolume: 1.2,
+    ambience: {
+      // The engines, and the sea rushing past the hull and churning in the wake.
+      bed: { name: 'ocean-boat', volume: 0.55 },
+      passing: [
+        // The seabirds diving over a shoal.
+        { name: 'sea-gulls', every: [30, 80], first: [12, 30], volume: [0.16, 0.32], vary: 0.07 },
       ],
     },
   },

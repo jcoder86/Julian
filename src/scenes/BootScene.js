@@ -12,6 +12,7 @@ import { MAPS, catchBgKey, catchBgImage } from '../data/maps.js';
 import { TEAMS, lookTeamId } from '../data/teams.js';
 import { CHARACTERS_KEY, crewTextureKey, buildClipTexture } from '../systems/Crew.js';
 import { UI } from '../systems/Ui.js';
+import { TROPHY, trophyFigureKey } from './TrophyScene.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
@@ -124,6 +125,14 @@ export class BootScene extends Phaser.Scene {
     // "Fish on!" indicator. Lives in raw/ -- hand-authored transparent PNG,
     // skips the chromakey/clean pipeline.
     this.load.image(TEX.FISHON,      'raw/fishon.png');
+
+    // The weighing station of the big ocean: its painting, the scale, and
+    // the children standing (scripts/make_trophy.py).
+    this.load.image(TROPHY.BG, 'clean/weigh-ocean.jpg');
+    this.load.image(TROPHY.SCALE, 'clean/ui-scale.png');
+    this.load.json(TROPHY.META, 'clean/trophy.json');
+    const figures = new Set(TEAMS.flatMap((team) => (team.trophy || []).map((k) => k.who)));
+    for (const who of figures) this.load.image(trophyFigureKey(who), `clean/trophy_${who}.png`);
 
     // Bulk-load all fish, bait and float sprites. Each key matches the
     // file name produced by scripts/split_atlas.py.

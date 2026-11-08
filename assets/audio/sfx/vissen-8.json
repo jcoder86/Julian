@@ -1,0 +1,146 @@
+{
+  "file": "vissen-8.mp3",
+  "totalDuration": 64.64,
+  "phrases": {
+    "small_mahimahi": {
+      "start": 0.5,
+      "duration": 1.67
+    },
+    "small_wahoo": {
+      "start": 2.67,
+      "duration": 1.34
+    },
+    "small_yellowfin": {
+      "start": 4.51,
+      "duration": 1.81
+    },
+    "small_sailfish": {
+      "start": 6.82,
+      "duration": 1.69
+    },
+    "small_bluemarlin": {
+      "start": 9.01,
+      "duration": 1.6
+    },
+    "small_mako": {
+      "start": 11.11,
+      "duration": 1.53
+    },
+    "small_hammerhead": {
+      "start": 13.14,
+      "duration": 1.49
+    },
+    "small_tigershark": {
+      "start": 15.13,
+      "duration": 1.51
+    },
+    "small_whiteshark": {
+      "start": 17.14,
+      "duration": 1.48
+    },
+    "small_sunfish": {
+      "start": 19.12,
+      "duration": 1.38
+    },
+    "small_whaleshark": {
+      "start": 21.0,
+      "duration": 1.43
+    },
+    "medium_mahimahi": {
+      "start": 22.93,
+      "duration": 1.21
+    },
+    "medium_wahoo": {
+      "start": 24.64,
+      "duration": 0.87
+    },
+    "medium_yellowfin": {
+      "start": 26.01,
+      "duration": 1.26
+    },
+    "medium_sailfish": {
+      "start": 27.77,
+      "duration": 1.05
+    },
+    "medium_bluemarlin": {
+      "start": 29.32,
+      "duration": 1.19
+    },
+    "medium_mako": {
+      "start": 31.01,
+      "duration": 1.13
+    },
+    "medium_hammerhead": {
+      "start": 32.64,
+      "duration": 1.03
+    },
+    "medium_tigershark": {
+      "start": 34.17,
+      "duration": 1.12
+    },
+    "medium_whiteshark": {
+      "start": 35.79,
+      "duration": 1.04
+    },
+    "medium_sunfish": {
+      "start": 37.33,
+      "duration": 0.95
+    },
+    "medium_whaleshark": {
+      "start": 38.78,
+      "duration": 1.1
+    },
+    "large_mahimahi": {
+      "start": 40.38,
+      "duration": 1.52
+    },
+    "large_wahoo": {
+      "start": 42.4,
+      "duration": 1.2
+    },
+    "large_yellowfin": {
+      "start": 44.1,
+      "duration": 1.59
+    },
+    "large_sailfish": {
+      "start": 46.19,
+      "duration": 1.37
+    },
+    "large_bluemarlin": {
+      "start": 48.06,
+      "duration": 1.58
+    },
+    "large_mako": {
+      "start": 50.14,
+      "duration": 1.47
+    },
+    "large_hammerhead": {
+      "start": 52.11,
+      "duration": 1.39
+    },
+    "large_tigershark": {
+      "start": 54.0,
+      "duration": 1.5
+    },
+    "large_whiteshark": {
+      "start": 56.0,
+      "duration": 1.37
+    },
+    "large_sunfish": {
+      "start": 57.87,
+      "duration": 1.31
+    },
+    "large_whaleshark": {
+      "start": 59.68,
+      "duration": 1.59
+    },
+    "fish_on": {
+      "start": 61.77,
+      "duration": 0.77
+    },
+    "map_ocean": {
+      "start": 63.04,
+      "duration": 1.1
+    }
+  }
+}

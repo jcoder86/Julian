@@ -220,6 +220,60 @@ FISH.update({
                   "\nThe body and the sword are drawn straight and horizontal."),
 })
 
+
+# The big ocean (map "ocean", November 2026): the giants of the open sea,
+# fished from a boat -- the game's last, biggest level. (The swordfish is
+# the Greek coast's strip.)
+FISH.update({
+    "mahimahi": ("a mahi-mahi / common dolphinfish (Coryphaena hippurus), a big bull: a "
+                 "steep, very high, blunt square forehead, one long dorsal fin running from "
+                 "the head all the way to the tail, a dazzling GOLDEN-YELLOW and green-blue "
+                 "body sprinkled with bright blue spots, and a deeply forked tail", SIDE, ""),
+    "wahoo": ("a wahoo (Acanthocybium solandri): a long, slim, torpedo-shaped speed fish with "
+              "a long, pointed, beak-like snout full of small teeth, an iridescent steel-blue "
+              "back, silver sides with vivid electric-blue vertical TIGER STRIPES, small "
+              "finlets and a sickle-shaped tail", SIDE,
+              "\nThe body is drawn straight and horizontal."),
+    "yellowfin": ("a yellowfin tuna (Thunnus albacares): a powerful, torpedo-shaped tuna with "
+                  "a dark metallic blue back, silver belly, a golden-yellow stripe along the "
+                  "side, and very long, bright YELLOW second dorsal and anal fins that sweep "
+                  "back like sickles; yellow finlets and a crescent tail", SIDE, ""),
+    "sailfish": ("an Indo-Pacific sailfish (Istiophorus platypterus): a slim billfish with a "
+                 "long spear-like bill and an ENORMOUS, tall, SAIL-like dorsal fin raised "
+                 "high along its back, cobalt blue with dark spots in the sail, vertical rows "
+                 "of light-blue dots on its silver-blue sides, a deeply forked tail", SIDE,
+                 "\nThe body and the bill are drawn straight and horizontal."),
+    "bluemarlin": ("a blue marlin (Makaira nigricans): a massive, powerful billfish with a "
+                   "long spear bill, a cobalt-blue back with pale blue vertical stripes, a "
+                   "silver-white belly, a pointed dorsal fin and a huge crescent tail", SIDE,
+                   "\nThe body and the bill are drawn straight and horizontal."),
+    "mako": ("a shortfin mako shark (Isurus oxyrinchus): a sleek, streamlined shark, "
+             "metallic INDIGO-blue on top and snow-white below, a pointed conical snout, a big "
+             "black eye, long curved dagger-like teeth showing in a slightly open mouth, and a "
+             "crescent tail with nearly equal lobes", SIDE, ""),
+    "hammerhead": ("a great hammerhead shark (Sphyrna mokarran): a big bronze-grey shark with "
+                   "the iconic wide, flat, HAMMER-shaped head with an eye at each end, a very "
+                   "tall, sickle-shaped first dorsal fin and a white belly", SIDE,
+                   "\nSeen from the side and a little from above, so that the hammer-shaped "
+                   "head shows clearly."),
+    "tigershark": ("a tiger shark (Galeocerdo cuvier): a huge, heavy-bodied shark with a broad, "
+                   "blunt, square snout, a grey-brown back with dark TIGER STRIPES and "
+                   "blotches, a white belly and a long upper tail lobe", SIDE, ""),
+    "whiteshark": ("a great white shark (Carcharodon carcharias): a massive, torpedo-shaped "
+                   "shark, slate-grey on top sharply set off from a pure white belly, a "
+                   "conical snout, a black eye, rows of big serrated triangular teeth in a "
+                   "half-open mouth, a tall triangular dorsal fin and a crescent tail", SIDE, ""),
+    "sunfish": ("an ocean sunfish (Mola mola): an enormous, flat, ROUND, disc-shaped fish that "
+                "looks like a giant head with fins -- very tall dorsal and anal fins set far "
+                "back, no real tail but a short wavy frill, rough silvery-grey skin with pale "
+                "mottling, a small round open mouth and a big eye", SIDE, ""),
+    "whaleshark": ("a whale shark (Rhincodon typus), the biggest fish in the world: a gigantic, "
+                   "gentle shark with a very wide, flat head and a huge wide mouth right at the "
+                   "front, a dark blue-grey back covered in a pattern of white SPOTS and pale "
+                   "stripes, ridges along its sides, a white belly and a tall crescent tail",
+                   SIDE, "\nThe body is drawn straight and horizontal."),
+})
+
 # The fish of the ice at the South Pole (map "antarctica", October 2026).
 # All are real Antarctic species; the game calls them by their own name
 # only ("Tandvis", not "Antarctische tandvis").
@@ -539,6 +593,66 @@ low down from a low sun.
 No ships, no people, no text. 4:3 landscape.
 """
 
+OCEAN_BACKDROP = """\
+Repaint the attached picture (a view over the sea from a rock on a coast)
+as the OPEN OCEAN, seen from the back deck of a big-game fishing boat that
+is sailing at speed. Keep the same camera position, the same composition
+and the same rich, detailed painting style.
+
+THE BOAT. In the lower-left corner, exactly where the rock is in the
+reference -- same position, same size, same viewing angle, same footprint
+-- there is now the open back deck of a white sport-fishing boat: a flat,
+clean deck of light teak planks with a low white gunwale around it, the
+square stern at the right edge of the deck. On the deck stands a sturdy
+big-game FIGHTING CHAIR of polished chrome and white leather with a foot
+rest, at the far left; heavy fishing rods with big gold reels stand upright
+in rod holders along the gunwale; a tall OUTRIGGER pole rises up out of the
+left edge of the picture. The middle of the deck, from one sixth to one
+third of the width, stays clear and empty (two children and a dog are
+added there later).
+
+THE WAKE. From the stern a broad trail of churning WHITE FOAM and pale
+turquoise bubbly water streams away behind the boat, straight back toward
+the horizon, getting narrower and fainter with distance -- the boat is
+clearly moving fast.
+
+THE OCEAN. Deep, saturated cobalt and ultramarine blue tropical ocean
+everywhere else, with long, smooth swells, small white caps and dazzling
+sparkles of sunlight; no land nearby.
+
+FAR AWAY. A HIGH, level horizon about one quarter of the way down from the
+top edge; on it, small and far, a green tropical island with a volcano,
+and a flock of seabirds diving over the water in the right half.
+
+THE SKY. Clear, bright tropical blue with NO clouds at all, hazy just
+above the horizon.
+
+No people, no other boats, no text. 4:3 landscape.
+"""
+
+WEIGH_BACKDROP = """\
+A painting for a children's fishing game, in exactly the same rich,
+detailed, warm painting style as the attached reference image: the
+WEIGHING STATION at the end of a wooden dock in a tropical sport-fishing
+harbour, at golden sunset.
+
+Straight on, at eye level. Across the very TOP edge of the picture runs the
+thick wooden crossbeam of a tall weighing gallows, held up by two massive
+square wooden posts standing at the far left and the far right edges of
+the picture. Nothing hangs from the beam yet.
+
+The ground is the dock: broad, weathered wooden planks filling the lower
+fifth of the picture, seen from a little above, with a coiled rope and a
+cooler box near the left post. Behind the dock: the calm harbour glowing
+orange and gold in the low sun, moored white sport-fishing boats with tall
+outrigger poles, palm trees, a small tackle hut with a string of light
+bulbs, and the sun sinking into the sea.
+
+Between the two posts the whole middle of the picture is EMPTY: no fish,
+no scale, no people, no animals there -- a big fish, a scale and children
+are added later. No text, no signs with letters. 4:3 landscape.
+"""
+
 MAPSELECT_BACKGROUND = """\
 A background painting for the "choose your fishing spot" screen of a
 children's fishing game: the inside wall of a cosy fishing cabin, made of
@@ -595,10 +709,13 @@ SKY_LIGHT = {
                "clouds with soft blue-grey shading, hazy and pale near the horizon"),
     "antarctica": ("a crisp, clear polar day with a low sun -- bright white clouds with cool "
                    "blue-grey shading and a faint golden-pink glow on their sunny side"),
+    "ocean": ("a hot, brilliant tropical day over the open ocean -- towering, dazzling white "
+              "trade-wind cumulus with soft blue-grey shading"),
 }
 SKY_PAINTING = {"lake": "assets/raw/backdrop-naarden.png", "sea": "assets/raw/backdrop-sea.png",
                 "france": "assets/raw/backdrop-france.png", "greece": "assets/raw/backdrop-greece.png",
-                "antarctica": "assets/raw/backdrop-antarctica.png"}
+                "antarctica": "assets/raw/backdrop-antarctica.png",
+                "ocean": "assets/raw/backdrop-ocean.png"}
 
 # The near layer: a few big clouds, high up.  The far layer: small ones, low.
 SKY_LAYERS = {
@@ -746,6 +863,23 @@ right, looking ahead to the right with bright eyes, mouth a little open.
 He is alone. Full body, complete from the tips of his ears to his paws,
 in the middle of a wide landscape image with plenty of green on all
 sides; nothing is cropped.
+""" + GREEN
+
+# For the weighing station: the boy STANDING next to his catch (which is
+# not in the picture), at his real height beside it in the game.
+BOY_STAND = CHAR_STYLE + """
+WHO: {look}. The PHOTOS show the real boy: give the character HIS face,
+HIS hair and HIS expression, so that his parents recognise him at once.
+The LAST reference image is this same boy in the game: keep his face,
+hair and clothes exactly the same.
+POSE: He STANDS proudly next to his enormous catch, which hangs just to his
+RIGHT, outside the picture: his right arm stretched high, pointing up at
+it, his left hand on his hip, and he laughs at the viewer.
+
+FRAMING: he stands, seen from the side-front (three-quarter view), his
+body turned a little to the right. Full body, complete from head to boots,
+filling most of the image's height; nothing is cropped. He holds nothing:
+no rod, no seat. He is alone: no dog, no fish, no other people.
 """ + GREEN
 
 # ---------------------------------------------------------------------------
@@ -1059,6 +1193,53 @@ overlaps or touches. No shadows on the background, no text, no labels, no
 grid lines. Crisp edges. Landscape, about 3:2.
 """
 
+# The scale at the weighing station (drawn on by the game: its numbers
+# and its needle).
+UI_SCALE = """\
+A single object for a children's fishing game, in a rich, realistic,
+warm painting style: a big old-fashioned HANGING SCALE for weighing giant
+fish at a harbour, seen straight on. A large round dial with a thick,
+polished BRASS rim and a plain cream-white dial face that has only fine
+black tick marks evenly spaced around its edge -- NO numbers, NO letters,
+NO needle, nothing in the middle. A big iron ring on top to hang it from,
+and a heavy iron hook hanging straight down from its bottom.
+
+Solid flat pure green (#00FF00) background everywhere around it, no shadow
+on the background, no text. Square image, the scale in the middle with
+plenty of green around it.
+"""
+
+# The big ocean: trolled behind the boat.
+OCEAN_BAITS = """\
+A sprite sheet of big-game fishing lures and baits for a game, in exactly
+the same realistic painting style and the same kind of layout as the
+attached reference sheet: here 5 columns by 2 rows on a solid flat pure
+green (#00FF00) chroma-key background.
+
+Columns, left to right:
+  1. a skirted trolling lure -- a bullet-shaped polished chrome head with
+     big painted eyes and a long, flowing skirt of rubber tentacles in
+     electric BLUE and PINK, a big stainless hook among the tentacles
+  2. a big diving trolling plug -- a long, fat, hard fish-shaped lure with a
+     long clear diving lip, a PURPLE-black back and mirror-silver flanks,
+     two big treble hooks
+  3. a rigged ballyhoo -- a slender silver baitfish with a long needle-like
+     lower jaw and a small pink skirt over its head, a big hook through it
+  4. a live mackerel bait -- a whole Atlantic mackerel with its wavy dark
+     bars, hooked through the nose on a big circle hook
+  5. a shark bait -- a big, deep-red chunk of tuna on a huge circle hook
+     with a short steel wire leader
+
+TOP ROW, each item hanging vertically "on the line", its line ring or
+hook eye at the top. BOTTOM ROW, the same five items lying flat and
+horizontal, line end at the LEFT.
+
+Nothing on any item is green. Every item is one solid, connected object,
+clearly separated from its neighbours by plenty of plain green; nothing
+overlaps or touches. No shadows on the background, no text, no labels, no
+grid lines. Crisp edges. Landscape, about 2:1.
+"""
+
 MAP_ICON = """\
 A game HUD button in exactly the same style, size and framing as the
 attached reference icon: a round, glossy blue button with a polished
@@ -1095,6 +1276,15 @@ JOBS = {
                          refs=["assets/raw/backdrop-greece.png"], brief=ANTARCTICA_BACKDROP),
     "antarctica-baits": dict(out="assets/raw/baits-antarctica.png",
                              refs=["assets/raw/baits-greece.png"], brief=ANTARCTICA_BAITS),
+    # The big ocean, from the back deck of a boat under way; its weighing
+    # station in the harbour, where a catch is shown; the scale; the baits.
+    "ocean":        dict(out="assets/raw/backdrop-ocean.png",
+                         refs=["assets/raw/backdrop-greece.png"], brief=OCEAN_BACKDROP),
+    "weigh":        dict(out="assets/raw/weigh-ocean.png",
+                         refs=["assets/raw/backdrop-greece.png"], brief=WEIGH_BACKDROP),
+    "ui-scale":     dict(out="assets/raw/ui-scale.png", refs=[], brief=UI_SCALE),
+    "ocean-baits":  dict(out="assets/raw/baits-ocean.png",
+                         refs=["assets/raw/baits-sea.png"], brief=OCEAN_BAITS),
     "mapselect-bg": dict(out="assets/raw/mapselect.png", refs=[], brief=MAPSELECT_BACKGROUND),
     "sea-baits":    dict(out="assets/raw/baits-sea.png",
                          refs=["assets/raw/baits.png"], brief=SEA_BAITS),
@@ -1121,6 +1311,11 @@ for _pose, _text in BOAZ_POSES.items():
         brief=BOAZ.format(pose=_text, same="" if _first else SAME.replace("the seat, the rod, ", "")),
     )
 JOBS["char-dirk"] = dict(out="assets/raw/char-dirk.png", refs=[STYLE_REF], brief=DIRK)
+for _boy, _spec in BOYS.items():
+    JOBS[f"char-{_boy}-stand"] = dict(
+        out=f"assets/raw/char-{_boy}-stand.png",
+        refs=[STYLE_REF] + _spec["photos"] + [f"assets/raw/char-{_boy}-ready.png"],
+        brief=BOY_STAND.format(look=_spec["look"]))
 JOBS["start"] = dict(
     out="assets/raw/start-friends.png",
     refs=["assets/raw/start.png", "assets/raw/char-julian-ready.png", "assets/raw/char-james-ready.png",

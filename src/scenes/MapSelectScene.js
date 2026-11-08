@@ -6,7 +6,7 @@ import { MAPS } from '../data/maps.js';
 import { AudioManager, reloadMissingVoice } from '../systems/AudioManager.js';
 import { fishTextureKey } from '../data/fish.js';
 import { TEX } from './BootScene.js';
-import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
+import { UI, COLOR, addGlow, addRays, lettering, pressable } from '../systems/Ui.js';
 
 /**
  * "Where shall we fish?" -- one big picture per map, tap to go there.
@@ -27,9 +27,14 @@ import { UI, COLOR, addGlow, lettering, pressable } from '../systems/Ui.js';
 // Cards are 4:3 like the paintings, side by side in the design frame: three
 // of them fill its width; four (or more) get smaller to fit next to each
 // other, and so do their name plates.
+//
+// A FEATURED map (the big ocean, the last level) is not one of the row: it
+// hangs on its own below it, bigger, in a golden frame that glows.
+const ROW_MAPS = MAPS.filter((m) => !m.featured);
+const FEATURED = MAPS.find((m) => m.featured) || null;
 const FRAME_FILL = 1220;          // the width the row of cards may take
-const CARD_GAP = MAPS.length > 3 ? 24 : 34;
-const CARD_W   = Math.min(384, Math.floor((FRAME_FILL - (MAPS.length - 1) * CARD_GAP) / MAPS.length));
+const CARD_GAP = ROW_MAPS.length > 3 ? 24 : 34;
+const CARD_W   = Math.min(384, Math.floor((FRAME_FILL - (ROW_MAPS.length - 1) * CARD_GAP) / ROW_MAPS.length));
 const CARD_H   = Math.round(CARD_W * 0.75);
 const BORDER   = 8;
 const CARD_SCALE = CARD_W / 384;  // of the plate and its lettering, against three cards
@@ -38,6 +43,14 @@ const PLATE_W  = Math.round(264 * Math.max(0.88, CARD_SCALE));
 const PLATE_H  = Math.round(88 * Math.max(0.88, CARD_SCALE));
 const PLATE_DROP = 34;            // from the frame's lower edge to the plate's middle
 const PLATE_TEXT = Math.round(27 * Math.max(0.85, CARD_SCALE));
+// The featured card, and where the row and it hang (design y of their middles).
+const FEATURE_W = 330;
+const FEATURE_H = Math.round(FEATURE_W * 0.75);
+const FEATURE_PLATE_W = 330;
+const FEATURE_PLATE_H = 104;
+const FEATURE_PLATE_TEXT = 34;
+const ROW_Y = FEATURED ? 214 : 360;
+const FEATURE_Y = 520;
 // A moment for the name to start sounding before the map opens.
 const ENTER_DELAY_MS = 350;
 
@@ -78,25 +91,29 @@ export class MapSelectScene extends Phaser.Scene {
       ? this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, TEX.MAPSELECT_BG)
       : null;
 
-    const totalW = MAPS.length * CARD_W + (MAPS.length - 1) * CARD_GAP;
+    const totalW = ROW_MAPS.length * CARD_W + (ROW_MAPS.length - 1) * CARD_GAP;
     const firstX = (GAME_WIDTH - totalW) / 2 + CARD_W / 2;
     const lastMapId = SaveSystem.getCurrentMap();
 
-    MAPS.forEach((map, i) => {
+    ROW_MAPS.forEach((map, i) => {
       const x = firstX + i * (CARD_W + CARD_GAP);
-      this._buildCard(map, x, GAME_HEIGHT / 2, map.id === lastMapId);
+      this._buildCard(map, x, ROW_Y, map.id === lastMapId);
     });
+    if (FEATURED) this._buildFeaturedCard(FEATURED, GAME_WIDTH / 2, FEATURE_Y);
     const home = this._buildHomeButton();
     const book = this._buildBookButton();
 
     // Camera: keep both cards (plus breathing room) on screen, zooming out
     // only on screens too small for them.
-    bindLayout(this, { mode: 'frame', fitWidth: totalW + 40, fitHeight: CARD_H + 190 }, (layout) => {
+    const fitHeight = FEATURED
+      ? (FEATURE_Y + FEATURE_H / 2 + BORDER + 34 + FEATURE_PLATE_H / 2) - (ROW_Y - CARD_H / 2 - BORDER) + 40
+      : CARD_H + 190;
+    bindLayout(this, { mode: 'frame', fitWidth: totalW + 40, fitHeight }, (layout) => {
       const { view, safe } = layout;
 
       // The way back hangs in the top-left corner of the screen. Where the
       // screen is too low to fit it above the cards, it shrinks.
-      const cardsTop = GAME_HEIGHT / 2 - CARD_H / 2 - BORDER;
+      const cardsTop = ROW_Y - CARD_H / 2 - BORDER;
       const room = cardsTop - safe.top - HOME_MARGIN - 10;
       const scale = Phaser.Math.Clamp(room / HOME_FULL_H, HOME_MIN_SCALE, 1);
       home.setScale(scale);
@@ -171,6 +188,33 @@ export class MapSelectScene extends Phaser.Scene {
       this.add.text(x, plateY, map.nlName, lettering(PLATE_TEXT, COLOR.GOLD)).setOrigin(0.5);
     }
 
+    pressable(this, picture, () => this._enter(map));
+  }
+
+  /**
+   * The last level, on its own below the row: bigger, in a golden frame,
+   * with rays of light turning behind it.
+   */
+  _buildFeaturedCard(map, x, y) {
+    addRays(this, x, y, FEATURE_W * 0.78, { alpha: 0.45 });
+    addGlow(this, x, y, { w: FEATURE_W + 16, h: FEATURE_H + 16, radius: 18 });
+    for (let i = 0; i < 4; i++) {
+      this.add.rectangle(x + 6, y + 10, FEATURE_W + BORDER * 3 + i * 7, FEATURE_H + BORDER * 3 + i * 7,
+                         0x000000, 0.09);
+    }
+    this.add.rectangle(x, y, FEATURE_W + BORDER * 3, FEATURE_H + BORDER * 3, GLOW_COLOR)
+      .setStrokeStyle(5, 0x3a1d06);
+    let picture;
+    if (this.textures.exists(map.backdropKey)) {
+      picture = this.add.image(x, y, map.backdropKey).setDisplaySize(FEATURE_W, FEATURE_H);
+    } else {
+      picture = this.add.rectangle(x, y, FEATURE_W, FEATURE_H, 0x205070);
+    }
+    const plateY = y + FEATURE_H / 2 + BORDER + 34;
+    if (this.textures.exists(UI.BOARD_LABEL)) {
+      this.add.image(x, plateY, UI.BOARD_LABEL).setDisplaySize(FEATURE_PLATE_W, FEATURE_PLATE_H);
+    }
+    this.add.text(x, plateY, map.nlName, lettering(FEATURE_PLATE_TEXT, COLOR.GOLD)).setOrigin(0.5);
     pressable(this, picture, () => this._enter(map));
   }
 

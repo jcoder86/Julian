@@ -21,6 +21,10 @@ export const TEAMS = [
     // `dx`, `dy`: where the buddy's feet are, in design px from the
     // bottom-left corner of the angler's seat.
     buddy: { who: 'dirk', height: 126, dx: -64, dy: 4 },
+    // How tall they REALLY are, in cm (standing; the dog sitting): at the
+    // weighing station of the big ocean they stand beside the catch at
+    // their true size, so a shark towers over them (TrophyScene).
+    trophy: [{ who: 'julian', cm: 105 }, { who: 'dirk', cm: 40 }],
   },
   {
     // This profile was called "guest" when it was a try-it-out button, and
@@ -30,6 +34,7 @@ export const TEAMS = [
     collectionTitle: 'Vangst van James & Boaz',
     angler: { who: 'james', height: 262 },
     buddy: { who: 'boaz', height: 196, dx: -68, dy: 6 },
+    trophy: [{ who: 'james', cm: 125 }, { who: 'boaz', cm: 104 }],
   },
   {
     // The grey "Gast" button: for whoever wants to try the game, or to
@@ -44,6 +49,7 @@ export const TEAMS = [
     lookOf: 'julian',
     angler: { who: 'julian', height: 232 },
     buddy: { who: 'dirk', height: 126, dx: -64, dy: 4 },
+    trophy: [{ who: 'julian', cm: 105 }, { who: 'dirk', cm: 40 }],
   },
 ];
 

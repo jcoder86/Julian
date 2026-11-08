@@ -9,6 +9,9 @@
 // `kind` decides how you fish with it:
 //   "bait" -- hangs under the float: cast, wait for the float to go under,
 //             tap to strike, reel in.
+//   "troll" -- the big ocean: let out behind the boat as it sails, and
+//             TROLLED there -- nothing to do but wait for the strike, and
+//             then fight (FishingScene's trolling, FishFight's big game).
 //   "lure" -- no float: cast, then reel the lure back yourself; a fish may
 //             grab it on the way in, and is hooked at once: keep reeling.
 //             A lure is too big a mouthful for a small fish (see
@@ -35,6 +38,7 @@ const FRESH = ["lake", "france"];
 const SEA = ["sea"];
 const GREECE = ["greece"];
 const ICE = ["antarctica"];
+const OCEAN = ["ocean"];
 
 export const BAITS = [
   // The South Pole's own bait, first in its menu: krill, the little shrimp
@@ -87,6 +91,18 @@ export const BAITS = [
   { id: "werpjig",  maps: GREECE, kind: "lure", displayName: "Werpjig",  nlName: "Werpjig", lengthCm: 9,
     swim: { depth: 1.5, sink: 1.0, sway: 2, roll: 14, beat: 1.8, jig: 0.5, flash: true } },
 
+  // The big ocean: everything is trolled behind the boat. A skirted lure
+  // -- chrome head, rubber tentacles -- for the tuna, marlin, dorado and,
+  // because it looks like a jellyfish, the sunfish; a big diving plug for
+  // the wahoo and the tuna; a rigged ballyhoo for the billfish; a live
+  // mackerel, which everything big eats; and a chunk of tuna with a trail
+  // of chum, for the sharks.
+  { id: "rokjeslure", maps: OCEAN, kind: "troll", displayName: "Rokjeslure", nlName: "Rokjeslure", lengthCm: 25 },
+  { id: "duikplug", maps: OCEAN, kind: "troll", displayName: "Duikplug", nlName: "Duikplug", lengthCm: 22 },
+  { id: "ballyhoo", maps: OCEAN, kind: "troll", displayName: "Ballyhoo", nlName: "Ballyhoo", lengthCm: 28 },
+  { id: "makreel",  maps: OCEAN, kind: "troll", displayName: "Makreel",  nlName: "Makreel",  lengthCm: 35 },
+  { id: "haaienaas", maps: OCEAN, kind: "troll", displayName: "Haaienaas", nlName: "Haaienaas", lengthCm: 25 },
+
   // The South Pole's own lure (also the pilker above): a glow jig, painted
   // with glow paint that shines in the dark, cold water; jigged slowly, deep.
   { id: "lichtjig", maps: ICE, kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
@@ -103,6 +119,11 @@ export function baitsForMap(mapId) {
 /** Can this bait be fished on this map? (False for an unknown id.) */
 export function baitOnMap(baitId, mapId) {
   return !!BAITS_BY_ID[baitId]?.maps.includes(mapId);
+}
+
+/** True when this id is trolled behind a boat (the big ocean). */
+export function isTroll(baitId) {
+  return BAITS_BY_ID[baitId]?.kind === "troll";
 }
 
 /** True when this id is a lure (fished actively, without a float). */

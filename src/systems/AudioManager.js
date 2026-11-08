@@ -14,6 +14,11 @@ export const SFX = Object.freeze({
   REEL:     'reel',         // looping click while the player cranks the reel
   APPLAUSE: 'applause',     // played on catch display open
   FISHON:   'fishon',       // one-shot ping when the bobber goes under (strike window opens)
+  // The big ocean:
+  SCREAM:   'reel-scream',  // the reel's drag screams as a big fish takes line
+  BIG_SPLASH: 'splash-big', // a giant leaps out of the sea and crashes back
+  SHUTTER:  'shutter',      // the camera at the last leap, and at the weighing
+  CHAIN:    'chain',        // the chain and the scale take the weight
 });
 
 // The sounds there is a recording of (assets/audio/sfx/<key>.wav). The
@@ -21,7 +26,8 @@ export const SFX = Object.freeze({
 // these and no more: a file that is not there costs a request at every
 // start -- and the live site answers it with the web page, which is then
 // decoded as sound, and fails.
-export const SFX_RECORDED = Object.freeze([SFX.PLOP, SFX.SPLASH, SFX.REEL, SFX.APPLAUSE, SFX.FISHON]);
+export const SFX_RECORDED = Object.freeze([SFX.PLOP, SFX.SPLASH, SFX.REEL, SFX.APPLAUSE, SFX.FISHON,
+  SFX.SCREAM, SFX.BIG_SPLASH, SFX.SHUTTER, SFX.CHAIN]);
 
 // Music keys.
 export const MUSIC = Object.freeze({
@@ -29,7 +35,12 @@ export const MUSIC = Object.freeze({
   SEA:     'relaxing',     // the sea's own music (audio/music/relaxing.mp3);
                            // without that file the sea uses AMBIENT.
   START:   'start',        // title-screen theme
+  OCEAN:   'ocean',        // the big ocean: big-game adventure...
+  OCEAN_FIGHT: 'ocean-fight', // ...and its exciting version, while a fish is on
 });
+
+// A map's music and its fight version are cross-faded over this long (ms).
+export const MUSIC_FADE_MS = 1400;
 
 // (The waves, birds and other sounds of a place are not music: see
 // systems/Ambience.js.)
@@ -89,6 +100,9 @@ export function musicPath(key) {
 //                  (papegaaivis, koraalduivel, zwaardvis; bijlvis, spookhaai,
 //                  koningsvis, riemvis)
 //   vissen-gigant-4  "Wow! Een gigantische ...!" for those seven
+//   vissen-8       the eleven new fish of the big ocean, "Vis aan!" (`fish_on`)
+//                  and its name (`map_ocean`)
+//   vissen-gigant-5  "Wow! Een gigantische ...!" for those eleven
 // A new one is made by scripts/make_voice_atlas.py and added at the END of
 // this list. The atlas name is also its audio cache key.
 //
@@ -99,6 +113,7 @@ export function musicPath(key) {
 export const VOICE_ATLASES = [
   'vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4',
   'vissen-5', 'vissen-gigant-2', 'vissen-6', 'vissen-gigant-3', 'vissen-7', 'vissen-gigant-4',
+  'vissen-8', 'vissen-gigant-5',
 ];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;
@@ -347,6 +362,41 @@ export class AudioManager {
     if (this.currentMusic) {
       try { this.currentMusic.stop(); } catch (e) { /* ignore */ }
       this.currentMusic = null;
+    }
+    for (const sound of this._fading || []) {
+      try { sound.stop(); sound.destroy(); } catch (e) { /* ignore */ }
+    }
+    this._fading = [];
+  }
+
+  /**
+   * From the music that is playing to another one: the one fades out while
+   * the other fades in (a map's music and its exciting fight version). Does
+   * nothing when that one is already playing or there is no such file.
+   */
+  crossfadeMusic(key, ms = MUSIC_FADE_MS, volume = MUSIC_VOLUME) {
+    if (!key || !this.scene.cache.audio.exists(key)) return;
+    if (this.currentMusic && this.currentMusic.key === key) return;
+    const old = this.currentMusic;
+    if (old) {
+      this._fading = this._fading || [];
+      this._fading.push(old);
+      this.scene.tweens.killTweensOf(old);
+      this.scene.tweens.add({
+        targets: old, volume: 0, duration: ms,
+        onComplete: () => {
+          try { old.stop(); old.destroy(); } catch (e) { /* ignore */ }
+          this._fading = this._fading.filter((s) => s !== old);
+        },
+      });
+    }
+    try {
+      const sound = this.scene.sound.add(key, { loop: true, volume: 0 });
+      this.currentMusic = sound;
+      sound.play();
+      this.scene.tweens.add({ targets: sound, volume, duration: ms });
+    } catch (e) {
+      console.warn(`[MUSIC] crossfade failed for ${key}`, e);
     }
   }
 }

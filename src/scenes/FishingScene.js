@@ -9,7 +9,7 @@ import { AudioManager, SFX, MUSIC, reloadMissingVoice } from '../systems/AudioMa
 import { Ambience } from '../systems/Ambience.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { weightedPick, fishTextureKey, FISH_BY_ID } from '../data/fish.js';
-import { BAITS_BY_ID, baitOnMap, baitSimpleTextureKey, isLure, smallestCatchOn } from '../data/baits.js';
+import { BAITS_BY_ID, baitOnMap, baitSimpleTextureKey, isLure, isTroll, smallestCatchOn } from '../data/baits.js';
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
@@ -196,6 +196,8 @@ const STATE = Object.freeze({
   CATCHING: 'catching',
   // Lure fishing (no float). The player reels the lure back in:
   RETRIEVE: 'retrieve',     // lure in the water, reel widget brings it home
+  // The big ocean: the lure is trolled behind the boat, waiting for a strike.
+  TROLLING: 'trolling',
   // The hook let go during the fight: a moment to take that in.
   ESCAPED: 'escaped',
 });
@@ -237,6 +239,46 @@ const LURE_REFUSE_CHANCE = 0.3;
 const LURE_REFUSE_FROM = 0.4;
 const LURE_REFUSE_TO = 0.8;
 
+
+// ---------------------------------------------------------------------------
+// Trolling (the big ocean)
+// ---------------------------------------------------------------------------
+// What is on the line is let out behind the boat as it sails, and trolled
+// there: no float, no reeling it back. The lure skips in the wake; now and
+// then a fin cuts the water behind it (a fish having a look); and after a
+// long wait -- the big ones are few -- the strike: the water explodes, the
+// reel screams, "Vis aan!". Then a long, hard fight (FishFight's big game):
+// runs, in which only holding on helps, a tired fish, which must be cranked
+// in, and some that leap clear of the water. Brought alongside, the fish
+// makes one last leap -- in slow motion, caught by a camera flash -- and is
+// then weighed in the harbour (TrophyScene).
+// (Twice as long and more since November 2026, on request: a strike
+// should be an event.)
+const TROLL_WAIT_MIN = 20000;           // ms from the lure landing to the strike
+const TROLL_WAIT_MAX = 45000;
+const TROLL_TEASERS = [1, 3];           // fins seen behind the lure before it
+const TROLL_WEAVE_PX = 7;               // the lure weaves in the wake (at full scale)
+const TROLL_WEAVE_MS = 2600;
+const TROLL_SPRAY_MS = 170;             // a puff of spray off the skipping lure
+const TROLL_STRIKE_MS = 700;            // from the strike to the fight
+// Reel turns of a big-game fight: a few plus one per this many cm, within
+// [min, max]; a slow drain when nobody cranks (share of the fight per s).
+const BIG_TURNS_BASE = 6;
+const BIG_CM_PER_TURN = 22;
+const BIG_TURNS_MIN = 8;
+const BIG_TURNS_MAX = 34;
+const BIG_DECAY = 0.04;
+// A fish that leaps during the fight: at most this wide (design px), up
+// for this long.
+const JUMP_MAX_PX = 560;
+const JUMP_MS = 950;
+// The last leap: at most this wide, rising for so long, the flash at its top.
+const TROPHY_LEAP_MAX_PX = 1050;
+const TROPHY_LEAP_MS = 2100;
+const TROPHY_FLASH_MS = 650;
+// The voice: "Vis aan!" (a phrase of a voice atlas).
+const VOICE_FISH_ON = 'fish_on';
+
 // ---------------------------------------------------------------------------
 // The one that got away
 // ---------------------------------------------------------------------------
@@ -246,6 +288,11 @@ const LURE_REFUSE_TO = 0.8;
 const ESCAPE_CHANCE = 0.07;
 const ESCAPE_FROM = 0.25;
 const ESCAPE_TO = 0.8;
+// On the ocean, cranking hard while the fish runs (the reel glows red)
+// strains the line: after each run in which the angler did, the hook tears
+// out with this chance (FishFight counts those runs). Waiting for green
+// keeps the fish on.
+const OVERCRANK_ESCAPE = 0.06;
 // How long the scene dwells on it before the angler can cast again (ms).
 const ESCAPE_SHOW_MS = 2800;
 // The voice: "Helaas! De vis is ontsnapt!" (a phrase of a voice atlas).
@@ -294,6 +341,12 @@ function requiresReel(_pick) { return true; }
 //   catfish large  175cm (w 3) -> 11
 //   catfish large  200cm (w 3) -> 12  (its own cap)
 const DEFAULT_MAX_REEL_TURNS = 9;
+// A big-game fight (the big ocean): many more turns -- see BIG_TURNS_*.
+function bigGameTurnsFor(pick) {
+  const cm = pick.lengthCm ?? 100;
+  return Phaser.Math.Clamp(Math.round(BIG_TURNS_BASE + cm / BIG_CM_PER_TURN), BIG_TURNS_MIN, BIG_TURNS_MAX);
+}
+
 function reelTurnsFor(pick) {
   const species = FISH_BY_ID[pick.species];
   const cm = pick.lengthCm ?? 30;
@@ -346,9 +399,11 @@ export class FishingScene extends Phaser.Scene {
     // its own yet). Idempotent across scene wakes -- playMusic stops any
     // existing loop before starting the new one, so re-entering the
     // fishing scene from a child scene does not stack.
-    this.sound.stopByKey(MUSIC.AMBIENT);
-    this.sound.stopByKey(MUSIC.SEA);
-    this.audio.playMusic(this.cache.audio.exists(this.map.music) ? this.map.music : MUSIC.AMBIENT);
+    // (Every music: a fight's music may still be fading out of the last map.)
+    for (const key of Object.values(MUSIC)) {
+      if (key !== MUSIC.START) this.sound.stopByKey(key);
+    }
+    this.audio.playMusic(this._mapMusic());
     // ...and under it what the place itself sounds like: birds or waves,
     // and now and then something passing. Ends with the scene.
     this.ambience = new Ambience(this, this.map.ambience);
@@ -411,6 +466,11 @@ export class FishingScene extends Phaser.Scene {
     this._sceneListeners.push([event, fn]);
   }
 
+  /** The map's music (the lake's when it has none of its own yet). */
+  _mapMusic() {
+    return this.cache.audio.exists(this.map.music) ? this.map.music : MUSIC.AMBIENT;
+  }
+
   /** The bait or lure on the line: the saved choice for this map, if valid. */
   _currentBaitId() {
     const saved = SaveSystem.getSelectedBait(this.map.id);
@@ -467,6 +527,16 @@ export class FishingScene extends Phaser.Scene {
     return isLure(this._currentBaitId());
   }
 
+  /** True on a map where what is on the line is trolled behind a boat. */
+  _isTrollMode() {
+    return this.map.fishing === 'troll';
+  }
+
+  /** No float on the line: a lure, or anything trolled. */
+  _noFloat() {
+    return this._isLureMode() || this._isTrollMode() || isTroll(this._currentBaitId());
+  }
+
   /** Where the end of the line is when fully reeled in: at the jetty, on the water. */
   _reelHome() {
     return this.map.landing;
@@ -509,6 +579,10 @@ export class FishingScene extends Phaser.Scene {
       this.fight.update(delta);
       this.bobber.x = this.fight.x;
       this.bobber.y = this.fight.y;
+      if (this.fight.overcranks > this._overcranksSeen) {
+        this._overcranksSeen = this.fight.overcranks;
+        if (Math.random() < OVERCRANK_ESCAPE) this._escapeAt = 0;
+      }
       if (this._escapeAt != null && this.reelOverlay && this.reelOverlay.progress >= this._escapeAt) {
         this._fishEscapes();
       }
@@ -525,6 +599,8 @@ export class FishingScene extends Phaser.Scene {
       if (this.lure && this.lure.biteAt != null && p >= this.lure.biteAt) {
         this._hookOnLure();
       }
+    } else if (this.state === STATE.TROLLING && this._troll) {
+      this._updateTroll(delta);
     }
 
     this._updateLine(delta);
@@ -563,6 +639,7 @@ export class FishingScene extends Phaser.Scene {
       case STATE.NIBBLE: slack = LINE_SLACK.NIBBLE; break;
       case STATE.DIVE: slack = LINE_SLACK.DIVE; tremble = LINE_TREMBLE.DIVE; break;
       case STATE.RETRIEVE: slack = cranking ? LINE_SLACK.LURE_CRANKING : LINE_SLACK.LURE_RESTING; break;
+      case STATE.TROLLING: slack = 0; break;   // pulled taut by the boat
       case STATE.REELING: {
         const running = !!(this.fight && this.fight.running);
         slack = running ? 0 : (cranking ? LINE_SLACK.FISH_CRANKING : LINE_SLACK.FISH_RESTING);
@@ -612,7 +689,7 @@ export class FishingScene extends Phaser.Scene {
   _bobberDepthScale(y) {
     const farY = this.map.depthFarY;
     const t = Phaser.Math.Clamp((y - farY) / (BOBBER_DEPTH_NEAR_Y - farY), 0, 1);
-    const far = this._isLureMode() ? LURE_SCALE_FAR : BOBBER_SCALE_FAR;
+    const far = this._noFloat() ? LURE_SCALE_FAR : BOBBER_SCALE_FAR;
     return Phaser.Math.Linear(far, BOBBER_SCALE_NEAR, t);
   }
 
@@ -984,7 +1061,7 @@ export class FishingScene extends Phaser.Scene {
     this._rigAir = null;       // float mode: what shows in the air...
     this._rigTip = null;       // ...and what shows in the water
 
-    const lureKey = this._isLureMode() ? baitSimpleTextureKey(this._currentBaitId()) : null;
+    const lureKey = this._noFloat() ? baitSimpleTextureKey(this._currentBaitId()) : null;
     if (lureKey && this.textures.exists(lureKey)) {
       // Lure sprites are drawn lying flat with the line eye on the LEFT.
       // Origin sits on that eye, so the line ends exactly where it is tied
@@ -1247,7 +1324,7 @@ export class FishingScene extends Phaser.Scene {
     }
     // A lure is fished without a float: fade the float button out so it
     // is clear it plays no part right now (it still opens its menu).
-    fl.container.setAlpha(this._isLureMode() ? 0.35 : 1);
+    fl.container.setAlpha(this._noFloat() ? 0.35 : 1);
 
     // --- Bait icon: selected bait / lure simple sprite ---
     const ba = this.hudIcons.bait;
@@ -1372,6 +1449,10 @@ export class FishingScene extends Phaser.Scene {
         // The reel brings the lure in; a tap on the water means nothing.
         break;
 
+      case STATE.TROLLING:
+        // The lure is out behind the boat: wait for the strike.
+        break;
+
       case STATE.CATCHING:
         // Animation in progress -- ignore.
         break;
@@ -1398,6 +1479,8 @@ export class FishingScene extends Phaser.Scene {
     this._hideFishOn();
     this._cancelAllPhaseLogic();
     this.state = STATE.READY;
+    // After a fight: the calm music again.
+    if (this.map.fightMusic) this.audio.crossfadeMusic(this._mapMusic());
     // Rod in hand, nothing out yet: the crew relaxes and looks at us.
     this.crew.mood('ready');
     this.tweens.killTweensOf(this.bobber);
@@ -1454,7 +1537,8 @@ export class FishingScene extends Phaser.Scene {
         onComplete: () => {
           this.activeCastTween = null;
           // A float sits and waits for a bite; a lure is reeled back in.
-          if (this._isLureMode()) this._enterRetrieve(targetX, targetY);
+          if (this._isTrollMode()) this._enterTrolling(targetX, targetY);
+          else if (this._isLureMode()) this._enterRetrieve(targetX, targetY);
           else this._enterIdle(targetX, targetY);
         },
       });
@@ -1832,6 +1916,7 @@ export class FishingScene extends Phaser.Scene {
     this._escapeAt = Math.random() < ESCAPE_CHANCE
       ? Phaser.Math.FloatBetween(ESCAPE_FROM, ESCAPE_TO)
       : null;
+    this._overcranksSeen = 0;
     this.audio.playSfx(SFX.NIBBLE);   // little "tension" beep, no dedicated SFX yet
 
     // Coming from a lure retrieve the reel widget is already on screen,
@@ -1866,7 +1951,8 @@ export class FishingScene extends Phaser.Scene {
       this.bobber.y = startY;
     }
 
-    const turns = reelTurnsFor(pick);
+    const troll = this._isTrollMode();
+    const turns = troll ? bigGameTurnsFor(pick) : reelTurnsFor(pick);
     // Position: bottom-right corner of the visible screen, clear of the
     // HUD stack. Follows the screen on rotation via _applyLayout.
     const reelPos = this._reelPosition();
@@ -1875,6 +1961,7 @@ export class FishingScene extends Phaser.Scene {
       x: reelPos.x,
       y: reelPos.y,
       requiredTurns: turns,
+      decayPerSecond: troll ? BIG_DECAY : undefined,
       onComplete: () => {
         this.reelOverlay = null;
         // (A fish that was going to get off and has not yet -- a tiny one,
@@ -1884,6 +1971,12 @@ export class FishingScene extends Phaser.Scene {
           return;
         }
         this._endFight();
+        if (troll) {
+          // Alongside the boat: one last leap, then the weighing station.
+          this._performTrophyLeap(pick);
+          this.reelEnd = null;
+          return;
+        }
         // The fish is at the landing spot: from there the catch-leap lifts
         // it out -- the "fish breaks the surface right at the jetty" moment.
         if (this.bobber) {
@@ -1907,11 +2000,16 @@ export class FishingScene extends Phaser.Scene {
       home: this._reelHome(),
       depthScale: (y) => this._bobberDepthScale(y),
       isWater: (x, y) => this.map.isWater(x, y),
+      bigGame: troll,
+      jumps: troll && !!FISH_BY_ID[pick.species]?.jumps,
+      onJump: (x, y) => this._fishJump(pick, x, y),
       onRun: (running) => {
         if (this.state !== STATE.REELING) return;
         // It tears off: the angler can only hold on, rod bent double.
         this.crew.mood(running ? 'run' : 'reel');
         if (running) this.audio.playSfx(SFX.SPLASH, { volume: 0.35 });
+        // A big one on the ocean: the reel screams as the line goes.
+        if (running && troll) this.audio.playSfx(SFX.SCREAM, { volume: 0.7 });
       },
     });
   }
@@ -1944,6 +2042,7 @@ export class FishingScene extends Phaser.Scene {
     this.crew.mood('wait');
 
     this.audio.playSfx(SFX.SPLASH, { volume: 0.55 });
+    if (this.map.fightMusic) this.audio.crossfadeMusic(this._mapMusic(), 2400);
     this.audio.playPhrase(VOICE_ESCAPED, { volume: this.map.voiceVolume ?? 1 });
     this._showEscape(pick, at);
     this.time.delayedCall(ESCAPE_SHOW_MS, () => {
@@ -2069,6 +2168,229 @@ export class FishingScene extends Phaser.Scene {
     });
   }
 
+
+  // ---------------------------------------------------------------------------
+  // Trolling (the big ocean)
+  // ---------------------------------------------------------------------------
+
+  /** The lure has landed in the wake: troll it, and wait for the strike. */
+  _enterTrolling(x, y) {
+    this.state = STATE.TROLLING;
+    this.crew.mood('wait');
+    this.audio.playSfx(SFX.PLOP);
+    this._slack = 0;
+    this._setRigInAir(false);
+    this.bobber.x = x;
+    this.bobber.y = y;
+    this.bobberHomeY = y;
+    this.bobber.setScale(this._bobberDepthScale(y));
+    this._pointLureAtRod();
+    this._troll = { x, y, t: 0, sprayIn: 0, timers: [] };
+
+    const wait = Phaser.Math.Between(TROLL_WAIT_MIN, TROLL_WAIT_MAX);
+    this.biteTimer = this.time.delayedCall(wait, () => this._trollStrike());
+    // A fin or two before it: a fish having a look at the lure.
+    const teasers = Phaser.Math.Between(...TROLL_TEASERS);
+    for (let i = 0; i < teasers; i++) {
+      const at = Phaser.Math.FloatBetween(0.2, 0.85) * wait;
+      this._troll.timers.push(this.time.delayedCall(at, () => this._trollTeaser()));
+    }
+  }
+
+  /** The lure skips and weaves in the wake, throwing up spray. */
+  _updateTroll(delta) {
+    const tr = this._troll;
+    tr.t += delta;
+    const scale = this._bobberDepthScale(tr.y);
+    const weave = Math.sin(tr.t / TROLL_WEAVE_MS * Math.PI * 2) * TROLL_WEAVE_PX * scale;
+    const bob = Math.sin(tr.t / 230) * 1.6 * scale;
+    this.bobber.x = tr.x + weave;
+    this.bobber.y = tr.y + bob;
+    this._pointLureAtRod();
+    tr.sprayIn -= delta;
+    if (tr.sprayIn <= 0) {
+      tr.sprayIn = TROLL_SPRAY_MS;
+      this._spray(this.bobber.x, this.bobber.y, scale, 0.55);
+    }
+  }
+
+  /** A puff of white water at (x, y), drifting off. */
+  _spray(x, y, scale, strength = 1) {
+    const k = scale ** 0.6;
+    const puff = this.add.ellipse(x, y, 16 * k, 6 * k, 0xffffff, 0.7 * strength).setDepth(19);
+    this.tweens.add({
+      targets: puff,
+      x: x + Phaser.Math.FloatBetween(-10, 10) * k,
+      y: y - 3 * k,
+      scaleX: 2.2, scaleY: 1.6,
+      alpha: 0,
+      duration: 520,
+      ease: 'Quad.easeOut',
+      onComplete: () => puff.destroy(),
+    });
+  }
+
+  /** A dark fin cuts the water behind the lure, comes close -- and sinks away. */
+  _trollTeaser() {
+    if (this.state !== STATE.TROLLING || !this._troll) return;
+    const tr = this._troll;
+    const scale = this._bobberDepthScale(tr.y);
+    const k = scale ** 0.7;
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const fin = this.add.triangle(0, 0, 0, 0, 14 * k, -26 * k, 22 * k, 0, 0x1b2836, 0.9)
+      .setDepth(19).setOrigin(0.5, 1);
+    const from = { x: tr.x + side * 70 * k, y: tr.y - 26 * k };
+    const to = { x: tr.x + side * 14 * k, y: tr.y - 6 * k };
+    fin.setPosition(from.x, from.y).setAlpha(0);
+    const ripple = this.time.addEvent({
+      delay: 140, loop: true,
+      callback: () => this._spray(fin.x, fin.y + 2, scale, 0.35),
+    });
+    this.tweens.add({ targets: fin, alpha: 0.9, duration: 260 });
+    this.tweens.add({
+      targets: fin, x: to.x, y: to.y, duration: 1300, ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: fin, alpha: 0, y: fin.y + 10 * k, duration: 500,
+          onComplete: () => { ripple.remove(false); fin.destroy(); },
+        });
+      },
+    });
+  }
+
+  /** It takes it: the water explodes, the reel screams -- fish on. */
+  _trollStrike() {
+    if (this.state !== STATE.TROLLING) return;
+    const pick = this._pickFish();
+    const at = { x: this.bobber.x, y: this.bobber.y };
+    this._stopTroll();
+    const scale = this._bobberDepthScale(at.y);
+    for (let i = 0; i < 9; i++) {
+      this.time.delayedCall(i * 40, () => this._spray(at.x + Phaser.Math.Between(-18, 18) * scale,
+                                                        at.y, scale, 1));
+    }
+    const ring = this.add.ellipse(at.x, at.y, 120 * scale, 40 * scale).setDepth(19);
+    ring.setStrokeStyle(Math.max(2, 4 * scale), 0xffffff, 1);
+    this.tweens.add({
+      targets: ring, scale: { from: 0.3, to: 1.8 }, alpha: { from: 1, to: 0 }, duration: 900,
+      ease: 'Sine.easeOut', onComplete: () => ring.destroy(),
+    });
+    this.audio.playSfx(SFX.SPLASH, { volume: 0.7 });
+    this.audio.playSfx(SFX.SCREAM, { volume: 0.8 });
+    this.audio.playSfx(SFX.FISHON);
+    this.audio.playPhrase(VOICE_FISH_ON, { volume: this.map.voiceVolume ?? 1 });
+    // The music turns exciting until the fish is landed or gone.
+    this.audio.crossfadeMusic(this.map.fightMusic, 600);
+    this.crew.mood('bite');
+    this._showFishOn();
+    this.time.delayedCall(LURE_FISH_ON_MS + 400, () => {
+      if (this.state !== STATE.DIVE) this._hideFishOn();
+    });
+    this.time.delayedCall(TROLL_STRIKE_MS, () => {
+      if (this.state === STATE.READY || this.state === STATE.TROLLING) this._enterReeling(pick);
+    });
+    // (Until the fight starts nothing else may happen.)
+    this.state = STATE.TROLLING;
+    this._troll = null;
+  }
+
+  _stopTroll() {
+    if (!this._troll) return;
+    for (const t of this._troll.timers) t.remove(false);
+    this._troll = null;
+  }
+
+  /** The fish leaps clear of the water during the fight, and crashes back. */
+  _fishJump(pick, x, y) {
+    if (this.state !== STATE.REELING) return;
+    const key = fishTextureKey(pick.species, pick.size);
+    if (!this.textures.exists(key)) return;
+    const scale = this._bobberDepthScale(y);
+    const fish = this.add.image(x, y, key).setDepth(23);
+    const width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
+    fish.setScale(width / fish.width);
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    fish.setFlipX(dir < 0);
+    const height = width * 0.55 + 30 * scale;
+    const t = { p: 0 };
+    this.audio.playSfx(SFX.SPLASH, { volume: 0.6 });
+    for (let i = 0; i < 6; i++) this._spray(x + Phaser.Math.Between(-20, 20) * scale, y, scale, 1);
+    this.tweens.add({
+      targets: t, p: 1, duration: JUMP_MS, ease: 'Linear',
+      onUpdate: () => {
+        const p = t.p;
+        fish.x = x + dir * width * 0.5 * p;
+        fish.y = y - height * 4 * p * (1 - p);
+        fish.rotation = dir * Phaser.Math.Linear(-0.55, 0.6, p);
+      },
+      onComplete: () => {
+        this.audio.playSfx(SFX.SPLASH, { volume: 0.7 });
+        for (let i = 0; i < 10; i++) {
+          this._spray(fish.x + Phaser.Math.Between(-30, 30) * scale, y, scale, 1);
+        }
+        fish.destroy();
+      },
+    });
+  }
+
+  /**
+   * Brought alongside: the fish makes one last, slow leap out of the sea
+   * beside the boat -- a camera flash at its top -- and is taken to the
+   * weighing station.
+   */
+  _performTrophyLeap(pick) {
+    this.state = STATE.CATCHING;
+    this.crew.mood('cheer');
+    SaveSystem.recordCatch({ ...pick, mapId: this.map.id });
+    this.audio.playSfx(SFX.BIG_SPLASH, { volume: 0.9 });
+    const home = this._reelHome();
+    const key = fishTextureKey(pick.species, pick.size);
+    const go = () => {
+      this.bobber.setVisible(false);
+      this.scene.sleep();
+      this.scene.run('TrophyScene', {
+        species: pick.species, size: pick.size, lengthCm: pick.lengthCm, mapId: this.map.id,
+      });
+    };
+    if (!this.textures.exists(key)) { go(); return; }
+
+    const scale = this._bobberDepthScale(home.y);
+    const fish = this.add.image(home.x, home.y + 30, key).setDepth(30);
+    const width = Math.min(TROPHY_LEAP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
+    fish.setScale(width / fish.width);
+    // Toward the open water, away from the boat.
+    const startX = home.x;
+    const endX = Math.min(home.x + width * 0.35, WORLD_RIGHT - width * 0.3);
+    const peakY = home.y - width * 0.32 - 80;
+    for (let i = 0; i < 14; i++) {
+      this._spray(home.x + Phaser.Math.Between(-60, 60) * scale, home.y, Math.max(scale, 0.8), 1);
+    }
+    const t = { p: 0 };
+    this.tweens.add({
+      targets: t, p: 1, duration: TROPHY_LEAP_MS, ease: 'Sine.easeOut',
+      onUpdate: () => {
+        const p = t.p;
+        fish.x = Phaser.Math.Linear(startX, endX, p);
+        fish.y = Phaser.Math.Linear(home.y + 30, peakY, Math.sin(p * Math.PI / 2));
+        fish.rotation = Phaser.Math.Linear(-0.5, -0.12, p);
+        // The line runs to its mouth (its head is on the right).
+        const head = width * 0.45;
+        this.bobber.x = fish.x + Math.cos(fish.rotation) * head;
+        this.bobber.y = fish.y + Math.sin(fish.rotation) * head;
+        if (Math.random() < 0.5) this._spray(fish.x - Math.cos(fish.rotation) * head * 0.6, home.y, 1, 0.8);
+      },
+      onComplete: () => {
+        // Click -- the photo.
+        this.audio.playSfx(SFX.SHUTTER, { volume: 0.9 });
+        this.cameras.main.flash(TROPHY_FLASH_MS, 255, 255, 255);
+        this.time.delayedCall(TROPHY_FLASH_MS * 0.7, () => {
+          fish.destroy();
+          go();
+        });
+      },
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Cleanup helpers
   // ---------------------------------------------------------------------------
@@ -2093,6 +2415,7 @@ export class FishingScene extends Phaser.Scene {
 
   _cancelAllPhaseLogic() {
     this._stopPhaseTimer();
+    this._stopTroll();
     this._stopBobTween();
     if (this.nibbleTween) {
       this.nibbleTween.stop();

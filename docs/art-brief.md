@@ -15,6 +15,11 @@ OpenAI/ChatGPT). Er staan geen tijdelijke plaatjes meer in het spel.
 | Aas en lures voor Griekenland: garnaal, inktvis, plug, werpjig (4 x 2) | `baits-greece.png` | `greece-baits` |
 | Het ijs van de Zuidpool, met iglo en vuurkorf | `backdrop-antarctica.png` | `antarctica` |
 | Krill en de lichtjig (2 x 2) | `baits-antarctica.png` | `antarctica-baits` |
+| De Grote oceaan vanaf het achterdek van een sportvisboot | `backdrop-ocean.png` | `ocean` |
+| De weegplaats in de haven, bij zonsondergang | `weigh-ocean.png` | `weigh` |
+| De koperen hangweegschaal | `ui-scale.png` | `ui-scale` |
+| De vijf sleepazen (5 x 2) | `baits-ocean.png` | `ocean-baits` |
+| Julian en James staand, omhoog wijzend (voor de weegplaats) | `char-julian-stand.png`, `char-james-stand.png` | `char-julian-stand`, `char-james-stand` |
 | Kaart-knop (kompas) | `icon-map.png` | `icon-map` |
 | De twaalf zeevissen, elk klein/middel/groot | `fish-<id>.png` | `fish-<id>` |
 | Startscherm met de drie vrienden en Dirk | `start-friends.png` | `start` |
@@ -209,6 +214,15 @@ alleen op deze computer staan: de map `work` komt niet in git. Zolang ze er zijn
 `python scripts/make_water.py sea --compose` gratis opnieuw samenstellen.
 Er zit ook geluid in (golven, vogels) dat nog niet gebruikt wordt.
 
+De Grote oceaan heeft nog **geen** bewegend water. Sinds november 2026
+kent de Gemini-sleutel Veo niet meer (het script krijgt "404"). Het kan
+ook via ElevenLabs (Image & Video, model Veo 3.1 Fast, ongeveer 2.400
+credits, start- en eindbeeld `work/veo-ocean-frame.jpg`), maar daar moet
+je eerst hun gebruiksregels accepteren. De film dan opslaan als
+`work/veo-ocean.mp4`, in een terminal in de Julian-map `python
+scripts/make_water.py ocean --compose`, en in `src/data/maps.js` bij de
+oceaan `backdropVideo: 'clean/backdrop-ocean.mp4'` terugzetten.
+
 ## De stem bij een vangst
 
 Bij elke vangst roept een stem wat het is: "een kleine haai!", "een haai!"
@@ -229,6 +243,8 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-gigant-3.mp3` + `.json` | "Wow! Een gigantische ...!" voor die twaalf |
 | `assets/audio/sfx/vissen-7.mp3` + `.json` | de nieuwkomers van de tweede ronde: papegaaivis, koraalduivel, zwaardvis; bijlvis, spookhaai, koningsvis, riemvis |
 | `assets/audio/sfx/vissen-gigant-4.mp3` + `.json` | "Wow! Een gigantische ...!" voor die zeven |
+| `assets/audio/sfx/vissen-8.mp3` + `.json` | de elf vissen van de Grote oceaan, "Grote oceaan!" en "Vis aan!" |
+| `assets/audio/sfx/vissen-gigant-5.mp3` + `.json` | "Wow! Een gigantische ...!" voor die elf |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.
@@ -269,8 +285,17 @@ Naast de muziek heeft elke kaart haar eigen geluiden
 | Zee | golven (`sea-waves`) | meeuwen (`sea-gulls`), een scheepshoorn in de verte (`sea-horn`) |
 | Griekenland | golfjes tegen de rotsen (`greece-waves`) | cicaden in de dennen (`greece-cicadas`), meeuwen (`sea-gulls`), de klok van de kapel (`lake-bells`) |
 | Zuidpool | golfjes en het knisperende vuur (`ice-water`) | een ijsberg die ver weg afbreekt (`ice-calving`) |
+| Grote oceaan | de motoren en het kielzog (`ocean-boat`) | zeevogels boven een school vis (`sea-gulls`) |
 
-De muziek van de zee is `assets/audio/music/relaxing.mp3`.
+De muziek van de zee is `assets/audio/music/relaxing.mp3`. De Grote
+oceaan heeft er twee: `ocean.mp3` (rustig avontuurlijk) en
+`ocean-fight.mp3`, een spannende versie die invloeit zodra er een vis
+toeslaat en weer uitvloeit als hij binnen of weg is. Ze komen uit
+ElevenLabs Music (model v2.5, instrumentaal; de spannende met de rustige als
+"reference") en worden met `python scripts/make_music.py` (in een terminal
+in de Julian-map) tot een naadloze lus gemaakt. De eigen geluiden van de
+oceaan (gillende reel, grote plons, cameraklik, ketting van de weegschaal)
+maakt `python scripts/make_sfx.py`.
 
 De geluiden komen van ElevenLabs (elevenlabs.io, Sound Effects): je
 beschrijft een geluid, kiest de duur (en voor een lus "Looping") en krijgt
@@ -360,3 +385,31 @@ stonden hier een dag en gingen er weer uit: ze leken op haring, geep,
 paling en rog. De doorschijnende vinnen lieten het groene scherm door:
 `scripts/split_atlas.py` haalt dat groen er bij deze soorten uit
 (`DESPILL_SPECIES`).
+
+## De vissen van de Grote oceaan
+
+Vanaf een varende boot: de grootste vissen die er zijn. Ze bijten
+zelden, vechten lang (zie "The big ocean" in de README) en worden in de
+haven gewogen. Het gewicht volgt uit de lengte (`kg` in `fish.js`: het
+gewicht bij een bepaalde lengte; gewicht gaat met de lengte tot de derde
+macht).
+
+| id | Naam | klein | middel | groot | bijt op | gewicht bij |
+|---|---|---|---|---|---|---|
+| `mahimahi` | Goudmakreel | 50-75 cm | 80-115 | 120-210 | rokjeslure, duikplug, ballyhoo | 40 kg bij 2,1 m |
+| `wahoo` | Wahoo | 60-95 | 100-145 | 150-250 | duikplug, rokjeslure | 83 kg bij 2,5 m |
+| `yellowfin` | Geelvintonijn | 50-85 | 90-145 | 150-240 | rokjeslure, duikplug, makreel | 200 kg bij 2,4 m |
+| `sailfish` | Zeilvis | 100-155 | 160-230 | 240-340 | ballyhoo, rokjeslure | 100 kg bij 3,4 m |
+| `bluemarlin` | Blauwe marlijn | 150-230 | 240-350 | 360-500 | rokjeslure, ballyhoo, makreel | 820 kg bij 5 m |
+| `swordfish` | Zwaardvis (ook in Griekenland) | 80-120 | 140-220 | 250-455 | ballyhoo, makreel | 650 kg bij 4,55 m |
+| `mako` | Mako-haai | 120-185 | 200-290 | 300-445 | makreel, duikplug, haaienaas | 570 kg bij 4,45 m |
+| `hammerhead` | Hamerhaai | 150-230 | 240-360 | 370-610 | haaienaas, makreel | 580 kg bij 6,1 m |
+| `tigershark` | Tijgerhaai | 150-230 | 250-360 | 370-550 | haaienaas, makreel | 900 kg bij 5,5 m |
+| `sunfish` | Maanvis | 80-125 | 140-210 | 220-333 | rokjeslure, haaienaas | 2.300 kg bij 3,3 m |
+| `whiteshark` | Witte haai | 200-290 | 300-430 | 450-640 | haaienaas, makreel | 2.000 kg bij 6,4 m |
+| `whaleshark` | Walvishaai | 400-620 | 700-1000 | 1100-1880 | haaienaas | 15.000 kg bij 15 m |
+
+De walvishaai is de legende, daarna de witte haai en de maanvis.
+Springers (`jumps`): goudmakreel, zeilvis, blauwe marlijn, zwaardvis,
+mako-haai en witte haai. De goudmakreel is zo groen als het groene scherm:
+`scripts/split_atlas.py` vult zijn lijf weer helemaal op (`GREEN_FISH`).

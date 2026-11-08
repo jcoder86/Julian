@@ -50,6 +50,10 @@ PAINTINGS = {
     "backdrop-antarctica": "the ice of the South Pole, with an igloo and a fire (map 'antarctica')",
     "catch-julian-antarctica": "Julian and Dirk on the snow",
     "catch-guest-antarctica":  "James and Boaz on the snow",
+    "backdrop-ocean":  "the big ocean, from the back deck of a big-game boat (map 'ocean')",
+    # The big ocean has no catch painting per team: a catch is weighed at
+    # the weighing station, the children beside it as figures (TrophyScene).
+    "weigh-ocean":     "the weighing station in the harbour, at sunset",
 }
 
 

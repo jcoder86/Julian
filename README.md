@@ -58,11 +58,13 @@ served at the dev-server root. Phaser's loader paths reflect that:
 
 ## Maps
 
-There are five fishing spots, picked on the map-select screen after the
+There are six fishing spots, picked on the map-select screen after the
 title (and reachable again through the compass button in the HUD). Each is
 a framed painting with its name on a plate; tapping one also says the name.
 (Three cards fill the width of the screen; four or more are made smaller to
-fit side by side: `MapSelectScene`.)
+fit side by side: `MapSelectScene`.) The last one, the big ocean, is the
+grand final level: its card (`featured` in `maps.js`) hangs on its own
+below the row, bigger, in a golden frame with rays of light behind it.
 
 * **lake** -- Naarden-Vesting: the moat, from a wooden jetty. Float fishing
   with bread, corn, maggots, worms or a bait fish, or lure fishing with a
@@ -94,6 +96,18 @@ fit side by side: `MapSelectScene`.)
   fanged black draakvis, the lantaarnvis with its lantern, the spookhaai,
   the round red-finned koningsvis; the trophy is the tandvis (toothfish,
   up to two metres), the legend the riemvis (oarfish, up to eight).
+* **ocean** -- Grote oceaan: from the back deck of a sport-fishing boat
+  sailing over the open ocean, rods in their holders along the rail. It
+  plays differently from every other spot: lures are **trolled** behind the
+  boat, bites are few, fights are long, and a catch is **weighed** in the
+  harbour instead of shown on the catch screen (see "The big ocean" below).
+  Five trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
+  ballyhoo, a whole mackerel and a big shark bait. Twelve of the biggest
+  fish there are: goudmakreel (dorado), wahoo, geelvintonijn, zeilvis,
+  blauwe marlijn, zwaardvis, mako-haai, hamerhaai, tijgerhaai, maanvis
+  (the ocean sunfish, up to 2.3 tonnes), witte haai -- and the legend, the
+  walvishaai (whale shark, up to 18.8 m). The swordfish lives in Greece
+  too and has a card on each page (`swordfish@ocean`).
 
 A species that is taken off a map keeps its id and its catches: they stay
 in the save, just no longer on a page. (In October 2026 the Greek coast's
@@ -233,7 +247,10 @@ water, the jetty cut out of it and the landing spot.
 
 A hook does not always hold. Of every hooked fish -- any species, on bait
 or lure -- 7 % gets off again somewhere during the fight (`ESCAPE_CHANCE`
-in `FishingScene.js`). The reel vanishes, the line falls slack, rings
+in `FishingScene.js`). On the ocean there is one more way: after every run
+in which the angler kept cranking hard while the reel glowed red (more
+than one and a half turns), the hook tears out with a chance of 6 %
+(`OVERCRANK_ESCAPE`; FishFight counts those runs). The reel vanishes, the line falls slack, rings
 spread where it tore loose and the fish's dark shape darts away; a board
 and the voice say "Helaas! De vis is ontsnapt!". Nothing is recorded, and
 after a moment the angler can cast again.
@@ -264,6 +281,41 @@ screen.
 Runs are planned at the start of the fight, at set points along the way,
 so a big fish makes the fight longer (about one and a half times for the
 largest) but never endless.
+
+### The big ocean
+
+The last level fishes differently (`fishing: 'troll'` and `trophy:
+'weigh'` on the map; the code is the "Trolling" part of `FishingScene.js`,
+FishFight's `BIG` and `src/scenes/TrophyScene.js`).
+
+* **Trolling.** The cast lets the lure out into the boat's wake; there it
+  skips and weaves and throws up spray. Then: wait. A strike comes after
+  20 to 45 seconds (`TROLL_WAIT_MIN/MAX`); before it, a fin or two cuts
+  the water behind the lure -- a fish having a look. The strike: the water
+  explodes, the reel screams, "Vis aan!" -- and the music turns exciting.
+* **Big game** (`bigGame` in FishFight). Many more turns of the reel (8 to
+  34, by length: `bigGameTurnsFor`) and three to eight long runs. During a
+  run the reel glows **red**: cranking is worth almost nothing (5 %), and
+  cranking hard against it may cost the fish (see above). After each run
+  the fish is tired for a while and the reel glows **green**: crank now.
+  A fish that is let alone slips back only slowly (`BIG_DECAY`): a hand may
+  rest. Fish that jump (`jumps` in `fish.js`: dorado, sailfish, marlin,
+  swordfish, mako, white shark) leap clear of the water at the start of
+  most runs.
+* **The last leap.** Brought alongside, the fish makes one slow leap out of
+  the sea beside the boat, and a camera flash freezes it at the top.
+* **The weighing station** (`TrophyScene`). At sunset in the harbour the
+  fish hangs by its tail from a big brass scale, head down. The needle
+  swings round to its weight (`weightKg` in `fish.js`: a species' `kg` is
+  its weight at a given length, and weight goes with the cube of length).
+  A measuring tape runs up beside it, metre by metre, and the children of
+  the team stand next to it at their **true height** (`trophy` in
+  `teams.js`: Julian 105 cm, Dirk 40, James 125, Boaz 104), all on one
+  scale -- a dorado comes up to their nose, a white shark towers over
+  them. Beside a fish of many metres they are only a few pixels tall; then
+  a magnifying glass shows them big, with a dotted line to where they
+  really stand. Flash, applause, confetti; for a giant rays of light and
+  "Wereldrecord!". The pieces are cut by `scripts/make_trophy.py`.
 
 ## Teams and characters
 
@@ -461,8 +513,10 @@ species, `vissen-4.mp3` for the roach by the name on its card (Blankvoorn;
 the first recording says "voorn"), `vissen-5.mp3` for the ten new fish of
 the Greek coast and its name, `vissen-gigant-2.mp3` for their giants,
 `vissen-6.mp3` and `vissen-gigant-3.mp3` the same for the South Pole,
-`vissen-7.mp3` and `vissen-gigant-4.mp3` for the strange newcomers of both; the
-list is `VOICE_ATLASES` in `src/systems/AudioManager.js`).
+`vissen-7.mp3` and `vissen-gigant-4.mp3` for the strange newcomers of both,
+`vissen-8.mp3` and `vissen-gigant-5.mp3` for the fish of the big ocean, its
+name and "Vis aan!"; the list is `VOICE_ATLASES` in
+`src/systems/AudioManager.js`).
 
 The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except
 where a phrase's loudest moment would then clip: that phrase gets as much
@@ -667,16 +721,19 @@ systems the next rounded or plain font in `UI_FONT` is used.
 
 Three layers, loudest last: the **music** of the map (`music` in
 `src/data/maps.js`: `ambient.mp3` at the moat, `relaxing.mp3` at sea and
-in Greece), the
+in Greece, `ocean.mp3` on the big ocean -- with an exciting version,
+`ocean-fight.mp3`, cross-faded in at a strike and out again when the fish
+is landed or gone: `fightMusic`), the
 **ambience** of the place, and the game's own sounds (the plop of the
 float, the reel, applause, the voice).
 
 The ambience (`src/systems/Ambience.js`, a map's `ambience`) is a *bed*
 that goes round and round -- birdsong at the moat, waves at the pier,
 little waves on the rocks in Greece, waves and the crackling fire on the
-ice -- and sounds that *pass* now and then, each after a random wait: a
-fish jumping and the church bells across the water; gulls and a ship's
-horn far out; cicadas in the pines; an iceberg breaking off far away.
+ice, the engines and the rushing wake on the ocean -- and sounds that
+*pass* now and then, each after a random wait: a fish jumping and the
+church bells across the water; gulls and a ship's horn far out; cicadas in
+the pines; an iceberg breaking off far away; seabirds over a shoal.
 How often and how loud is in `maps.js`; each passing sound also comes from
 a slightly different side and at a slightly different volume every time.
 The bed is cross-faded into itself rather than looped, so the sliver of
@@ -688,6 +745,16 @@ generated from): trimmed, soft-edged, the far-away ones dulled, all brought
 to one loudness. `scripts/listen.py <files> --blind` has Gemini describe a
 sound file -- useful when whoever makes the sounds cannot hear them, but it
 is confidently wrong at times, low drones especially: ask it twice.
+
+The big ocean's own sound effects -- the screaming reel, the big splash,
+the camera's shutter, the chain of the scale -- are prepared by
+`scripts/make_sfx.py`. The screaming reel is not a recording: the game's
+own reel click, cut into single clicks and laid down a hundred times a
+second (generated attempts sounded like a buzzer, a telephone or a spray
+can). Its music was made with ElevenLabs' Music: `scripts/make_music.py`
+cuts a stretch out of a generated piece and cross-fades its end into its
+beginning, so it loops without a seam. Both scripts list the descriptions
+used.
 
 ## Where things are on a painting
 

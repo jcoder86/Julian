@@ -18,6 +18,7 @@ Atlases handled:
     lures-fresh.png -- 3 fresh-water lures, same two rows       =  6 cells
     baits-greece.png -- 2 Greek baits + 2 lures, same two rows  =  8 cells
     baits-antarctica.png -- krill + the glow jig, same two rows   =  4 cells
+    baits-ocean.png  -- the five trolling baits, same two rows   = 10 cells
     floats.png     -- 5 floats x 2 parts  (full/tip)            = 10 cells
     rod.png, icon-*.png, play.png
 
@@ -369,6 +370,18 @@ FISH_STRIPS = [
     ("fish-parrotfish", "parrotfish"),   # mediterrane papegaaivis
     ("fish-lionfish", "lionfish"),   # koraalduivel
     ("fish-swordfish", "swordfish"),     # zwaardvis
+    # The big ocean.
+    ("fish-mahimahi", "mahimahi"),   # goudmakreel
+    ("fish-wahoo", "wahoo"),         # wahoo
+    ("fish-yellowfin", "yellowfin"),     # geelvintonijn
+    ("fish-sailfish", "sailfish"),   # zeilvis
+    ("fish-bluemarlin", "bluemarlin"),   # blauwe marlijn
+    ("fish-mako", "mako"),           # mako-haai
+    ("fish-hammerhead", "hammerhead"),   # hamerhaai
+    ("fish-tigershark", "tigershark"),   # tijgerhaai
+    ("fish-whiteshark", "whiteshark"),   # witte haai
+    ("fish-sunfish", "sunfish"),     # maanvis
+    ("fish-whaleshark", "whaleshark"),   # walvishaai
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 
@@ -397,6 +410,9 @@ DESPILL_SPECIES = {"icefish", "mackerelicefish", "snailfish", "silverfish", "lan
                    "grenadier", "toothfish", "hatchetfish", "opah", "oarfish",
                    "parrotfish", "lionfish", "swordfish"}
 DESPILL_ALLOWANCE = 6          # how much greener than red/blue a pixel may stay
+# A fish that is green ITSELF, right through its body (the mahi-mahi): there
+# the inside of the sprite is always fish, however green.
+GREEN_FISH = {"mahimahi"}
 # (Not the ghost shark, "chimaera": its big eyes are green.)
 
 
@@ -433,7 +449,8 @@ def _keep_main_sprite(img: Image.Image, reach: int = 8) -> Image.Image:
     return Image.fromarray(arr, mode="RGBA")
 
 
-def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3) -> Image.Image:
+def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3,
+                   screen_excess: float = CORE_SCREEN_EXCESS) -> Image.Image:
     """
     Make the inside of a keyed sprite fully opaque again, in its true colours.
 
@@ -450,9 +467,16 @@ def _solidify_core(cell: Image.Image, source: Image.Image, margin: int = 3) -> I
     keyed = np.asarray(cell.convert("RGBA")).astype(np.float32)
     true = np.asarray(source.convert("RGB")).astype(np.float32)
     excess = true[..., 1] - np.maximum(true[..., 0], true[..., 2])
-    core = ndimage.binary_erosion(keyed[..., 3] > 100, iterations=margin)
+    solid = keyed[..., 3] > 100
+    if screen_excess > 255:
+        # (A green fish: where the key made holes in its body, it is still fish.)
+        solid = ndimage.binary_fill_holes(solid)
+    core = ndimage.binary_erosion(solid, iterations=margin)
     # 1 = certainly fish, 0 = certainly screen seen through a fin.
-    fish = np.clip((CORE_SCREEN_EXCESS - excess) / (CORE_SCREEN_EXCESS - CORE_FISH_EXCESS), 0.0, 1.0)
+    fish = np.clip((screen_excess - excess) / (screen_excess - CORE_FISH_EXCESS), 0.0, 1.0)
+    if screen_excess > 255:
+        # (...and all of it is: a dorado has no see-through fins in its body.)
+        fish = np.ones_like(fish)
     fish = np.where(core, fish, 0.0)[..., None]
     solid = np.concatenate([true, np.full_like(true[..., :1], 255.0)], axis=-1)
     out = keyed + (solid - keyed) * fish
@@ -498,7 +522,8 @@ def process_fish_strip(atlas_path: Path, species: str, only=None) -> int:
         x1 = v_lines[i + 1][0] - BOX_INSET
         box = img.crop((x0, y0, x1, y1))
         cell = chromakey_remove(box, chroma_high=STRIP_CHROMA_HIGH)
-        cell = auto_crop(_keep_main_sprite(_solidify_core(cell, box)))
+        cell = auto_crop(_keep_main_sprite(_solidify_core(
+            cell, box, screen_excess=400 if species in GREEN_FISH else CORE_SCREEN_EXCESS)))
         if species in DESPILL_SPECIES:
             cell = _despill(cell)
         out = CLEAN_DIR / f"fish_{species}_{size}.png"
@@ -587,6 +612,25 @@ def process_baits_antarctica(atlas_path: Path) -> int:
         out_pattern=lambda r, c: CLEAN_DIR / f"bait_{ANTARCTICA_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
         atlas_name="baits-antarctica.png",
         # The krill's feelers and legs, the jig's treble: keep them together.
+        morph=SEA_BAIT_MERGE_PX,
+    )
+
+
+# The big ocean (raw/baits-ocean.png): what is trolled behind the boat.
+# 5 columns, the same rows.
+OCEAN_BAIT_NAMES = ["rokjeslure", "duikplug", "ballyhoo", "makreel", "haaienaas"]
+
+
+def process_baits_ocean(atlas_path: Path) -> int:
+    img = Image.open(atlas_path)
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    return _process_grid_via_blobs(
+        cleaned,
+        rows=len(BAIT_ROW_LABELS),
+        cols=len(OCEAN_BAIT_NAMES),
+        out_pattern=lambda r, c: CLEAN_DIR / f"bait_{OCEAN_BAIT_NAMES[c]}_{BAIT_ROW_LABELS[r]}.png",
+        atlas_name="baits-ocean.png",
+        # Tentacles, trebles, wire: keep them together.
         morph=SEA_BAIT_MERGE_PX,
     )
 
@@ -783,6 +827,7 @@ def main():
         ("lures-fresh.png", process_lures_fresh),   # spinner, shad, fly
         ("baits-greece.png", process_baits_greece),   # shrimp, squid, plug, jig
         ("baits-antarctica.png", process_baits_antarctica),   # krill, glow jig
+        ("baits-ocean.png", process_baits_ocean),     # the trolling baits
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]

@@ -1,0 +1,50 @@
+{
+  "file": "vissen-gigant-5.mp3",
+  "totalDuration": 31.98,
+  "phrases": {
+    "giant_mahimahi": {
+      "start": 0.5,
+      "duration": 2.52
+    },
+    "giant_wahoo": {
+      "start": 3.52,
+      "duration": 2.09
+    },
+    "giant_yellowfin": {
+      "start": 6.11,
+      "duration": 2.41
+    },
+    "giant_sailfish": {
+      "start": 9.02,
+      "duration": 2.32
+    },
+    "giant_bluemarlin": {
+      "start": 11.84,
+      "duration": 2.41
+    },
+    "giant_mako": {
+      "start": 14.75,
+      "duration": 2.36
+    },
+    "giant_hammerhead": {
+      "start": 17.61,
+      "duration": 2.4
+    },
+    "giant_tigershark": {
+      "start": 20.51,
+      "duration": 2.32
+    },
+    "giant_whiteshark": {
+      "start": 23.33,
+      "duration": 2.36
+    },
+    "giant_sunfish": {
+      "start": 26.19,
+      "duration": 2.39
+    },
+    "giant_whaleshark": {
+      "start": 29.08,
+      "duration": 2.4
+    }
+  }
+}

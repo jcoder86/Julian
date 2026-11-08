@@ -11,6 +11,7 @@ exactly the still painting: razor sharp and rock solid under Julian.
     python scripts/make_water.py lake
     python scripts/make_water.py greece
     python scripts/make_water.py antarctica    # the fire flickers too
+    python scripts/make_water.py ocean         # the wake of the boat
     python scripts/make_water.py sea --compose  # only redo the composing
 
 Step by step
@@ -148,6 +149,22 @@ WATER = {
             "the islands do not move -- no branch stirs. " + STILL_RULES +
             " Sound: small waves lapping against rock, cicadas far away. No "
             "music, no voices."
+        )),
+    # The big ocean, from the back deck of a boat under way: the wake.
+    "ocean": dict(
+        painting="backdrop-ocean",
+        prompt=(
+            "The open tropical ocean seen from the back deck of a big-game "
+            "fishing boat that is sailing forward at a steady speed. The broad "
+            "white wake behind the boat churns, foams and boils and streams "
+            "steadily away toward the horizon; the deep blue swells on both "
+            "sides roll past, small white caps break and sunlight glitters on "
+            "the water. The motion is lively but steady and regular all the "
+            "way through. The boat's deck, gunwale, fighting chair, rods, "
+            "reels and outrigger, the island and the birds do not move: the "
+            "camera is fixed to the boat. " + STILL_RULES +
+            " Sound: the steady rumble of boat engines and rushing, churning "
+            "water. No music, no voices."
         )),
     # The ice: the water, and the fire in its bowl beside the igloo.
     "antarctica": dict(

@@ -68,7 +68,10 @@ verstaan zoals geschreven.
 
 ## Nog te doen
 
-Niets.
+- Bewegend water voor de Grote oceaan (zie "Bewegend water" in
+  `docs/art-brief.md`): Veo werkt niet meer via de Gemini-sleutel; via
+  ElevenLabs kan het, maar dan moeten hun gebruiksregels eerst
+  geaccepteerd worden.
 
 ## Ronde van 20 oktober 2026 (later): exotischer
 
@@ -132,3 +135,29 @@ kapelklokje kwam bij ElevenLabs steeds uit als rinkelbelletjes.
 Stralen, glinsteringen en de lichtveeg over een gigantische vis zijn geen
 plaatjes maar worden door het spel zelf getekend (`addRays`, `addGlints` in
 `src/systems/Ui.js`).
+
+## Ronde van 8 november 2026: de Grote oceaan
+
+Het grote eindlevel: vissen vanaf een varende boot. Alles hieronder is op
+8 november 2026 gemaakt en zit in het spel, behalve het bewegende water.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Kaart Grote oceaan: het achterdek van een sportvisboot op volle zee | Codex, `ocean` | ja |
+| Wolken Grote oceaan | Codex, `clouds-ocean-*` | ja |
+| De weegplaats in de haven, de hangweegschaal | Codex, `weigh`, `ui-scale`, daarna `python scripts/make_trophy.py` | ja |
+| Julian en James staand en wijzend (Boaz en Dirk hadden al zo'n houding) | Codex, `char-julian-stand`, `char-james-stand`, daarna `make_trophy.py` | ja |
+| Vijf sleepazen: rokjeslure, duikplug, ballyhoo, makreel, haaienaas | Codex, `ocean-baits`, daarna `python scripts/split_atlas.py baits-ocean` | ja |
+| Elf vissen: goudmakreel, wahoo, geelvintonijn, zeilvis, blauwe marlijn, mako-haai, hamerhaai, tijgerhaai, maanvis, witte haai, walvishaai (de zwaardvis kwam uit Griekenland) | Codex, `fish-<id>` | ja |
+| Stem: de elf vissen, "Grote oceaan!" en "Vis aan!" | ElevenLabs, `vissen-8` | ja |
+| Stem: "Wow! Een gigantische ...!" voor die elf | ElevenLabs, `vissen-gigant-5` | ja |
+| Motoren en kielzog (lus) | ElevenLabs Sound Effects, `ocean-boat` | ja |
+| Grote plons, cameraklik, ketting van de weegschaal | ElevenLabs Sound Effects, `python scripts/make_sfx.py` | ja |
+| Gillende reel | gemaakt uit het eigen reel-geluid, `make_sfx.py` | ja |
+| Muziek: rustig en spannend | ElevenLabs Music, `python scripts/make_music.py` | ja |
+| Bewegend water | Veo, zie "Nog te doen" | nee |
+
+Niet gelukt: een gillende reel uit ElevenLabs (werd een zoemer, een
+telefoon, vogels, een ballon of een spuitbus) en een "zware ijzeren
+ketting" (werd een sleutelbos; de gebruikte is een krakende veer met een
+klap van metaal).

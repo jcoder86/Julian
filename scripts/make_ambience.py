@@ -64,6 +64,13 @@ The descriptions the sounds were generated from:
                 slowly over the calm sea and fading away. ..."  (7 s)
                 (Penguins were tried twice, and came out as shrill
                 squawking or as no bird at all: the ice has none.)
+    ocean-boat  "On the open back deck of a big-game fishing boat cruising
+                over the open ocean: the steady low rumble of powerful diesel
+                engines, water rushing and hissing along the hull and
+                churning in the wake behind the boat, a fresh sea breeze,
+                natural field recording. No voices, no music, no seagulls."
+                (20 s; variant 4 -- the only one in which the engines are
+                heard: the others are surf on a beach or rain.)
 """
 
 import subprocess
@@ -106,6 +113,8 @@ SOUNDS = {
     # Variant 2: a boom, then a rumble dying away over six seconds (around
     # 50 Hz -- a tablet's small speaker gives only a hint of it).
     "ice-calving": dict(src="ice-calving-2", far=1500, tail=1.5, echo=1.6),
+    # The big ocean: the engines and the wake, under way.
+    "ocean-boat":  dict(src="ocean-boat-4", bed=True, far=None, stereo=True),
 }
 ECHO = "aecho=0.8:0.65:330|700|1250:0.38|0.24|0.13"
 

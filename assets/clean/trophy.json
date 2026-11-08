@@ -1,0 +1,38 @@
+{
+ "scale": {
+  "file": "ui-scale.png",
+  "w": 280,
+  "h": 560,
+  "cx": 141,
+  "cy": 254,
+  "r": 110,
+  "hookX": 140,
+  "hookY": 559
+ },
+ "figures": {
+  "julian": {
+   "file": "trophy_julian.png",
+   "w": 348,
+   "h": 720,
+   "headY": 19
+  },
+  "james": {
+   "file": "trophy_james.png",
+   "w": 367,
+   "h": 720,
+   "headY": 8
+  },
+  "boaz": {
+   "file": "trophy_boaz.png",
+   "w": 419,
+   "h": 720,
+   "headY": 6
+  },
+  "dirk": {
+   "file": "trophy_dirk.png",
+   "w": 421,
+   "h": 720,
+   "headY": 17
+  }
+ }
+}

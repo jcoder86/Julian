@@ -58,6 +58,7 @@ SKIES = {
     "france": dict(painting="backdrop-france", mask="sky-mask-france", bottom=0.28),
     "greece": dict(painting="backdrop-greece", mask="sky-mask-greece", bottom=0.223),
     "antarctica": dict(painting="backdrop-antarctica", mask="sky-mask-antarctica", bottom=0.212),
+    "ocean": dict(painting="backdrop-ocean", mask="sky-mask-ocean", bottom=0.218),
 }
 SKY_MASK_FRACTION = 320 / 720     # the masks cover this share of a painting's height
 

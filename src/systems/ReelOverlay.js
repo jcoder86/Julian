@@ -29,19 +29,26 @@ import { TEX } from '../scenes/BootScene.js';
  *   reel.destroy();
  */
 export class ReelOverlay {
-  constructor(scene, { x, y, requiredTurns = 3, onComplete = null, decay = true }) {
+  constructor(scene, { x, y, requiredTurns = 3, onComplete = null, decay = true, decayPerSecond = 0.12 }) {
     this.scene = scene;
     this.x = x;
     this.y = y;
     this.requiredTurns = requiredTurns;
     this.onComplete = onComplete;
     this.decay = decay;
+    // How much of the fight drains back per second while nobody cranks (a
+    // long big-game fight drains slower: a hand needs a rest).
+    this.decayPerSecond = decayPerSecond;
+    this._tired = false;
     // What a turn of the handle is worth: 1 normally, less while a fish runs.
     this.resistance = 1;
     this._strained = false;
     // Total accumulated absolute angular delta (radians). Drains slowly
     // when not dragging so the player has to stay engaged.
     this.accumulatedRadians = 0;
+    // Everything the handle was turned, whatever it was worth (radians):
+    // how hard the angler cranked, also against a running fish.
+    this.crankedRadians = 0;
     this.requiredRadians = requiredTurns * Math.PI * 2;
     this.isDragging = false;
     this._lastPointerAngle = null;
@@ -139,6 +146,18 @@ export class ReelOverlay {
   }
 
   /** The fish is running: the progress ring and the glow turn from calm to alarm. */
+  /**
+   * A big fish is tired after a run: the widget glows GREEN -- crank now!
+   * (Red, setStrained, wins over it while a run is on.)
+   */
+  setTired(tired) {
+    if (this._destroyed || this._tired === !!tired) return;
+    this._tired = !!tired;
+    if (this._strained) return;
+    this.glowOuter.setFillStyle(this._tired ? 0x3cff6a : 0xffd24a, this.glowOuter.fillAlpha);
+    this.glowInner.setFillStyle(this._tired ? 0xa8ffb8 : 0xffeaa0, this.glowInner.fillAlpha);
+  }
+
   setStrained(strained) {
     if (this._destroyed || this._strained === !!strained) return;
     this._strained = !!strained;
@@ -215,6 +234,7 @@ export class ReelOverlay {
         if (delta > Math.PI) delta -= 2 * Math.PI;
         if (delta < -Math.PI) delta += 2 * Math.PI;
         this.accumulatedRadians += Math.abs(delta) * this.resistance;
+        this.crankedRadians += Math.abs(delta);
       }
       this._lastPointerAngle = ang;
       this.handle.rotation = ang;
@@ -235,7 +255,7 @@ export class ReelOverlay {
       loop: true,
       callback: () => {
         if (this._destroyed || this.isDragging || !this.decay) return;
-        const drainPerTick = this.requiredRadians * 0.012;
+        const drainPerTick = this.requiredRadians * this.decayPerSecond / 10;
         if (this.accumulatedRadians > 0) {
           this.accumulatedRadians = Math.max(0, this.accumulatedRadians - drainPerTick);
           this._redrawProgress();
