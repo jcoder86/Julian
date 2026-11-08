@@ -196,3 +196,14 @@ galg en de weegschaal niet: de verhoudingen klopten niet.
 
 De weegschaal schaalt nu mee (ongeveer 70 cm), en de ketting loopt door
 tot de staart van de vis.
+
+## Ronde van 9 november 2026: vier boten
+
+Op de Grote oceaan is de dobberknop een bootknop. Alles hieronder is gemaakt
+en zit in het spel.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Witte vissersboot, piratenschip (dichte houten reling: door spijlen zou stilstaande zee te zien zijn), speedboot | Codex, `boat-vissersboot`, `boat-piratenschip`, `boat-speedboot`, daarna `python scripts/make_boats.py` | ja |
+| Schone schilderijen | `python scripts/make_paintings.py backdrop-ocean-<boot>` | ja |
+| Bewegend water per boot (dezelfde film) | `python scripts/make_water.py ocean --compose --painting backdrop-ocean-<boot>` | ja |

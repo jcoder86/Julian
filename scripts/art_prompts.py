@@ -646,6 +646,51 @@ above the horizon.
 No people, no animals, no other boats, no text. 4:3 landscape.
 """
 
+# The other boats of the big ocean (src/data/boats.js): the same picture,
+# only the boat repainted. Above the back rail the sea is taken from the
+# first painting afterwards anyway (scripts/make_boats.py), so that one
+# water film, one fishing area and one set of places fit every boat.
+BOAT_VARIANT = """\
+Repaint ONLY the boat in the FIRST attached picture, in exactly the same
+rich, detailed, warm painting style. Everything above the boat's back rail
+-- the sky, the island, the sea and the wake -- stays EXACTLY as it is.
+The back rail itself stays at exactly the same height and position,
+straight across the picture, as in the first picture and in the layout
+guide (the SECOND attached picture: light grey = the boat's walls, tan =
+its deck, pink = deck that must stay empty). We still look straight back
+over the stern from the deck; the deck fills the bottom of the picture.
+The deck is completely EMPTY -- nothing stands on it (two children and a
+dog are added there later); anything the boat has hangs on or is built
+into its walls. Nothing rises above the back rail anywhere.
+
+The boat is now {boat}
+
+No people, no animals, no text, no letters, no numbers. 4:3 landscape.
+"""
+
+BOATS = {
+    "vissersboot": (
+        "a sturdy, cheerful classic WHITE FISHING BOAT: a white-painted "
+        "wooden hull with a bright blue band along the top of the back wall, "
+        "a simple scrubbed light wooden cap rail, a deck of worn, pale "
+        "grey-brown planks, an orange life ring and a neatly coiled rope "
+        "hanging on the back wall."),
+    "piratenschip": (
+        "a wooden PIRATE SHIP: the back wall is dark, polished old wood, "
+        "SOLID all the way up to its thick wooden handrail -- no openings, no "
+        "gaps and no see-through railing (carved wooden panels instead of "
+        "balusters) -- small brass lanterns fixed on the wall below the handrail, "
+        "a round wooden shield with a white skull and crossbones in the "
+        "middle of the wall, ropes on iron hooks, and a deck of wide, old, "
+        "dark planks with iron nails -- a proper treasure-hunting ship."),
+    "speedboot": (
+        "a cool, tough SPEEDBOAT: the back wall is glossy black with fiery "
+        "red racing stripes and carbon-fibre panels, a polished chrome grab "
+        "rail along its top, red padded cushions built into the wall, and a "
+        "deck of light grey non-slip panels with thin red lines -- sporty "
+        "and fast."),
+}
+
 WEIGH_BACKDROP = """\
 Repaint the attached picture (the weighing station of a tropical sport-
 fishing harbour at golden sunset) in exactly the same rich, detailed, warm
@@ -1300,6 +1345,15 @@ JOBS = {
     # (Made from its own first version, which had a gallows, a cooler and a
     # rope in front: all of them gone, as they did not grow or shrink with
     # the children. The first version is kept in work/weigh-ocean-v1.png.)
+    "boat-vissersboot": dict(out="assets/raw/boat-ocean-vissersboot.png",
+                         refs=["assets/raw/backdrop-ocean.png", "assets/raw/layout-ocean.png"],
+                         brief=BOAT_VARIANT.replace("{boat}", BOATS["vissersboot"])),
+    "boat-piratenschip": dict(out="assets/raw/boat-ocean-piratenschip.png",
+                         refs=["assets/raw/backdrop-ocean.png", "assets/raw/layout-ocean.png"],
+                         brief=BOAT_VARIANT.replace("{boat}", BOATS["piratenschip"])),
+    "boat-speedboot": dict(out="assets/raw/boat-ocean-speedboot.png",
+                         refs=["assets/raw/backdrop-ocean.png", "assets/raw/layout-ocean.png"],
+                         brief=BOAT_VARIANT.replace("{boat}", BOATS["speedboot"])),
     "weigh":        dict(out="assets/raw/weigh-ocean.png",
                          refs=["work/weigh-ocean-v1.png"], brief=WEIGH_BACKDROP),
     "ui-scale":     dict(out="assets/raw/ui-scale.png", refs=[], brief=UI_SCALE),

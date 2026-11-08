@@ -103,8 +103,15 @@ below the row, bigger, in a golden frame with rays of light behind it.
   horizon. (Painted from a colour-block layout guide,
   `scripts/make_layout_ocean.py`, after a first painting with a fighting
   chair under the dog and rods where the rod swings back, and a second
-  with a slanted stern that looked like the bow.) It plays differently
-  from every other spot: lures are **trolled** behind the
+  with a slanted stern that looked like the bow.) **Four boats** to fish
+  from (`src/data/boats.js`; on this map the float button is the boat
+  button): the sport-fishing boat, a white fishing boat, a pirate ship and
+  a speedboat. They have the same shape -- the rail at the same height,
+  the deck below it -- and the very same sea above the rail
+  (`scripts/make_boats.py` takes it from the first painting), so one water
+  film, one fishing area and one set of places fit them all; each boat has
+  its own still and video (`make_water.py ocean --compose --painting
+  backdrop-ocean-<boat>`). It plays differently from every other spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Five trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged

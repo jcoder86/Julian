@@ -80,34 +80,48 @@ const PLAY_BTN_SIZE = 210;
 const PLAY_BTN_MARGIN = 30;
 
 /**
- * How many px of empty margin a fish picture has before its tail (on the
- * left), measured in the middle of its height, where the tail is.
+ * Where a fish picture's tail is (the picture looks right, its tail on the
+ * left): {x, y} in the picture's px -- where the chain must take hold.
+ * Not simply the middle of the left edge: a sailfish's tail sits low under
+ * its sail, a shark's high, and the picture has an empty margin. So: the
+ * tail is found in the leftmost part with something in it, halfway between
+ * its upper and lower lobe, and the chain reaches in to where it begins.
  */
-const tailInsets = new Map();
-function tailInset(scene, key) {
-  if (tailInsets.has(key)) return tailInsets.get(key);
-  let inset = 0;
+const tailPoints = new Map();
+function tailPoint(scene, key) {
+  if (tailPoints.has(key)) return tailPoints.get(key);
+  const src = scene.textures.get(key).getSourceImage();
+  let point = { x: 0, y: src.height / 2 };
   try {
-    const src = scene.textures.get(key).getSourceImage();
     const canvas = document.createElement('canvas');
     canvas.width = src.width;
     canvas.height = src.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(src, 0, 0);
-    const top = Math.floor(src.height * 0.3);
-    const rows = Math.max(1, Math.floor(src.height * 0.4));
-    const cols = Math.ceil(src.width * 0.4);
-    const data = ctx.getImageData(0, top, cols, rows).data;
-    let first = cols;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < first; x++) {
-        if (data[(y * cols + x) * 4 + 3] > 128) { first = x; break; }
-      }
+    const { width: w, height: h } = src;
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const solid = (x, y) => data[(y * w + x) * 4 + 3] > 128;
+    let left = -1;
+    for (let x = 0; x < w * 0.5 && left < 0; x++) {
+      for (let y = 0; y < h; y++) if (solid(x, y)) { left = x; break; }
     }
-    inset = first < cols ? first : 0;
-  } catch (e) { /* (unreadable: no margin assumed) */ }
-  tailInsets.set(key, inset);
-  return inset;
+    if (left >= 0) {
+      // A little way in, the tail's lobes: halfway between them is its middle.
+      const col = Math.min(w - 1, left + Math.round(w * 0.05));
+      let top = -1;
+      let bottom = -1;
+      for (let y = 0; y < h; y++) {
+        if (solid(col, y)) { if (top < 0) top = y; bottom = y; }
+      }
+      const y = top < 0 ? Math.round(h / 2) : Math.round((top + bottom) / 2);
+      // ...and along that row, where the tail begins (the fork, if it has one).
+      let x = left;
+      for (let i = left; i < Math.min(w, left + w * 0.2); i++) if (solid(i, y)) { x = i; break; }
+      point = { x, y };
+    }
+  } catch (e) { /* (unreadable: the middle of the left edge) */ }
+  tailPoints.set(key, point);
+  return point;
 }
 
 /** "4,8 m" or "85 cm" */
@@ -234,20 +248,29 @@ export class TrophyScene extends Phaser.Scene {
     const tailY = -HEAD_GAP - fishPx;            // in stage coordinates
     const chainLen = tailY - hookY;
     const key = fishTextureKey(species, size);
-    // The picture has a little empty margin before the tail: the chain goes
-    // on down to where the tail really is, and a little round it.
-    const inset = this.textures.exists(key)
-      ? tailInset(this, key) * (fishPx / this.textures.get(key).getSourceImage().width) : 0;
+    // The chain takes hold of the tail where it really is in the picture:
+    // the fish is moved sideways so that its tail is under the hook, and
+    // the chain goes on down past the picture's empty margin into the tail.
+    let tail = null;
+    let fs = 1;
+    if (this.textures.exists(key)) {
+      const src = this.textures.get(key).getSourceImage();
+      fs = fishPx / src.width;
+      const p = tailPoint(this, key);
+      tail = { dx: (p.y - src.height / 2) * fs, inset: p.x * fs };
+    }
     const chain = this.add.graphics();
     chain.lineStyle(4, 0x3a3a3a, 1);
-    for (let y = 0; y < chainLen + inset + 4; y += 12) {
+    for (let y = 0; y < chainLen + (tail ? tail.inset : 0) + 4; y += 12) {
       chain.strokeEllipse(0, y + 6, 8, 12);
     }
     hang.add(chain);
     let fishHalfW = 40;
+    let fishDx = 0;
     if (this.textures.exists(key)) {
-      const fish = this.add.image(0, chainLen + fishPx / 2, key);
-      fish.setScale(fishPx / fish.width);
+      fishDx = tail ? tail.dx : 0;
+      const fish = this.add.image(fishDx, chainLen + fishPx / 2, key);
+      fish.setScale(fs);
       fish.setRotation(Math.PI / 2);              // its head (on the right) points down
       fishHalfW = (fish.height * fish.scaleY) / 2;
       if (this.giant) {
@@ -269,11 +292,11 @@ export class TrophyScene extends Phaser.Scene {
     });
 
     // The measuring tape, beside it, from the dock up to its tail.
-    const tapeX = FISH_X + fishHalfW + TAPE_GAP;
+    const tapeX = FISH_X + fishDx + fishHalfW + TAPE_GAP;
     this._buildTape(stage, tapeX, cm, k);
 
     // The children, at their true size, on the dock to the left of it.
-    let x = FISH_X - fishHalfW - FIGURE_GAP;
+    let x = FISH_X + fishDx - fishHalfW - FIGURE_GAP;
     let left = x;
     for (const kid of kids) {
       const f = meta.figures[kid.who];
@@ -289,7 +312,7 @@ export class TrophyScene extends Phaser.Scene {
       this.tweens.add({ targets: img, alpha: 1, duration: 400, delay: 200 });
     }
     if (kids.length && tallest * k < LENS_FROM_PX) {
-      const first = FISH_X - fishHalfW - FIGURE_GAP;
+      const first = FISH_X + fishDx - fishHalfW - FIGURE_GAP;
       const spot = { x: (x + FIGURE_GAP * 0.4 + first) / 2, y: -tallest * k / 2 };
       left = Math.min(left, this._buildLens(stage, kids, meta, spot, first - LENS_R - 40));
     }

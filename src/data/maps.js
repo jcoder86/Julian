@@ -138,6 +138,9 @@ function makeWaterTopAt(samples) {
 //                   no float, no retrieve; a long wait, then a long fight)
 //   trophy          optional: 'weigh' -- a catch is shown at the weighing
 //                   station (TrophyScene) instead of the catch screen
+//   boats           optional: fished from a boat of the player's choice
+//                   (data/boats.js; the float button picks it): the chosen
+//                   boat's painting and video are shown instead
 //   featured        optional: on the map screen this card hangs apart,
 //                   bigger and in gold -- the last, biggest level
 //   waterline       see above
@@ -391,6 +394,9 @@ const MAP_DEFS = [
     featured: true,
     fishing: 'troll',
     trophy: 'weigh',
+    // Fished from a boat of your choice (data/boats.js): its painting and
+    // video take the place of the ones below, which are the first boat's.
+    boats: true,
     backdropKey: 'backdrop-ocean',
     backdropImage: 'clean/backdrop-ocean.jpg',
     backdropVideo: 'clean/backdrop-ocean.mp4',

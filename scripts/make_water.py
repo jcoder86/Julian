@@ -303,8 +303,12 @@ def read_clip(path, size):
     return np.frombuffer(raw, dtype=np.uint8).reshape(-1, height, width, 3)
 
 
-def compose(map_id):
-    spec = WATER[map_id]
+def compose(map_id, painting=None):
+    spec = dict(WATER[map_id])
+    if painting:
+        # Another painting with the same water (the boats of the big ocean:
+        # scripts/make_boats.py): the same film, laid over that one.
+        spec["painting"] = painting
     clip_path = WORK / f"veo-{map_id}.mp4"
     if not clip_path.exists():
         sys.exit(f"missing {clip_path.relative_to(ROOT)}: run without --compose first")
@@ -377,7 +381,13 @@ def compose(map_id):
     # difference between the two is a colour shift to undo ------------------
     blur = (COLOUR_BLUR_PX, COLOUR_BLUR_PX, 0)
     first = ndimage.gaussian_filter(clip[0].astype(np.float32), blur)
-    paint = ndimage.gaussian_filter(still[top:], blur)
+    # (Over another painting the colours are matched against the map's own:
+    # only that one is the film's first frame.)
+    match = still
+    if spec["painting"] != WATER[map_id]["painting"]:
+        match = np.asarray(Image.open(RAW / f"{WATER[map_id]['painting']}.png").convert("RGB")
+                           .resize(OUT_SIZE, Image.LANCZOS)).astype(np.float32)
+    paint = ndimage.gaussian_filter(match[top:], blur)
     gain = np.ones(3, dtype=np.float32)
     bias = np.zeros(3, dtype=np.float32)
     for ch in range(3):
@@ -423,6 +433,8 @@ def main():
     ap.add_argument("--compose", action="store_true",
                     help="skip the (paid) generation, reuse work/veo-<map>.mp4")
     ap.add_argument("--model", default="omni", help="the video model (gen_video.py's MODELS)")
+    ap.add_argument("--painting", help="with --compose: lay the film over this painting "
+                    "instead (one with the same water, such as a boat of the big ocean)")
     args = ap.parse_args()
 
     if not args.compose:
@@ -436,7 +448,7 @@ def main():
         frame.unlink()
         if clip is None:
             sys.exit(1)
-    compose(args.map)
+    compose(args.map, args.painting)
 
 
 if __name__ == "__main__":

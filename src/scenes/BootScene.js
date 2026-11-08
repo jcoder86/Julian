@@ -13,6 +13,7 @@ import { TEAMS, lookTeamId } from '../data/teams.js';
 import { CHARACTERS_KEY, crewTextureKey, buildClipTexture } from '../systems/Crew.js';
 import { UI } from '../systems/Ui.js';
 import { TROPHY, trophyFigureKey } from './TrophyScene.js';
+import { BOATS, boatTextureKey, boatImage, boatIconKey, boatIconImage } from '../data/boats.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
@@ -127,6 +128,13 @@ export class BootScene extends Phaser.Scene {
     // "Fish on!" indicator. Lives in raw/ -- hand-authored transparent PNG,
     // skips the chromakey/clean pipeline.
     this.load.image(TEX.FISHON,      'raw/fishon.png');
+
+    // The boats of the big ocean: their paintings (the first one is the
+    // map's own) and a square piece of each for the boat button and menu.
+    for (const boat of BOATS) {
+      if (!this.textures.exists(boatTextureKey(boat))) this.load.image(boatTextureKey(boat), boatImage(boat));
+      this.load.image(boatIconKey(boat), boatIconImage(boat));
+    }
 
     // The weighing station of the big ocean: its painting, the scale, and
     // the children standing (scripts/make_trophy.py).

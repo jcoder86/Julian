@@ -14,6 +14,9 @@ let _activeProfile = 'julian';
 const FISH_COUNTS_KEY = 'fishCounts';
 const SELECTED_BAIT_KEY = 'selectedBait';
 const SELECTED_FLOAT_KEY = 'selectedFloat';
+// The boat chosen on the big ocean (data/boats.js). A new key: older saves
+// simply have none and start on the first boat.
+const SELECTED_BOAT_KEY = 'selectedBoat';
 const LAST_CATCH_KEY = 'lastCatch';     // { species, size, lengthCm }
 // Trophy table: per species, per size, the LARGEST cm ever landed.
 //   { roach: { small: 9, medium: 22 }, pike: { large: 121 } }
@@ -346,6 +349,9 @@ export const SaveSystem = {
 
   setSelectedFloat(floatId) { this.save(SELECTED_FLOAT_KEY, floatId); },
   getSelectedFloat()        { return this.load(SELECTED_FLOAT_KEY); },
+
+  setSelectedBoat(boatId)   { this.save(SELECTED_BOAT_KEY, boatId); },
+  getSelectedBoat()         { return this.load(SELECTED_BOAT_KEY); },
 
   // ---------- Last catch ----------------------------------------------------
 

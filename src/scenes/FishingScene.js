@@ -13,6 +13,7 @@ import { BAITS_BY_ID, baitOnMap, baitSimpleTextureKey, isLure, isTroll, smallest
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
+import { getBoat, boatTextureKey, boatImage, boatVideo, boatIconKey } from '../data/boats.js';
 import { TEX } from './BootScene.js';
 import {
   createBobberPlaceholder,
@@ -730,7 +731,7 @@ export class FishingScene extends Phaser.Scene {
     //      HTML5 <video> takes the <img>'s place once it can play. Native
     //      browser scaling via object-fit: cover -- no fighting with
     //      Phaser's Video GameObject sizing quirks.
-    if (this.textures.exists(this.map.backdropKey)) {
+    if (this.textures.exists(this._backdrop().key)) {
       this._buildImageBackdrop();
     } else {
       this.backdropImage = this.add.rectangle(
@@ -763,12 +764,41 @@ export class FishingScene extends Phaser.Scene {
     // The painting IS the world: stretch it over exactly the world rect so
     // it lines up with the video that replaces it once loaded.
     const bg = this.add.image(
-      WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2, this.map.backdropKey
+      WORLD_LEFT + WORLD_WIDTH / 2, WORLD_TOP + WORLD_HEIGHT / 2, this._backdrop().key
     );
     bg.setOrigin(0.5);
     bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
     bg.setDepth(0);
     this.backdropImage = bg;
+  }
+
+  /**
+   * The painting of this map -- or, where you fish from a boat of your
+   * choice, of that boat: its texture key, still image and video.
+   */
+  _backdrop() {
+    if (this.map.boats) {
+      const boat = getBoat(SaveSystem.getSelectedBoat());
+      return { key: boatTextureKey(boat), image: boatImage(boat), video: boatVideo(boat) };
+    }
+    return { key: this.map.backdropKey, image: this.map.backdropImage, video: this.map.backdropVideo };
+  }
+
+  /** Another boat was chosen: put its painting and video in. */
+  _swapBackdrop() {
+    const backdrop = this._backdrop();
+    if (this._backdropShown === backdrop.key) return;
+    this._backdropLoading = null;
+    if (this.backdropVideoEl) {
+      if (this.backdropVideoEl.pause) this.backdropVideoEl.pause();
+      this.backdropVideoEl.remove();
+      this.backdropVideoEl = null;
+    }
+    if (this.backdropImage && this.backdropImage.setTexture && this.textures.exists(backdrop.key)) {
+      this.backdropImage.setTexture(backdrop.key);
+      this.backdropImage.setVisible(true);
+    }
+    this._tryAttachDomVideoBackdrop();
   }
 
   _tryAttachDomVideoBackdrop() {
@@ -786,10 +816,12 @@ export class FishingScene extends Phaser.Scene {
     });
 
     this._attachDomImageBackdrop();
-    if (!this.map.backdropVideo) return;
+    const backdrop = this._backdrop();
+    this._backdropShown = backdrop.key;
+    if (!backdrop.video) return;
 
     const videoEl = document.createElement('video');
-    videoEl.src = this.map.backdropVideo;
+    videoEl.src = backdrop.video;
     videoEl.muted = true;
     videoEl.loop = true;
     videoEl.playsInline = true;       // iOS friendly
@@ -845,7 +877,7 @@ export class FishingScene extends Phaser.Scene {
       videoEl.remove();
       if (this._backdropLoading !== videoEl) return;
       this._backdropLoading = null;
-      console.log(`[FishingScene] no ${this.map.backdropVideo}, keeping the still painting`);
+      console.log(`[FishingScene] no ${backdrop.video}, keeping the still painting`);
     }, { once: true });
 
     // Kick off the load (some browsers don't start without it).
@@ -862,7 +894,7 @@ export class FishingScene extends Phaser.Scene {
     if (this.backdropVideoEl) return;
     const img = document.createElement('img');
     img.alt = '';
-    img.src = this.map.backdropImage;
+    img.src = this._backdrop().image;
     img.style.position = 'fixed';
     img.style.objectFit = 'cover';
     img.style.zIndex = '-2';
@@ -1209,7 +1241,7 @@ export class FishingScene extends Phaser.Scene {
     this.hudIcons.float = this._buildHudIcon({
       key:   TEX.ICON_FLOAT,
       slot:  1,
-      onTap: () => this._openModal('FloatSelectionScene'),
+      onTap: () => this._openModal(this.map.boats ? 'BoatSelectionScene' : 'FloatSelectionScene'),
     });
     this.hudIcons.bait  = this._buildHudIcon({
       key:   TEX.ICON_BAIT,
@@ -1228,7 +1260,11 @@ export class FishingScene extends Phaser.Scene {
 
     // Refresh when waking from a sub-scene -- selection or collection may
     // have updated the selected bait/float or last caught fish.
-    this._onScene(Phaser.Scenes.Events.WAKE, () => this._refreshHud());
+    this._onScene(Phaser.Scenes.Events.WAKE, () => {
+      this._refreshHud();
+      // (Back from the boat menu with another boat.)
+      if (this.map.boats) this._swapBackdrop();
+    });
   }
 
   /** Pack up and go back to the screen where you pick a map. */
@@ -1332,10 +1368,10 @@ export class FishingScene extends Phaser.Scene {
       fish.overlay.setVisible(false);
     }
 
-    // --- Float icon: selected float full sprite ---
+    // --- Float icon: selected float full sprite (or, behind a boat, the boat) ---
     const fl = this.hudIcons.float;
     const flId = SaveSystem.getSelectedFloat() || DEFAULT_FLOAT_ID;
-    const flKey = floatFullTextureKey(flId);
+    const flKey = this.map.boats ? boatIconKey(getBoat(SaveSystem.getSelectedBoat())) : floatFullTextureKey(flId);
     if (this.textures.exists(flKey)) {
       fl.overlay.setTexture(flKey);
       this._fitOverlayInside(fl.overlay, fl.sizePx * INNER_RATIO);
@@ -1345,7 +1381,7 @@ export class FishingScene extends Phaser.Scene {
     }
     // A lure is fished without a float: fade the float button out so it
     // is clear it plays no part right now (it still opens its menu).
-    fl.container.setAlpha(this._noFloat() ? 0.35 : 1);
+    fl.container.setAlpha(this._noFloat() && !this.map.boats ? 0.35 : 1);
 
     // --- Bait icon: selected bait / lure simple sprite ---
     const ba = this.hudIcons.bait;
