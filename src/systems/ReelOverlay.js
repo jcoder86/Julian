@@ -29,7 +29,8 @@ import { TEX } from '../scenes/BootScene.js';
  *   reel.destroy();
  */
 export class ReelOverlay {
-  constructor(scene, { x, y, requiredTurns = 3, onComplete = null, decay = true, decayPerSecond = 0.12 }) {
+  constructor(scene, { x, y, requiredTurns = 3, onComplete = null, decay = true, decayPerSecond = 0.12,
+                       bold = false }) {
     this.scene = scene;
     this.x = x;
     this.y = y;
@@ -40,6 +41,10 @@ export class ReelOverlay {
     // long big-game fight drains slower: a hand needs a rest).
     this.decayPerSecond = decayPerSecond;
     this._tired = false;
+    // `bold` (the big ocean): red and green are not a soft glow but a solid
+    // ring round the reel that pulses -- the glow is lost on white foam,
+    // and there the colour decides whether the fish stays on.
+    this.bold = bold;
     // What a turn of the handle is worth: 1 normally, less while a fish runs.
     this.resistance = 1;
     this._strained = false;
@@ -116,6 +121,13 @@ export class ReelOverlay {
     this.hitZone.setInteractive({ useHandCursor: true });
     this.hitZone.setDepth(44);   // above reel + handle so pointerdown lands here
 
+    // The bold signal: drawn round (0, 0) and placed on the reel, so that
+    // it can pulse (scale) about its middle.
+    if (this.bold) {
+      this.signal = scene.add.graphics().setPosition(x, y).setDepth(41);
+      this.signal.setVisible(false);
+    }
+
     // Optional progress ring overlay (debug/visual feedback).
     // Drawn as an arc on a Graphics object underneath the reel.
     this.progressGfx = scene.add.graphics();
@@ -156,6 +168,41 @@ export class ReelOverlay {
     if (this._strained) return;
     this.glowOuter.setFillStyle(this._tired ? 0x3cff6a : 0xffd24a, this.glowOuter.fillAlpha);
     this.glowInner.setFillStyle(this._tired ? 0xa8ffb8 : 0xffeaa0, this.glowInner.fillAlpha);
+    this._drawSignal();
+  }
+
+  /** The bold signal: red and fast while the fish runs, green and calm while it is tired. */
+  _drawSignal() {
+    if (!this.signal) return;
+    const red = this._strained;
+    const green = !red && this._tired;
+    if (this._signalTween) {
+      this._signalTween.stop();
+      this._signalTween = null;
+    }
+    this.signal.clear().setScale(1);
+    this.reel.clearTint();
+    if (!red && !green) {
+      this.signal.setVisible(false);
+      return;
+    }
+    const color = red ? 0xff1e1e : 0x22d84a;
+    const r = 112;
+    this.signal.fillStyle(color, 0.38);
+    this.signal.fillCircle(0, 0, r);
+    this.signal.lineStyle(14, color, 1);
+    this.signal.strokeCircle(0, 0, r);
+    this.signal.lineStyle(4, 0xffffff, 0.9);
+    this.signal.strokeCircle(0, 0, r + 9);
+    this.signal.setVisible(true);
+    this.reel.setTint(red ? 0xffa0a0 : 0xb8ffc0);
+    this._signalTween = this.scene.tweens.add({
+      targets: this.signal,
+      scale: { from: 1, to: red ? 1.14 : 1.07 },
+      alpha: { from: 1, to: red ? 0.55 : 0.8 },
+      duration: red ? 230 : 650,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
   }
 
   setStrained(strained) {
@@ -164,6 +211,7 @@ export class ReelOverlay {
     const tint = this._strained ? 0xff5a2a : 0xffd24a;
     this.glowOuter.setFillStyle(tint, this.glowOuter.fillAlpha);
     this.glowInner.setFillStyle(this._strained ? 0xff9a6a : 0xffeaa0, this.glowInner.fillAlpha);
+    this._drawSignal();
     this._redrawProgress();
   }
 
@@ -194,7 +242,8 @@ export class ReelOverlay {
     this.y = y;
     this.pivotX += dx;
     this.pivotY += dy;
-    for (const obj of [this.glowOuter, this.glowInner, this.reel, this.handle, this.hitZone]) {
+    for (const obj of [this.glowOuter, this.glowInner, this.reel, this.handle, this.hitZone, this.signal]) {
+      if (!obj) continue;
       obj.x += dx;
       obj.y += dy;
     }
@@ -274,7 +323,11 @@ export class ReelOverlay {
     const radius = 80;
     const start = -Math.PI / 2;
     const end = start + fraction * Math.PI * 2;
-    this.progressGfx.lineStyle(8, this._strained ? 0xff6a2a : 0x66ff77, 0.85);
+    if (this.bold) {
+      this.progressGfx.lineStyle(12, this._strained ? 0xff1e1e : 0x66ff77, 1);
+    } else {
+      this.progressGfx.lineStyle(8, this._strained ? 0xff6a2a : 0x66ff77, 0.85);
+    }
     this.progressGfx.beginPath();
     this.progressGfx.arc(this.x, this.y, radius, start, end, false);
     this.progressGfx.strokePath();
@@ -291,6 +344,7 @@ export class ReelOverlay {
     if (this._destroyed) return;
     this._destroyed = true;
     if (this.glowTween) this.glowTween.stop();
+    if (this._signalTween) this._signalTween.stop();
     if (this._decayEvent) this._decayEvent.remove(false);
     if (this.hitZone) this.hitZone.off('pointerdown', this._onHandleDown);
     this.scene.input.off('pointerup', this._onPointerUp);
@@ -298,7 +352,7 @@ export class ReelOverlay {
     // Belt + suspenders: ensure the reel loop stops even if the player
     // never released their finger (e.g. catch completes mid-drag).
     this.scene.audio?.stopReelLoop();
-    [this.glowOuter, this.glowInner, this.reel, this.handle, this.hitZone, this.progressGfx]
+    [this.glowOuter, this.glowInner, this.reel, this.handle, this.hitZone, this.progressGfx, this.signal]
       .filter(Boolean)
       .forEach((obj) => obj.destroy());
   }

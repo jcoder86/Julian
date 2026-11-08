@@ -73,6 +73,8 @@ export class BootScene extends Phaser.Scene {
     const painted = [...new Set(TEAMS.map(lookTeamId))];
     for (const map of MAPS) {
       this.load.image(map.backdropKey, map.backdropImage);
+      // (A catch on the big ocean is weighed, not shown on a catch screen.)
+      if (map.trophy) continue;
       for (const teamId of painted) {
         this.load.image(catchBgKey(teamId, map.id), catchBgImage(teamId, map.id));
       }

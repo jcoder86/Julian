@@ -1962,6 +1962,7 @@ export class FishingScene extends Phaser.Scene {
       y: reelPos.y,
       requiredTurns: turns,
       decayPerSecond: troll ? BIG_DECAY : undefined,
+      bold: troll,
       onComplete: () => {
         this.reelOverlay = null;
         // (A fish that was going to get off and has not yet -- a tiny one,

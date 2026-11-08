@@ -295,9 +295,11 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   explodes, the reel screams, "Vis aan!" -- and the music turns exciting.
 * **Big game** (`bigGame` in FishFight). Many more turns of the reel (8 to
   34, by length: `bigGameTurnsFor`) and three to eight long runs. During a
-  run the reel glows **red**: cranking is worth almost nothing (5 %), and
-  cranking hard against it may cost the fish (see above). After each run
-  the fish is tired for a while and the reel glows **green**: crank now.
+  run the reel is ringed in pulsing **red**: cranking is worth almost
+  nothing (5 %), and cranking hard against it may cost the fish (see
+  above). After each run the fish is tired for a while and the ring turns
+  **green**: crank now. (On the ocean the ring is solid, not the soft glow
+  of the other spots: a glow is lost on white foam. ReelOverlay's `bold`.)
   A fish that is let alone slips back only slowly (`BIG_DECAY`): a hand may
   rest. Fish that jump (`jumps` in `fish.js`: dorado, sailfish, marlin,
   swordfish, mako, white shark) leap clear of the water at the start of
@@ -310,7 +312,7 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   its weight at a given length, and weight goes with the cube of length).
   A measuring tape runs up beside it, metre by metre, and the children of
   the team stand next to it at their **true height** (`trophy` in
-  `teams.js`: Julian 105 cm, Dirk 40, James 125, Boaz 104), all on one
+  `teams.js`: Julian 105 cm, Dirk 40, James 120, Boaz 104), all on one
   scale -- a dorado comes up to their nose, a white shark towers over
   them. Beside a fish of many metres they are only a few pixels tall; then
   a magnifying glass shows them big, with a dotted line to where they

@@ -34,7 +34,7 @@ export const TEAMS = [
     collectionTitle: 'Vangst van James & Boaz',
     angler: { who: 'james', height: 262 },
     buddy: { who: 'boaz', height: 196, dx: -68, dy: 6 },
-    trophy: [{ who: 'james', cm: 125 }, { who: 'boaz', cm: 104 }],
+    trophy: [{ who: 'james', cm: 120 }, { who: 'boaz', cm: 104 }],
   },
   {
     // The grey "Gast" button: for whoever wants to try the game, or to
