@@ -16,9 +16,11 @@ fits the figures and the cast:
                  children, and the stern (transom) in front of them
     pink         deck that stays EMPTY: the children and the dog sit there
 
-The children face right, toward the stern; the angler's rod swings back
-up-left over the open sea behind the far gunwale (nothing there), then the
-lure goes over the stern into the wake.
+We stand in the cockpit and look back over the stern: its flat back wall
+runs straight across the picture, and the wake begins right behind the
+middle of it. (A first redo, November 2026, had the stern at a slant in
+a corner, and looked like the bow.) The children sit on the deck in front
+of it; the rod reaches over the stern and the lure goes into the wake.
 """
 
 from pathlib import Path
@@ -43,21 +45,22 @@ def poly(draw, points, colour):
 def main():
     img = Image.new("RGB", (W, H), (150, 200, 245))           # sky
     d = ImageDraw.Draw(img)
-    HORIZON = 94
+    HORIZON = 82
     poly(d, [(0, HORIZON), (1280, HORIZON), (1280, 840), (0, 840)], (25, 60, 150))   # ocean
-    # The wake: from behind the stern (bottom right) away to the horizon,
-    # narrowing toward a point right of the middle.
-    poly(d, [(690, 840), (690, 470), (1005, HORIZON + 2), (1040, HORIZON + 2), (1200, 840)],
-         (245, 248, 252))
-    # The deck: below the far gunwale, left of the stern.
-    poly(d, [(0, 500), (690, 520), (640, 840), (0, 840)], (196, 150, 98))
-    # The far gunwale: a white wall with a cap rail, behind the children.
-    poly(d, [(0, 430), (705, 455), (705, 520), (0, 500)], (215, 218, 222))
-    # The stern (transom): a white wall in front of them, from the far
-    # corner down to the bottom edge.
-    poly(d, [(690, 455), (735, 470), (690, 840), (630, 840)], (215, 218, 222))
+    # The wake: it begins right behind the middle of the stern and streams
+    # straight back to the horizon.
+    poly(d, [(400, 470), (695, HORIZON + 2), (745, HORIZON + 2), (1080, 470)], (245, 248, 252))
+    # The stern (transom): the boat's flat back wall, straight across.
+    poly(d, [(40, 462), (1240, 462), (1240, 560), (40, 560)], (215, 218, 222))
+    # Its cap rail along the top.
+    poly(d, [(40, 455), (1240, 455), (1240, 472), (40, 472)], (150, 95, 45))
+    # The two sides of the boat, coming toward us at the left and right edge.
+    poly(d, [(0, 440), (40, 455), (40, 560), (0, 610)], (215, 218, 222))
+    poly(d, [(1280, 440), (1240, 455), (1240, 560), (1280, 610)], (215, 218, 222))
+    # The deck in front of the stern.
+    poly(d, [(0, 610), (40, 560), (1240, 560), (1280, 610), (1280, 840), (0, 840)], (196, 150, 98))
     # Where the children and the dog sit: deck, kept empty.
-    poly(d, [(120, 520), (600, 525), (600, 760), (120, 760)], (238, 150, 190))
+    poly(d, [(120, 580), (620, 580), (620, 790), (120, 790)], (238, 150, 190))
     img.save(OUT)
     print(f"[ok]   {OUT.relative_to(ROOT)}  {W}x{H}")
 

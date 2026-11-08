@@ -155,6 +155,18 @@ WATER = {
     "ocean": dict(
         painting="backdrop-ocean",
         all_water=True,
+        # Gemini Omni given the same first and last frame filmed two seconds
+        # of motion, a jump, and near-stillness. So, with Omni: the first
+        # frame only, twelve seconds, the longest stretch that keeps moving,
+        # and its end dissolved into its beginning over a full second.
+        # (The film in use, November 2026, is Veo 3.1 after all, made in
+        # ElevenLabs' Image & Video -- 1080p, 8 s, this frame as first and
+        # last frame, this prompt without the sound -- when the Gemini
+        # credit had run out: saved as work/veo-ocean.mp4, then --compose.)
+        last_frame=False,
+        seconds=12,
+        clean_stretch=True,
+        loop_blend=24,
         prompt=(
             "In a single continuous shot, the camera locked off on the boat: "
             "the open tropical ocean seen from the cockpit of a big-game "
@@ -162,9 +174,10 @@ WATER = {
             "behind the stern the broad white wake churns, foams and boils and "
             "streams steadily away toward the horizon; the deep blue swells "
             "beside it roll past, small white caps break and sunlight glitters "
-            "on the water. The motion is lively but steady and regular all the "
-            "way through. The boat's teak deck, its white walls and varnished "
-            "rails, the island and the birds do not move: the "
+            "on the water. The motion is fast, lively, steady and continuous "
+            "from the first to the last frame -- the water never slows down "
+            "or stops, and there are no cuts. The boat's teak deck, its white "
+            "stern and varnished rails, the island and the birds do not move: the "
             "camera is fixed to the boat. " + STILL_RULES +
             " Sound: the steady rumble of boat engines and rushing, churning "
             "water. No music, no voices."
@@ -249,6 +262,33 @@ def film_frame(painting):
     return img.crop((0, top, img.width, img.height)).resize(FILM_SIZE, Image.LANCZOS)
 
 
+def clean_stretch(clip):
+    """
+    The longest stretch of the film that keeps moving: without a cut (a
+    sudden jump to another picture) and without the water standing still.
+    (Gemini Omni's first ocean film, November 2026, moved for two seconds,
+    jumped, and then hardly moved at all -- on the iPad: bursts of motion
+    and stillness.)
+    """
+    small = clip[:, ::8, ::8].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    step = np.abs(np.diff(small, axis=0)).mean(axis=(1, 2))
+    typical = np.percentile(step, 75)
+    local = ndimage.median_filter(step, size=9, mode="nearest")
+    good = (step > typical * 0.35) & (step < local * 2.5)
+    best, run_from, best_from = 0, 0, 0
+    for i, ok in enumerate(list(good) + [False]):
+        if not ok:
+            if i - run_from > best:
+                best, best_from = i - run_from, run_from
+            run_from = i + 1
+    first, last = best_from, best_from + best       # frames first..last
+    print(f"       clean stretch: frames {first}-{last} of {len(clip)} "
+          f"({(last - first + 1) / FPS:.1f} s; motion {step[first:last].mean():.1f} per frame)")
+    if (last - first + 1) < FPS * 4:
+        sys.exit("less than four seconds of steady motion: generate the film again")
+    return clip[first:last + 1]
+
+
 def read_clip(path, size):
     """All frames of a video as one uint8 array (frames, height, width, 3)."""
     width, height = size
@@ -271,6 +311,8 @@ def compose(map_id):
     width, height = OUT_SIZE
     top = round(height * WINDOW_TOP)
     clip = read_clip(clip_path, (width, height - top))       # film, back at painting scale
+    if spec.get("clean_stretch"):
+        clip = clean_stretch(clip)
     frames = len(clip)
 
     # --- where does the film move? -----------------------------------------
@@ -339,7 +381,7 @@ def compose(map_id):
          "-movflags", "+faststart", "-an", str(out)],
         stdin=subprocess.PIPE)
     m = mask[top:, :, None]
-    blend = LOOP_BLEND_FRAMES
+    blend = spec.get("loop_blend", LOOP_BLEND_FRAMES)
     for i in range(frames - blend):
         film = clip[i].astype(np.float32)
         if i < blend:
@@ -375,7 +417,9 @@ def main():
         WORK.mkdir(exist_ok=True)
         frame = WORK / f"veo-{args.map}-frame.jpg"
         film_frame(spec["painting"]).save(frame, "JPEG", quality=95)
-        clip = generate(spec["prompt"], frame, WORK / f"veo-{args.map}.mp4", loop=True, model=args.model)
+        clip = generate(spec["prompt"], frame, WORK / f"veo-{args.map}.mp4",
+                        loop=spec.get("last_frame", True), seconds=spec.get("seconds", 8),
+                        model=args.model)
         frame.unlink()
         if clip is None:
             sys.exit(1)

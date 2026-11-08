@@ -97,12 +97,14 @@ below the row, bigger, in a golden frame with rays of light behind it.
   the round red-finned koningsvis; the trophy is the tandvis (toothfish,
   up to two metres), the legend the riemvis (oarfish, up to eight).
 * **ocean** -- Grote oceaan: in the cockpit of a sport-fishing boat
-  sailing over the open ocean. The children sit on its teak deck facing
-  the stern; behind the stern the wake streams away to the horizon. (The
-  first painting, with a fighting chair under the dog and rods where the
-  rod swings back, was redone from a colour-block layout guide:
-  `scripts/make_layout_ocean.py`.) It plays differently from every other
-  spot: lures are **trolled** behind the
+  sailing over the open ocean, looking back over its stern: the flat back
+  wall runs straight across, the children sit on the teak deck in front
+  of it, and the wake starts right behind it and streams away to the
+  horizon. (Painted from a colour-block layout guide,
+  `scripts/make_layout_ocean.py`, after a first painting with a fighting
+  chair under the dog and rods where the rod swings back, and a second
+  with a slanted stern that looked like the bow.) It plays differently
+  from every other spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Five trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
@@ -313,8 +315,8 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   swordfish, mako, white shark) leap clear of the water at the start of
   most runs.
 * **The last leap.** Brought alongside, the fish makes one slow leap out of
-  the sea behind the stern -- all of it over open water, never over the
-  deck -- and a camera flash freezes it at the top. Jumps during the fight
+  the wake behind the boat (`leap` in `maps.js`: clear of the stern and
+  the children) and a camera flash freezes it at the top. Jumps during the fight
   also go out over open water, away from the boat.
 * **The weighing station** (`TrophyScene`). At sunset in the harbour the
   fish hangs by its tail from a big brass scale, head down. The needle

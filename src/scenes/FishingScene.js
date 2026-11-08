@@ -262,7 +262,7 @@ const LURE_REFUSE_TO = 0.8;
 const TROLL_WAIT_MIN = 20000;           // ms from the lure landing to the strike
 const TROLL_WAIT_MAX = 45000;
 const TROLL_TEASERS = [1, 3];           // fins seen behind the lure before it
-const TROLL_AT = [0.17, 0.3];           // how far along the wake the lure is trolled
+const TROLL_AT = [0.22, 0.36];          // how far along the wake the lure is trolled
 const TROLL_SIDE_PX = 30;               // ...and how far to one side of its middle
 const TROLL_DROPBACK_MS = 3200;         // from the stern back to that spot
 const TROLL_WEAVE_PX = 16;              // the lure weaves in the wake (at full scale)
@@ -287,6 +287,7 @@ const BIG_DECAY = 0.04;
 // A fish that leaps during the fight: at most this wide (design px), up
 // for this long.
 const JUMP_MAX_PX = 560;
+const JUMP_MIN_PX = 140;
 const JUMP_MS = 950;
 // The last leap: at most this wide, rising for so long, the flash at its top.
 const TROPHY_LEAP_MAX_PX = 1050;
@@ -2112,7 +2113,9 @@ export class FishingScene extends Phaser.Scene {
       // a long one is seen a little further out.
       const half = (length * depthScale) / 2 * 1.15 + 20;
       const from = { x: at.x, y: at.y };
-      for (let i = 0; i < 30 && !this.map.isWater(from.x - away.x * half, from.y - away.y * half * 0.5); i++) {
+      const tailIn = () => this.map.isWater(from.x - away.x * half, from.y - away.y * half * 0.5)
+        && this.map.isWater(from.x - away.x * half, from.y - away.y * half * 0.5 + 30 * depthScale);
+      for (let i = 0; i < 30 && !tailIn(); i++) {
         from.x += away.x * 10;
         from.y += away.y * 5;
       }
@@ -2439,14 +2442,29 @@ export class FishingScene extends Phaser.Scene {
     const scale = this._bobberDepthScale(y);
     const fish = this.add.image(x, y, key).setDepth(23);
     this._jumping = fish;
-    const width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
-    fish.setScale(width / fish.width);
+    let width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
     // It leaps out over open water, never back over the boat: a way where
     // the water goes on under its whole arc.
     const open = (d) => [0.15, 0.3, 0.45, 0.6].every((f) => this.map.isWater(x + d * width * f, y));
     const right = open(1);
     const left = open(-1);
-    const dir = right && left ? (Math.random() < 0.5 ? -1 : 1) : (left ? -1 : 1);
+    let dir;
+    if (right && left) {
+      // (Behind a boat the children sit on the left: away from them.)
+      dir = this._isTrollMode() ? 1 : (Math.random() < 0.5 ? -1 : 1);
+    } else {
+      dir = left ? -1 : 1;
+    }
+    // Its tail, coming up out of the water last, must not show over the
+    // stern or the jetty: close to them a leap is smaller (a fish that is
+    // further off looks smaller anyway), and right at them there is none.
+    while (width >= JUMP_MIN_PX && !this.map.isWater(x - dir * width * 0.45, y + width * 0.26)) width *= 0.85;
+    if (width < JUMP_MIN_PX) {
+      fish.destroy();
+      this._jumping = null;
+      return;
+    }
+    fish.setScale(width / fish.width);
     fish.setFlipX(dir < 0);
     const height = width * 0.55 + 30 * scale;
     const t = { p: 0 };
@@ -2492,20 +2510,31 @@ export class FishingScene extends Phaser.Scene {
     };
     if (!this.textures.exists(key)) { go(); return; }
 
-    const scale = this._bobberDepthScale(home.y);
-    // All of it over open water: from the side of the boat, where the
-    // water begins, out toward the edge of the picture -- never over the deck.
-    let edge = home.x;
-    while (edge > WORLD_LEFT && this.map.isWater(edge - 10, home.y)) edge -= 10;
-    const room = WORLD_RIGHT - edge - 30;
-    const width = Math.min(TROPHY_LEAP_MAX_PX, room, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
-    const startX = edge + width * 0.5;
+    // Where it leaps: the map's `leap` spot (open water clear of the boat
+    // and the children), or else beside the landing spot -- all of it over
+    // open water, from where the water begins out toward the edge of the
+    // picture, never over the jetty or the deck.
+    const spot = this.map.leap;
+    const baseY = spot ? spot.y : home.y;
+    const scale = this._bobberDepthScale(baseY);
+    const natural = (pick.lengthCm ?? 100) * PX_PER_CM * scale;
+    let width;
+    let startX;
+    if (spot) {
+      width = Math.min(TROPHY_LEAP_MAX_PX, spot.width, natural);
+      startX = spot.x;
+    } else {
+      let edge = home.x;
+      while (edge > WORLD_LEFT && this.map.isWater(edge - 10, home.y)) edge -= 10;
+      width = Math.min(TROPHY_LEAP_MAX_PX, WORLD_RIGHT - edge - 30, natural);
+      startX = edge + width * 0.5;
+    }
     const endX = Math.min(startX + width * 0.12, WORLD_RIGHT - width * 0.5);
-    const fish = this.add.image(startX, home.y + 30, key).setDepth(30);
+    const fish = this.add.image(startX, baseY + 30, key).setDepth(30);
     fish.setScale(width / fish.width);
-    const peakY = home.y - width * 0.32 - 80;
+    const peakY = baseY - width * 0.32 - 80;
     for (let i = 0; i < 14; i++) {
-      this._spray(startX + Phaser.Math.Between(-60, 60) * scale, home.y, Math.max(scale, 0.8), 1);
+      this._spray(startX + Phaser.Math.Between(-60, 60) * scale, baseY, Math.max(scale, 0.8), 1);
     }
     const t = { p: 0 };
     this.tweens.add({
@@ -2513,13 +2542,13 @@ export class FishingScene extends Phaser.Scene {
       onUpdate: () => {
         const p = t.p;
         fish.x = Phaser.Math.Linear(startX, endX, p);
-        fish.y = Phaser.Math.Linear(home.y + 30, peakY, Math.sin(p * Math.PI / 2));
+        fish.y = Phaser.Math.Linear(baseY + 30, peakY, Math.sin(p * Math.PI / 2));
         fish.rotation = Phaser.Math.Linear(-0.5, -0.12, p);
         // The line runs to its mouth (its head is on the right).
         const head = width * 0.45;
         this.bobber.x = fish.x + Math.cos(fish.rotation) * head;
         this.bobber.y = fish.y + Math.sin(fish.rotation) * head;
-        if (Math.random() < 0.5) this._spray(fish.x - Math.cos(fish.rotation) * head * 0.6, home.y, 1, 0.8);
+        if (Math.random() < 0.5) this._spray(fish.x - Math.cos(fish.rotation) * head * 0.6, baseY, 1, 0.8);
       },
       onComplete: () => {
         // Click -- the photo.

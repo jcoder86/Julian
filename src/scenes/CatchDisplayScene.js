@@ -424,6 +424,9 @@ export class CatchDisplayScene extends Phaser.Scene {
     this._closed = true;
     // Restore the DOM video backdrop for the fishing scene.
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = '';
+    // (Safari on an iPad may pause a video that was hidden: start it again.)
+    const video = this._hiddenVideoEl;
+    if (video && video.paused && video.play) video.play().catch(() => {});
     // Defer the scene transition to the NEXT frame. Calling scene.stop()
     // synchronously from inside Phaser's pointerdown processing loses the
     // SHUTDOWN action silently -- the scene keeps running. delayedCall(0)

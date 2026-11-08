@@ -170,3 +170,17 @@ dwars van de boot af. Alles hieronder is gemaakt en zit in het spel.
 | Nieuw schilderij: de kuip met een leeg dek, de jongens kijken naar de spiegel, het kielzog erachter | Codex, `ocean` (met de indelingsschets `layout-ocean.png`), daarna `make_paintings.py`, `make_sky_mask.py` | ja |
 | Bewegend water voor het nieuwe schilderij | Gemini Omni, `python scripts/make_water.py ocean` | ja |
 | De vijf sleepazen opnieuw geknipt (de kleine plaatjes hadden een stuk van de grote erbij) | `python scripts/split_atlas.py baits-ocean` | ja |
+
+## Ronde van 8 november 2026 (avond): een echte achterkant, doorlopend water
+
+Na het tweede testen: de schuine hoek leek de voorkant van de boot en sloot
+niet aan op het kielzog, en het water bewoog met horten en stoten (de film
+van Gemini Omni bewoog twee seconden, sprong, en stond daarna bijna stil).
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Nieuw schilderij: de rechte spiegel dwars door beeld, het kielzog midden erachter | Codex, `ocean` (nieuwe indelingsschets) | ja |
+| Bewegend water | Veo 3.1 in ElevenLabs (Image & Video, 1080p, 8 s, begin- en eindbeeld `work/veo-ocean-frame.jpg`), opgeslagen als `work/veo-ocean.mp4`, daarna `python scripts/make_water.py ocean --compose` | ja |
+
+Het Gemini-tegoed was op (8 november 2026): zonder tegoed geen Omni en
+geen `listen.py`. Opwaarderen in AI Studio (aistudio.google.com, Billing).

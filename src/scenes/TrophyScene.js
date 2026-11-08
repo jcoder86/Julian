@@ -499,6 +499,9 @@ export class TrophyScene extends Phaser.Scene {
     if (this._closed) return;
     this._closed = true;
     if (this._hiddenVideoEl) this._hiddenVideoEl.style.display = '';
+    // (Safari on an iPad may pause a video that was hidden: start it again.)
+    const video = this._hiddenVideoEl;
+    if (video && video.paused && video.play) video.play().catch(() => {});
     // (Not from inside Phaser's pointerdown pass: see CatchDisplayScene.)
     this.time.delayedCall(0, () => {
       this.scene.stop();

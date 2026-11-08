@@ -611,23 +611,25 @@ guide's flat colours or straight block edges may show.
 - pink: part of the teak deck that must stay COMPLETELY EMPTY (two
   children and a dog are added there later)
 
-THE BOAT. We stand in the cockpit and look toward the back of the boat.
-The teak deck fills the lower left. Behind it, across the picture, runs
-the low white side wall of the boat (the gunwale) with a varnished teak
-cap rail and a few small, EMPTY chrome rod-holder tubes set flush into it;
-over it we look out over the open sea. On the right the deck ends at the
-STERN: the low white back wall of the boat (the transom), seen from inside
-at an angle, with a teak cap rail, running from the far corner down to the
-bottom edge of the picture. NOTHING stands on the deck: no fighting chair,
-no rods, no poles, no outriggers, no buckets, no ropes, no people -- only
-the clean, empty teak deck with its fine planks, a flush hatch and a
-chrome deck drain. Nothing rises above the walls anywhere.
+THE BOAT. We stand in the cockpit and look straight back over the STERN
+of the boat. The stern is the boat's flat, square back wall (the
+transom): a white fibreglass wall with a varnished teak cap rail that runs
+STRAIGHT ACROSS the picture from left to right, level, as in the guide --
+clearly the back of the boat, not a pointed bow and not a corner. In its
+middle a small flush transom door; two empty chrome rod-holder tubes set
+into the cap rail. At the far left and right edges the boat's two sides
+come toward us. In front of the stern the clean, empty teak deck fills
+the bottom of the picture: fine planks, a flush hatch, a chrome deck
+drain. NOTHING stands on the deck: no fighting chair, no rods, no poles,
+no outriggers, no buckets, no ropes, no people. Nothing rises above the
+stern or the sides.
 
-THE WAKE. Right behind the stern a broad trail of churning WHITE FOAM and
-pale turquoise bubbling water streams away from the boat, straight back
-toward the horizon, getting narrower and fainter with distance. It starts
-right at the transom and fills the lower right of the picture, as in the
-guide: the boat is clearly moving fast.
+THE WAKE. Directly behind the MIDDLE of the stern, where the propellers
+are, the sea is churned into a broad trail of boiling WHITE FOAM and pale
+turquoise bubbling water that starts right at the stern and streams
+straight back, away from us, to the horizon, narrowing and fading with
+distance, exactly as in the guide: the boat is clearly moving fast,
+straight ahead, away from where the wake goes.
 
 THE OCEAN. Deep, saturated cobalt and ultramarine blue tropical ocean
 everywhere else, with long swells, small white caps and dazzling sparkles

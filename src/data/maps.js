@@ -152,6 +152,9 @@ function makeWaterTopAt(samples) {
 //                   sea takes it back along the wake, the line from `from`
 //                   (just behind the stern) to `to` (where the wake meets
 //                   the horizon), to be trolled there
+//   leap            optional: where a trophy's last leap is (x, y of the
+//                   water where it comes up, and the widest it may be);
+//                   else beside the landing spot
 //   fightMusic      optional: the exciting version of it, cross-faded in
 //                   when a fish strikes and out again once it is landed
 //                   or gone (the big ocean)
@@ -375,13 +378,14 @@ const MAP_DEFS = [
   },
   {
     // The big ocean -- the last, biggest level. In the cockpit of a
-    // big-game fishing boat under way: the children sit on its teak deck
-    // facing the stern, and behind the stern the wake streams away to the
-    // horizon; an island with a volcano and diving seabirds far off.
-    // Nothing on deck in the way of the rod's swing (November 2026: the
-    // first painting had the fighting chair under the dog and rods where
-    // the rod swings back). Fished by trolling; a catch is weighed in the
-    // harbour.
+    // big-game fishing boat under way, looking back over its stern: the
+    // flat back wall runs straight across, the children sit on the teak
+    // deck in front of it, and the wake starts right behind it and streams
+    // away to the horizon; an island with a volcano far off. Nothing on
+    // deck. (November 2026: the first painting had the fighting chair under
+    // the dog and rods where the rod swings back; the second a slanted
+    // stern in a corner that looked like the bow.) Fished by trolling; a
+    // catch is weighed in the harbour.
     id: 'ocean',
     nlName: 'Grote oceaan',
     featured: true,
@@ -396,16 +400,18 @@ const MAP_DEFS = [
       { src: 'clean/clouds-ocean-back.png',  height: OCEAN_SKY * WORLD_HEIGHT, speed: 1.6, alpha: 0.95 },
       { src: 'clean/clouds-ocean-front.png', height: OCEAN_SKY * WORLD_HEIGHT, speed: 4.2, alpha: 1 },
     ],
-    // On the teak deck, facing the stern.
-    seat: { x: 290, y: 680 },
+    // On the teak deck, close to the stern: the rod reaches over it.
+    seat: { x: 290, y: 650 },
     // Brought up to the stern, in the white of the wake.
-    landing: { x: 780, y: 640 },
+    landing: { x: 700, y: 418 },
     // Over the stern, back into the wake.
-    wake: { drop: { x: 790, y: 585 }, from: { x: 840, y: 600 }, to: { x: 1015, y: 85 } },
-    // The boat: its deck, the gunwale behind the children and the stern.
+    wake: { drop: { x: 700, y: 412 }, from: { x: 705, y: 425 }, to: { x: 715, y: 80 } },
+    // The last leap: in the wake behind the boat, clear of the children,
+    // at most this wide (its tail must stay above the stern).
+    leap: { x: 880, y: 290, width: 460 },
+    // The boat: the deck, the stern and the two sides.
     dry: [
-      [0, 414], [300, 425], [600, 438], [690, 446], [720, 455], [738, 470], [732, 520],
-      [724, 600], [712, 700], [700, 800], [696, 840], [0, 840],
+      [0, 413], [50, 433], [1235, 433], [1280, 413], [1280, 840], [0, 840],
     ],
     waterline: flatHorizon(OCEAN_HORIZON),
     depthFarY: WORLD_TOP + OCEAN_HORIZON * WORLD_HEIGHT,
