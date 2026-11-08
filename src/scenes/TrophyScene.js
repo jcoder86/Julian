@@ -480,6 +480,8 @@ export class TrophyScene extends Phaser.Scene {
     // The metres, as many as fit.
     const labelEvery = [1, 2, 5, 10].find((m) => m * 100 * k >= 34) || 10;
     for (let m = labelEvery; m * 100 <= cm + 0.01; m += labelEvery) {
+      // (Not right under the whole length at the top: they would overlap.)
+      if ((cm - m * 100) * k < 30) continue;
       stage.add(this.add.text(x + TAPE_W + 8, -HEAD_GAP - m * 100 * k, `${m} m`, lettering(20))
         .setOrigin(0, 0.5));
     }

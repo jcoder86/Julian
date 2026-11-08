@@ -207,3 +207,18 @@ en zit in het spel.
 | Witte vissersboot, piratenschip (dichte houten reling: door spijlen zou stilstaande zee te zien zijn), speedboot | Codex, `boat-vissersboot`, `boat-piratenschip`, `boat-speedboot`, daarna `python scripts/make_boats.py` | ja |
 | Schone schilderijen | `python scripts/make_paintings.py backdrop-ocean-<boot>` | ja |
 | Bewegend water per boot (dezelfde film) | `python scripts/make_water.py ocean --compose --painting backdrop-ocean-<boot>` | ja |
+
+## Ronde van 9 november 2026: zestien vissen op de Grote oceaan
+
+Het laatste level heeft meer vissen dan de andere: zestien. Zijn bladzijde
+in het vissenboek heeft een vierde rij. De lichtjig van de Zuidpool is ook
+op de oceaan te koop: diep gesleept vangt hij de vissen van de diepte.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Orka, mantarog (van boven), diepzeehengelvis, tandbaars | Codex, `fish-orca`, `fish-mantaray`, `fish-anglerfish`, `fish-grouper`, daarna `python scripts/split_atlas.py fish-orca fish-mantaray fish-anglerfish fish-grouper` | ja |
+| Stem: "een kleine tandbaars!" enzovoort, voor die vier | ElevenLabs, `vissen-9` | ja |
+| Stem: "Wow! Een gigantische ...!" voor die vier | ElevenLabs, `vissen-gigant-6` | ja |
+
+De stemmen zijn niet door Gemini nagekeken (`--check`): het Gemini-tegoed
+was op.

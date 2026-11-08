@@ -345,6 +345,21 @@ export const FISH_SPECIES = [
   // by the smell of the shark bait's chum.
   { id: "whaleshark", nlName: "Walvishaai", baits: ["haaienaas"],                            speciesWeight: 1.0, sizeWeights: [55, 30, 15],
     lengthCm: { small: [400, 620], medium: [700, 1000], large: [1100, 1880] }, kg: [1500, 15000] },
+  // Four more (November 2026): the big ocean has sixteen. Deep down, where
+  // the glow jig goes, the giant grouper, the deep-sea anglerfish -- it
+  // hunts with a light of its own -- and the manta, which comes to light
+  // (it draws the plankton it eats); and, rarer than a white shark but not
+  // as rare as the whale shark, the orca. (It is no fish but a dolphin:
+  // the children wanted it all the same.) Orca and manta leap clear of the
+  // water, as they do.
+  { id: "grouper",  nlName: "Tandbaars", baits: ["makreel", "lichtjig", "duikplug"],          speciesWeight:  25, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [40, 70], medium: [80, 140], large: [150, 270] }, kg: [270, 400] },
+  { id: "anglerfish", nlName: "Diepzeehengelvis", baits: ["lichtjig"],                       speciesWeight:   6, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [15, 30], medium: [35, 60], large: [65, 120] }, kg: [120, 25] },
+  { id: "mantaray", nlName: "Mantarog",  baits: ["lichtjig"],                                  speciesWeight:   4, sizeWeights: [45, 40, 15],
+    lengthCm: { small: [150, 250], medium: [260, 400], large: [420, 550] }, kg: [550, 2400], jumps: true },
+  { id: "orca",     nlName: "Orka",      baits: ["haaienaas", "makreel"],                      speciesWeight:   2, sizeWeights: [50, 35, 15],
+    lengthCm: { small: [400, 560], medium: [580, 750], large: [780, 980] }, kg: [980, 10000], jumps: true },
 
   // Four fish lived on the ice for a day in October 2026 and were taken off
   // again because they looked like fish of other maps (herring, garfish,
@@ -379,8 +394,10 @@ export const MAP_SPECIES = {
            "lionfish", "barracuda", "dentex", "moray", "amberjack", "swordfish"],
   antarctica: ["hatchetfish", "lanternfish", "plunderfish", "snailfish", "icefish", "dragonfish",
                "rockcod", "chimaera", "grenadier", "opah", "toothfish", "oarfish"],
-  ocean: ["mahimahi", "wahoo", "yellowfin", "sailfish", "bluemarlin", "swordfish",
-          "mako", "hammerhead", "tigershark", "sunfish", "whiteshark", "whaleshark"],
+  // (Sixteen: the last level shows off. Its page in the book has a fourth row.)
+  ocean: ["mahimahi", "wahoo", "yellowfin", "grouper", "sailfish", "bluemarlin", "swordfish",
+          "anglerfish", "mako", "hammerhead", "tigershark", "mantaray", "sunfish",
+          "whiteshark", "orca", "whaleshark"],
 };
 
 /** All species of one map, in display order. */
@@ -477,6 +494,7 @@ export const OLDEST_YEARS = {
   // The big ocean
   mahimahi: 5, wahoo: 9, yellowfin: 9, sailfish: 13, bluemarlin: 27, mako: 32,
   hammerhead: 44, tigershark: 40, sunfish: 23, whiteshark: 70, whaleshark: 130,
+  grouper: 50, anglerfish: 25, mantaray: 45, orca: 90,
 };
 // A species that is not in the list is taken for an ordinary one.
 const OLDEST_YEARS_UNKNOWN = 15;

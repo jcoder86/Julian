@@ -27,6 +27,9 @@ import { UI, COLOR, lettering, written, addGlow, addRays, addGlints, pressable }
  *
  * The layout is fixed at 12 cards (one per species), so the screen never
  * grows even with thousands of catches -- the trophy values just go up.
+ * (The big ocean has sixteen: its page has a fourth row. Alone on screen
+ * that page is drawn a little smaller, so that it still fits; in the whole
+ * book it is simply a longer page.)
  *
  * Each map has its own page of 12. Opened from the fishing screen the scene
  * shows the page of that map ({ mapId }); the little painting in the
@@ -90,7 +93,16 @@ const PAGE_PLATE_H = 100;
 const PAGE_HEADER_H = 104;
 const PAGE_GAP = 30;
 const GRID_H = ROWS * CARD_H + (ROWS - 1) * CARD_GAP;
-const PAGE_H = PAGE_HEADER_H + GRID_H + PAGE_GAP;
+// A page with more fish has more rows.
+function rowsOf(map) {
+  return Math.max(ROWS, Math.ceil(speciesForMap(map.id).length / COLS));
+}
+function gridHeight(rows) {
+  return rows * CARD_H + (rows - 1) * CARD_GAP;
+}
+function pageHeight(map) {
+  return PAGE_HEADER_H + gridHeight(rowsOf(map)) + PAGE_GAP;
+}
 // Scrolling: how fast a flick dies out (share of its speed kept per
 // 1/60 s), and below which speed (px/s) it stops.
 const FLICK_KEEP = 0.94;
@@ -164,11 +176,24 @@ export class FishingCollectionScene extends Phaser.Scene {
     // The cards live in one container: the whole book is moved by moving it.
     this._content = this.add.container(0, 0).setDepth(2);
     if (this.showAll) {
-      MAPS.forEach((map, i) => this._buildPage(map, i * PAGE_H, true));
+      let top = 0;
+      for (const map of MAPS) {
+        this._buildPage(map, top, true);
+        top += pageHeight(map);
+      }
+      this._bookHeight = top;
       this._enableScrolling();
     } else {
       this._buildMapSwitch();
       this._buildPage(this.map, 0, false);
+      // A page with more rows than fit under the title: a little smaller.
+      const room = GAME_HEIGHT - TITLE_BAR_H - 12;
+      const height = gridHeight(rowsOf(this.map));
+      if (height > room) {
+        const k = room / height;
+        this._content.setScale(k);
+        this._content.setPosition((GAME_WIDTH / 2) * (1 - k), TITLE_BAR_H + 6 - TITLE_BAR_H * k);
+      }
     }
 
     // Camera: zoom out just enough that the whole design frame (title +
@@ -204,7 +229,7 @@ export class FishingCollectionScene extends Phaser.Scene {
     // The whole book: how far it can be scrolled on this screen.
     if (this.showAll) {
       this._view = layout.view;
-      const bookBottom = BOOK_TOP + MAPS.length * PAGE_H;
+      const bookBottom = BOOK_TOP + this._bookHeight;
       this._maxScroll = Math.max(0, bookBottom - layout.view.bottom);
       this._scrollTo(this._scroll);
     }
@@ -363,8 +388,9 @@ export class FishingCollectionScene extends Phaser.Scene {
         .setOrigin(0.5));
       gridTop += PAGE_HEADER_H;
     } else {
-      // One page alone is centred in the room under the title.
-      gridTop += (GAME_HEIGHT - TITLE_BAR_H - GRID_H) / 2;
+      // One page alone is centred in the room under the title (a taller one
+      // starts at the top, and is made to fit: see create).
+      gridTop += Math.max(0, (GAME_HEIGHT - TITLE_BAR_H - gridHeight(rowsOf(map))) / 2);
     }
 
     const totalGridW = COLS * CARD_W + (COLS - 1) * CARD_GAP;

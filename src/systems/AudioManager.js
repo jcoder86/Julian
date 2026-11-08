@@ -113,7 +113,7 @@ export function musicPath(key) {
 export const VOICE_ATLASES = [
   'vissen', 'vissen-zee', 'vissen-3', 'stem-spel', 'vissen-gigant', 'vissen-4',
   'vissen-5', 'vissen-gigant-2', 'vissen-6', 'vissen-gigant-3', 'vissen-7', 'vissen-gigant-4',
-  'vissen-8', 'vissen-gigant-5',
+  'vissen-8', 'vissen-gigant-5', 'vissen-9', 'vissen-gigant-6',
 ];
 export function voiceAtlasMetaKey(atlas) {
   return `${atlas}-meta`;

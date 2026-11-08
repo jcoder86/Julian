@@ -272,6 +272,30 @@ FISH.update({
                    "front, a dark blue-grey back covered in a pattern of white SPOTS and pale "
                    "stripes, ridges along its sides, a white belly and a tall crescent tail",
                    SIDE, "\nThe body is drawn straight and horizontal."),
+    # Four more for the big ocean (November 2026): it shows off with
+    # sixteen fish instead of twelve.
+    "orca": ("an orca / killer whale (Orcinus orca), a big bull: a huge, sleek, powerful "
+             "black-and-white sea animal with a glossy jet-black back and sides, a pure "
+             "white belly and chin, the white oval patch behind the eye, a grey saddle "
+             "patch behind the very tall, straight, triangular dorsal fin, broad paddle-"
+             "shaped flippers and a wide horizontal tail fluke", SIDE,
+             "\nThe body is drawn straight and horizontal, the head on the right."),
+    "mantaray": ("a giant oceanic manta ray (Mobula birostris): an enormous, graceful, flat "
+                 "ray with huge, broad, pointed wings, a jet-black upper side with a white "
+                 "shoulder patch on each side of the head, the two curled horn-like head fins "
+                 "in front of its wide mouth, and a short thin tail", ABOVE,
+                 "\nThe head points right and the short tail points left; the wings spread "
+                 "wide up and down."),
+    "anglerfish": ("a deep-sea anglerfish (Melanocetus johnsonii): a strange, round, "
+                   "glossy BLACK deep-sea fish with a huge gaping mouth full of long, thin, "
+                   "glassy needle teeth, tiny eyes, small dark fins and, on a long thin "
+                   "stalk growing from its head, a bright GLOWING blue-white lantern bulb that "
+                   "dangles in front of its mouth", SIDE,
+                   "\nThe glowing lure on its stalk is clearly visible above and in front of the head."),
+    "grouper": ("a giant grouper (Epinephelus lanceolatus), a huge old one: a massive, heavy, "
+                "deep-bodied fish with an enormous wide mouth and a jutting lower jaw, small "
+                "eyes, thick lips, mottled olive-brown and greyish skin with yellow spots and "
+                "dark blotches, rounded fins and a big rounded tail", SIDE, ""),
 })
 
 # The fish of the ice at the South Pole (map "antarctica", October 2026).

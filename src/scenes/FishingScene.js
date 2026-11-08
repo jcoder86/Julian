@@ -292,6 +292,13 @@ const BIG_DECAY = 0.04;
 // for this long.
 const JUMP_MAX_PX = 560;
 const JUMP_MIN_PX = 140;
+// A picture taller than this (height / width) -- the manta, its wings
+// spread -- leaps smaller: as big across as an ordinary fish is long.
+const JUMP_TALL = 0.5;
+function tallFactor(img) {
+  const tall = img.height / img.width;
+  return tall > JUMP_TALL ? JUMP_TALL / tall : 1;
+}
 const JUMP_MS = 950;
 // The last leap: at most this wide, rising for so long, the flash at its top.
 const TROPHY_LEAP_MAX_PX = 1050;
@@ -2500,7 +2507,7 @@ export class FishingScene extends Phaser.Scene {
     const scale = this._bobberDepthScale(y);
     const fish = this.add.image(x, y, key).setDepth(23);
     this._jumping = fish;
-    let width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale);
+    let width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale) * tallFactor(fish);
     // It leaps out over open water, never back over the boat: a way where
     // the water goes on under its whole arc.
     const open = (d) => [0.15, 0.3, 0.45, 0.6].every((f) => this.map.isWater(x + d * width * f, y));
@@ -2524,7 +2531,10 @@ export class FishingScene extends Phaser.Scene {
     }
     fish.setScale(width / fish.width);
     fish.setFlipX(dir < 0);
-    const height = width * 0.55 + 30 * scale;
+    // Not so high that it leaves the picture at the top.
+    const half = Math.max(fish.displayWidth, fish.displayHeight) / 2;
+    const height = Math.max(20, Math.min(width * 0.55 + 30 * scale,
+                                         y - half - this.cameras.main.worldView.y - 10));
     const t = { p: 0 };
     this.audio.playSfx(SFX.SPLASH, { volume: 0.6 });
     for (let i = 0; i < 6; i++) this._spray(x + Phaser.Math.Between(-20, 20) * scale, y, scale, 1);
@@ -2587,10 +2597,15 @@ export class FishingScene extends Phaser.Scene {
       width = Math.min(TROPHY_LEAP_MAX_PX, WORLD_RIGHT - edge - 30, natural);
       startX = edge + width * 0.5;
     }
-    const endX = Math.min(startX + width * 0.12, WORLD_RIGHT - width * 0.5);
     const fish = this.add.image(startX, baseY + 30, key).setDepth(30);
+    // A tall picture (the manta, the sunfish) no taller than the sky above
+    // the water there: at the top of its leap it is clear of the sea.
+    width = Math.min(width, (baseY - this.cameras.main.worldView.y - 20) * fish.width / fish.height);
+    const endX = Math.min(startX + width * 0.12, WORLD_RIGHT - width * 0.5);
     fish.setScale(width / fish.width);
-    const peakY = baseY - width * 0.32 - 80;
+    // (Its top stays in the picture.)
+    const peakY = Math.max(baseY - width * 0.32 - 80,
+                           this.cameras.main.worldView.y + fish.displayHeight / 2 + 10);
     for (let i = 0; i < 14; i++) {
       this._spray(startX + Phaser.Math.Between(-60, 60) * scale, baseY, Math.max(scale, 0.8), 1);
     }

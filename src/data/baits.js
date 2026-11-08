@@ -105,7 +105,9 @@ export const BAITS = [
 
   // The South Pole's own lure (also the pilker above): a glow jig, painted
   // with glow paint that shines in the dark, cold water; jigged slowly, deep.
-  { id: "lichtjig", maps: ICE, kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
+  // (On the big ocean too, since November 2026: trolled deep, it brings
+  // up the grouper, the deep-sea anglerfish and the manta.)
+  { id: "lichtjig", maps: [...ICE, "ocean"], kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
     swim: { depth: 1.8, sink: 0.8, sway: 2, roll: 10, beat: 1.3, jig: 0.6, glow: true } },
 ];
 

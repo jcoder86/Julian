@@ -183,13 +183,15 @@ async function runScenario(label, options) {
   // A species may move to another map (the first lake's trout, chub and
   // bass now live in the French lake): what counts is that it is on SOME
   // map's collection page, so no catch drops out of sight -- and that a
-  // page still holds exactly twelve.
+  // page still holds twelve, or full rows of four more (the big ocean has
+  // sixteen), each species once.
   for (const id of RELEASED_LAKE_SPECIES) {
     check(!!FISH_BY_ID[id], `species "${id}" no longer exists: its catches would vanish`);
     check(mapsOfSpecies(id).length > 0, `species "${id}" is on no map's collection page any more`);
   }
   for (const [mapId, ids] of Object.entries(MAP_SPECIES)) {
-    check(ids.length === 12 && new Set(ids).size === 12, `the collection page of "${mapId}" does not hold twelve species`);
+    check(ids.length >= 12 && ids.length % 4 === 0 && new Set(ids).size === ids.length,
+      `the collection page of "${mapId}" does not hold twelve species (or full rows of four more), each once`);
     check(ids.every((id) => !!FISH_BY_ID[id]), `the collection page of "${mapId}" lists an unknown species`);
   }
   for (const id of RELEASED_BAITS) {

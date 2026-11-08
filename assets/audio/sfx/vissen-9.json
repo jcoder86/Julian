@@ -1,0 +1,54 @@
+{
+  "file": "vissen-9.mp3",
+  "totalDuration": 22.25,
+  "phrases": {
+    "small_grouper": {
+      "start": 0.5,
+      "duration": 1.45
+    },
+    "small_anglerfish": {
+      "start": 2.45,
+      "duration": 1.74
+    },
+    "small_mantaray": {
+      "start": 4.69,
+      "duration": 1.28
+    },
+    "small_orca": {
+      "start": 6.47,
+      "duration": 1.11
+    },
+    "medium_grouper": {
+      "start": 8.08,
+      "duration": 0.98
+    },
+    "medium_anglerfish": {
+      "start": 9.56,
+      "duration": 1.37
+    },
+    "medium_mantaray": {
+      "start": 11.43,
+      "duration": 0.98
+    },
+    "medium_orca": {
+      "start": 12.91,
+      "duration": 0.84
+    },
+    "large_grouper": {
+      "start": 14.25,
+      "duration": 1.4
+    },
+    "large_anglerfish": {
+      "start": 16.15,
+      "duration": 1.84
+    },
+    "large_mantaray": {
+      "start": 18.49,
+      "duration": 1.49
+    },
+    "large_orca": {
+      "start": 20.48,
+      "duration": 1.27
+    }
+  }
+}

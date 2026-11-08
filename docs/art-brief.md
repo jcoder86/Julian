@@ -244,6 +244,8 @@ een geluidsbestand, met een lijstje erbij waar elke zin begint:
 | `assets/audio/sfx/vissen-gigant-4.mp3` + `.json` | "Wow! Een gigantische ...!" voor die zeven |
 | `assets/audio/sfx/vissen-8.mp3` + `.json` | de elf vissen van de Grote oceaan, "Grote oceaan!" en "Vis aan!" |
 | `assets/audio/sfx/vissen-gigant-5.mp3` + `.json` | "Wow! Een gigantische ...!" voor die elf |
+| `assets/audio/sfx/vissen-9.mp3` + `.json` | de vier latere vissen van de Grote oceaan: tandbaars, diepzeehengelvis, mantarog, orka |
+| `assets/audio/sfx/vissen-gigant-6.mp3` + `.json` | "Wow! Een gigantische ...!" voor die vier |
 
 Staat een vis in meer dan een opname (omdat zijn naam veranderde), dan
 gebruikt het spel de nieuwste.
@@ -407,8 +409,18 @@ macht).
 | `sunfish` | Maanvis | 80-125 | 140-210 | 220-333 | rokjeslure, haaienaas | 2.300 kg bij 3,3 m |
 | `whiteshark` | Witte haai | 200-290 | 300-430 | 450-640 | haaienaas, makreel | 2.000 kg bij 6,4 m |
 | `whaleshark` | Walvishaai | 400-620 | 700-1000 | 1100-1880 | haaienaas | 15.000 kg bij 15 m |
+| `grouper` | Tandbaars | 40-70 | 80-140 | 150-270 | makreel, lichtjig, duikplug | 400 kg bij 2,7 m |
+| `anglerfish` | Diepzeehengelvis | 15-30 | 35-60 | 65-120 | lichtjig | 25 kg bij 1,2 m |
+| `mantaray` | Mantarog (van boven getekend) | 150-250 | 260-400 | 420-550 | lichtjig | 2.400 kg bij 5,5 m |
+| `orca` | Orka | 400-560 | 580-750 | 780-980 | haaienaas, makreel | 10.000 kg bij 9,8 m |
 
-De walvishaai is de legende, daarna de witte haai en de maanvis.
+Sinds 9 november 2026 zestien in plaats van twaalf: de tandbaars, de
+diepzeehengelvis, de mantarog en de orka kwamen erbij (de orka is geen vis
+maar een dolfijn; de kinderen wilden hem toch). De lichtjig van de Zuidpool
+is ook een sleepaas op de oceaan: diep gesleept brengt hij de tandbaars,
+de diepzeehengelvis en de mantarog boven.
+
+De walvishaai is de legende, daarna de orka, de witte haai en de maanvis.
 Springers (`jumps`): goudmakreel, zeilvis, blauwe marlijn, zwaardvis,
-mako-haai en witte haai. De goudmakreel is zo groen als het groene scherm:
+mako-haai, witte haai, mantarog en orka. De goudmakreel is zo groen als het groene scherm:
 `scripts/split_atlas.py` vult zijn lijf weer helemaal op (`GREEN_FISH`).

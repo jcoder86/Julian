@@ -1,0 +1,22 @@
+{
+  "file": "vissen-gigant-6.mp3",
+  "totalDuration": 12.89,
+  "phrases": {
+    "giant_grouper": {
+      "start": 0.5,
+      "duration": 2.38
+    },
+    "giant_anglerfish": {
+      "start": 3.38,
+      "duration": 2.9
+    },
+    "giant_mantaray": {
+      "start": 6.78,
+      "duration": 2.64
+    },
+    "giant_orca": {
+      "start": 9.92,
+      "duration": 2.47
+    }
+  }
+}

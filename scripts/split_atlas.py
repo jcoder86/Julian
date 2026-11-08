@@ -382,6 +382,10 @@ FISH_STRIPS = [
     ("fish-whiteshark", "whiteshark"),   # witte haai
     ("fish-sunfish", "sunfish"),     # maanvis
     ("fish-whaleshark", "whaleshark"),   # walvishaai
+    ("fish-orca", "orca"),           # orka
+    ("fish-mantaray", "mantaray"),   # mantarog
+    ("fish-anglerfish", "anglerfish"),   # diepzeehengelvis
+    ("fish-grouper", "grouper"),     # tandbaars
 ]
 STRIP_EXTENSIONS = (".webp", ".png")
 

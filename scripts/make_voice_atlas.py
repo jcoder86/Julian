@@ -131,6 +131,12 @@ ATLASES = {
         "sunfish": "maanvis", "whaleshark": "walvishaai",
     },
     "vissen-gigant-5": {},
+    # November 2026, later: four more for the big ocean.
+    "vissen-9": {
+        "grouper": "tandbaars", "anglerfish": "diepzeehengelvis", "mantaray": "mantarog",
+        "orca": "orka",
+    },
+    "vissen-gigant-6": {},
 }
 # Every species by the name on its card, for "Wow! Een gigantische ...!"
 # (key `giant_<species>`).
@@ -156,13 +162,14 @@ GIANTS_GREECE = {
 GIANTS_ANTARCTICA = dict(ATLASES["vissen-6"])
 GIANTS_STRANGE = dict(ATLASES["vissen-7"])
 GIANTS_OCEAN = dict(ATLASES["vissen-8"])
+GIANTS_OCEAN_2 = dict(ATLASES["vissen-9"])
 GIANT_PHRASE = "Wow! Een gigantische {}!"
 # Atlases whose every phrase opens with a short cry ("Wow!") and a pause:
 # how long that cry lasts at most, in seconds. A stretch of sound no longer
 # than this is the opening of the phrase after it. (The pause after "Wow!"
 # is as long as some pauses BETWEEN phrases, so the pauses cannot tell.)
 OPENING_CRY_S = {"vissen-gigant": 0.6, "vissen-gigant-2": 0.6, "vissen-gigant-3": 0.6,
-                 "vissen-gigant-4": 0.6, "vissen-gigant-5": 0.6}
+                 "vissen-gigant-4": 0.6, "vissen-gigant-5": 0.6, "vissen-gigant-6": 0.6}
 # Phrases that are not a fish: (key, text), read out after the fish. The
 # map names are spoken when a map is chosen (key `map_<id>`); `escaped`
 # when a hooked fish gets off.
@@ -183,6 +190,8 @@ EXTRA = {
     "vissen-8": [("fish_on", "Vis aan!"), ("map_ocean", "Grote oceaan!")],
     "vissen-gigant-5": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
                         for species, spoken in GIANTS_OCEAN.items()],
+    "vissen-gigant-6": [(f"giant_{species}", GIANT_PHRASE.format(spoken))
+                        for species, spoken in GIANTS_OCEAN_2.items()],
 }
 SIZES = ("small", "medium", "large")
 PHRASE = {"small": "een kleine {}!", "medium": "een {}!", "large": "een grote {}!!"}

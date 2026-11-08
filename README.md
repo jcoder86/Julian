@@ -114,13 +114,18 @@ below the row, bigger, in a golden frame with rays of light behind it.
   backdrop-ocean-<boat>`). It plays differently from every other spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
-  Five trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
-  ballyhoo, a whole mackerel and a big shark bait. Twelve of the biggest
-  fish there are: goudmakreel (dorado), wahoo, geelvintonijn, zeilvis,
-  blauwe marlijn, zwaardvis, mako-haai, hamerhaai, tijgerhaai, maanvis
-  (the ocean sunfish, up to 2.3 tonnes), witte haai -- and the legend, the
-  walvishaai (whale shark, up to 18.8 m). The swordfish lives in Greece
-  too and has a card on each page (`swordfish@ocean`).
+  Six trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
+  ballyhoo, a whole mackerel, a big shark bait -- and the South Pole's glow
+  jig, trolled deep. As the last level it has more fish than any other
+  spot, **sixteen** of the biggest there are: goudmakreel (dorado), wahoo,
+  geelvintonijn, tandbaars (giant grouper), zeilvis, blauwe marlijn,
+  zwaardvis, diepzeehengelvis (the deep-sea anglerfish with its lantern),
+  mako-haai, hamerhaai, tijgerhaai, mantarog (giant manta), maanvis (the
+  ocean sunfish, up to 2.3 tonnes), witte haai, orka (rarer than the white
+  shark, not as rare as the whale shark) -- and the legend, the walvishaai
+  (whale shark, up to 18.8 m). The glow jig is how the deep ones are
+  caught: the anglerfish and the manta take nothing else. The swordfish
+  lives in Greece too and has a card on each page (`swordfish@ocean`).
 
 A species that is taken off a map keeps its id and its catches: they stay
 in the save, just no longer on a page. (In October 2026 the Greek coast's
@@ -134,7 +139,8 @@ waterline, default bait, music, ambience, name) is one entry in
 specifics of any spot itself.
 
 **Which fish live where** is `MAP_SPECIES` in `src/data/fish.js`: twelve per
-map, in the order of that map's page in the collection. A species can live
+map (sixteen on the big ocean), in the order of that map's page in the
+collection. A species can live
 on more than one map (the catfish does, and is rarer in France: `weightOn`);
 its catches are then kept per map -- under its plain id on its first map,
 under `<id>@<map>` on the others (`catchKey`), so the French catfish has a
@@ -321,11 +327,13 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   of the other spots: a glow is lost on white foam. ReelOverlay's `bold`.)
   A fish that is let alone slips back only slowly (`BIG_DECAY`): a hand may
   rest. Fish that jump (`jumps` in `fish.js`: dorado, sailfish, marlin,
-  swordfish, mako, white shark) leap clear of the water at the start of
-  most runs.
+  swordfish, mako, white shark, manta, orca) leap clear of the water at the
+  start of most runs -- never out of the top of the picture; the manta,
+  wings spread, leaps smaller (`JUMP_TALL`).
 * **The last leap.** Brought alongside, the fish makes one slow leap out of
   the wake behind the boat (`leap` in `maps.js`: clear of the stern and
-  the children) and a camera flash freezes it at the top. Jumps during the fight
+  the children) and a camera flash freezes it at the top -- a tall one
+  (manta, sunfish) no bigger than the sky above the water there. Jumps during the fight
   also go out over open water, away from the boat.
 * **The weighing station** (`TrophyScene`). At sunset in the harbour the
   fish hangs by its tail from a big brass scale, head down. The needle
@@ -541,7 +549,8 @@ the Greek coast and its name, `vissen-gigant-2.mp3` for their giants,
 `vissen-6.mp3` and `vissen-gigant-3.mp3` the same for the South Pole,
 `vissen-7.mp3` and `vissen-gigant-4.mp3` for the strange newcomers of both,
 `vissen-8.mp3` and `vissen-gigant-5.mp3` for the fish of the big ocean, its
-name and "Vis aan!"; the list is `VOICE_ATLASES` in
+name and "Vis aan!", `vissen-9.mp3` and `vissen-gigant-6.mp3` for its four
+later ones (tandbaars, diepzeehengelvis, mantarog, orka); the list is `VOICE_ATLASES` in
 `src/systems/AudioManager.js`).
 
 The voice plays 15 % louder than its recordings (`VOICE_VOLUME`), except
@@ -583,9 +592,11 @@ How rare a catch is follows from `speciesWeight`, `sizeWeights` and
 exact odds per bait -- of every species, of a fish longer than 150 cm and
 of a tuna or shark of over two metres. Run it after changing a weight.
 
-The collection screen is a 4 x 3 grid per map and each map currently has
-exactly 12 species; a 13th on one map needs a layout change in
-`FishingCollectionScene.js`. A tap on a card says the fish's name ("een
+The collection screen is a grid of four cards across per map: three rows
+for the twelve species of most maps, four for the sixteen of the big ocean
+(`rowsOf` in `FishingCollectionScene.js` adds a row per four more). Alone
+on screen a page with more than three rows is drawn smaller so that it
+fits under the title; in the whole book it is simply a longer page. A tap on a card says the fish's name ("een
 snoek!", the phrase without a size). From the fishing screen it opens on that map's
 page; the card "Alle vissen" on the map screen opens the whole book, every
 map's page under the other, to scroll through (drag, flick or mouse wheel).
