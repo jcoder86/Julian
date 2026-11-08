@@ -45,7 +45,7 @@ assets/
   clean/                      # what the game loads, made by the scripts
   audio/
 scripts/
-  gen_art.py, art_prompts.py  # generate pictures (Codex); gen_video.py: film (Veo)
+  gen_art.py, art_prompts.py  # generate pictures (Codex); gen_video.py: film (Gemini Omni)
   make_*.py, split_atlas.py   # turn raw pictures into what the game loads
   shipping.js, prune-dist.js  # what of assets/ does not go to the players
   test-save-compat.js         # run by `npm run build`: no update may lose catches
@@ -577,9 +577,11 @@ python scripts/make_water.py sea --compose   # only redo the composing
 ```
 
 1. The lower three quarters of the 4:3 painting are almost exactly 16:9.
-   That frame goes to Google's **Veo** video model as the first *and* the
-   last frame of an 8-second clip, with a prompt that locks the camera
-   and lets only the water move (`scripts/gen_video.py`).
+   That frame goes to Google's video model -- **Gemini Omni 1.2 Flash**
+   since November 2026; the first five maps were filmed by Veo 3.1, which
+   Google switched off on 22 October 2026 -- as the first *and* the last
+   frame of an 8-second clip, with a prompt that locks the camera and lets
+   only the water move (`scripts/gen_video.py`).
 2. The script measures where the clip actually moves and lays just that
    -- the water -- back over the original painting. Jetty or pier, walls,
    trees and sky stay the still painting: sharp, and rock solid under
@@ -593,8 +595,9 @@ shown at once and the video fades in over it when it has loaded. On an
 iPhone or iPad in Low Power Mode videos do not autoplay; the water then
 simply stays still.
 
-**It costs money.** Veo has no free tier: a clip with the default "fast"
-model is about one US dollar (`python scripts/gen_video.py --prices`).
+**It costs money.** Video has no free tier (the key's Google project must
+be on a paid tier): an 8-second clip at 1080p is about 85 US cents
+(`python scripts/gen_video.py --prices`).
 The API key is read from `GEMINI_API_KEY` in the environment or in a
 `.env` / `.env.txt` file in the project root (git-ignored). Veo's raw
 clips, `work/veo-<map>.mp4`, are 30 MB each: `work/` is not in git and not

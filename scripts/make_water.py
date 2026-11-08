@@ -1,8 +1,9 @@
 """
 Moving water for a map's painting.
 
-A video model (Veo, see scripts/gen_video.py) turns the painting into eight
-seconds of film in which the water moves. This script prepares the picture
+A video model (Gemini Omni -- Veo until October 2026 --, see
+scripts/gen_video.py) turns the painting into eight seconds of film in
+which the water moves. This script prepares the picture
 for it and afterwards puts ONLY the moving water back into the original
 painting, so everything else -- jetty or pier, walls, trees, sky -- stays
 exactly the still painting: razor sharp and rock solid under Julian.
@@ -153,8 +154,10 @@ WATER = {
     # The big ocean, from the back deck of a boat under way: the wake.
     "ocean": dict(
         painting="backdrop-ocean",
+        all_water=True,
         prompt=(
-            "The open tropical ocean seen from the back deck of a big-game "
+            "In a single continuous shot, the camera locked off on the boat: "
+            "the open tropical ocean seen from the back deck of a big-game "
             "fishing boat that is sailing forward at a steady speed. The broad "
             "white wake behind the boat churns, foams and boils and streams "
             "steadily away toward the horizon; the deep blue swells on both "
@@ -290,6 +293,11 @@ def compose(map_id):
     water[top:top + rows * k, :cols * k] = np.kron(moving, np.ones((k, k), dtype=bool))
     water[top + rows * k:] = water[top + rows * k - 1]          # the few rows and columns
     water[:, cols * k:] = water[:, cols * k - 1:cols * k]       # the blocks did not cover
+    if spec.get("all_water"):
+        # The open sea from a sailing boat: all of it moves -- also the white
+        # foam of the wake and the deep blue swell, which change too little
+        # in brightness for the measure above. All but the deck is film.
+        water[:] = True
     first_row = max(top + MASK_FEATHER_PX * 3,                  # the film's own top edge
                     round(far_shore(map_id, width, height)))
     water[:first_row] = False
@@ -359,7 +367,7 @@ def main():
     ap.add_argument("map", choices=WATER, help="map id, as in src/data/maps.js")
     ap.add_argument("--compose", action="store_true",
                     help="skip the (paid) generation, reuse work/veo-<map>.mp4")
-    ap.add_argument("--model", default="fast", help="lite, fast (default) or full")
+    ap.add_argument("--model", default="omni", help="the video model (gen_video.py's MODELS)")
     args = ap.parse_args()
 
     if not args.compose:

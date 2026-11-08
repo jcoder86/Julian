@@ -381,6 +381,7 @@ const MAP_DEFS = [
     trophy: 'weigh',
     backdropKey: 'backdrop-ocean',
     backdropImage: 'clean/backdrop-ocean.jpg',
+    backdropVideo: 'clean/backdrop-ocean.mp4',
     skyMask: 'clean/sky-mask-ocean.png',
     skyMaskFraction: 320 / 720,
     clouds: [

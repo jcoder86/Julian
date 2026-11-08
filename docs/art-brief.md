@@ -214,14 +214,13 @@ alleen op deze computer staan: de map `work` komt niet in git. Zolang ze er zijn
 `python scripts/make_water.py sea --compose` gratis opnieuw samenstellen.
 Er zit ook geluid in (golven, vogels) dat nog niet gebruikt wordt.
 
-De Grote oceaan heeft nog **geen** bewegend water. Sinds november 2026
-kent de Gemini-sleutel Veo niet meer (het script krijgt "404"). Het kan
-ook via ElevenLabs (Image & Video, model Veo 3.1 Fast, ongeveer 2.400
-credits, start- en eindbeeld `work/veo-ocean-frame.jpg`), maar daar moet
-je eerst hun gebruiksregels accepteren. De film dan opslaan als
-`work/veo-ocean.mp4`, in een terminal in de Julian-map `python
-scripts/make_water.py ocean --compose`, en in `src/data/maps.js` bij de
-oceaan `backdropVideo: 'clean/backdrop-ocean.mp4'` terugzetten.
+Google heeft Veo op 22 oktober 2026 uitgezet. Sindsdien maakt
+`scripts/gen_video.py` de film met **Gemini Omni 1.2 Flash**, met dezelfde
+sleutel en hetzelfde betaalaccount (ongeveer $0,85 voor 8 seconden in
+1080p). De Grote oceaan is als eerste zo gemaakt; de andere kaarten hebben
+nog hun Veo-film. Krijgt het script een "404", kijk dan in AI Studio
+(aistudio.google.com, "API Keys") of het project nog een betaald niveau
+heeft ("Tier 1"), en in Google's documentatie welk videomodel er nu is.
 
 ## De stem bij een vangst
 

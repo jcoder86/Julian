@@ -68,10 +68,7 @@ verstaan zoals geschreven.
 
 ## Nog te doen
 
-- Bewegend water voor de Grote oceaan (zie "Bewegend water" in
-  `docs/art-brief.md`): Veo werkt niet meer via de Gemini-sleutel; via
-  ElevenLabs kan het, maar dan moeten hun gebruiksregels eerst
-  geaccepteerd worden.
+Niets.
 
 ## Ronde van 20 oktober 2026 (later): exotischer
 
@@ -139,7 +136,7 @@ plaatjes maar worden door het spel zelf getekend (`addRays`, `addGlints` in
 ## Ronde van 8 november 2026: de Grote oceaan
 
 Het grote eindlevel: vissen vanaf een varende boot. Alles hieronder is op
-8 november 2026 gemaakt en zit in het spel, behalve het bewegende water.
+8 november 2026 gemaakt en zit in het spel.
 
 | Wat | Hoe | Klaar |
 |---|---|---|
@@ -155,7 +152,7 @@ Het grote eindlevel: vissen vanaf een varende boot. Alles hieronder is op
 | Grote plons, cameraklik, ketting van de weegschaal | ElevenLabs Sound Effects, `python scripts/make_sfx.py` | ja |
 | Gillende reel | gemaakt uit het eigen reel-geluid, `make_sfx.py` | ja |
 | Muziek: rustig en spannend | ElevenLabs Music, `python scripts/make_music.py` | ja |
-| Bewegend water | Veo, zie "Nog te doen" | nee |
+| Bewegend water (het kielzog) | Gemini Omni, `python scripts/make_water.py ocean` | ja |
 
 Niet gelukt: een gillende reel uit ElevenLabs (werd een zoemer, een
 telefoon, vogels, een ballon of een spuitbus) en een "zware ijzeren
