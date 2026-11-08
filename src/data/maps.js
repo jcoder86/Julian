@@ -147,11 +147,11 @@ function makeWaterTopAt(samples) {
 //   nlName          what the place is called: spoken when it is chosen
 //                   (the phrase `map_<id>` of a voice atlas)
 //   music           ambient loop key; falls back to the lake's if missing
-//   wake            only where `fishing` is 'troll': where the lure goes. A
-//                   tap on the water lobs it over the stern to `drop`; the
-//                   sea takes it back along the wake, the line from `from`
-//                   (just behind the stern) to `to` (where the wake meets
-//                   the horizon), to be trolled there
+//   wake            only where `fishing` is 'troll': a cast lands where the
+//                   water was tapped, but at least as far out as `nearY`;
+//                   the sea takes it back a little the way the wake runs,
+//                   from `from` (just behind the stern) to `to` (where it
+//                   meets the horizon)
 //   leap            optional: where a trophy's last leap is (x, y of the
 //                   water where it comes up, and the widest it may be);
 //                   else beside the landing spot
@@ -404,14 +404,15 @@ const MAP_DEFS = [
     seat: { x: 290, y: 650 },
     // Brought up to the stern, in the white of the wake.
     landing: { x: 700, y: 418 },
-    // Over the stern, back into the wake.
-    wake: { drop: { x: 700, y: 412 }, from: { x: 705, y: 425 }, to: { x: 715, y: 80 } },
+    // A cast lands at least this far out (design y); the wake runs from
+    // the stern to the horizon.
+    wake: { nearY: 380, from: { x: 705, y: 425 }, to: { x: 715, y: 80 } },
     // The last leap: in the wake behind the boat, clear of the children,
     // at most this wide (its tail must stay above the stern).
     leap: { x: 880, y: 290, width: 460 },
     // The boat: the deck, the stern and the two sides.
     dry: [
-      [0, 413], [50, 433], [1235, 433], [1280, 413], [1280, 840], [0, 840],
+      [0, 408], [50, 428], [1235, 428], [1280, 408], [1280, 840], [0, 840],
     ],
     waterline: flatHorizon(OCEAN_HORIZON),
     depthFarY: WORLD_TOP + OCEAN_HORIZON * WORLD_HEIGHT,

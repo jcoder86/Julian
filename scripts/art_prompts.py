@@ -647,26 +647,26 @@ No people, no animals, no other boats, no text. 4:3 landscape.
 """
 
 WEIGH_BACKDROP = """\
-A painting for a children's fishing game, in exactly the same rich,
-detailed, warm painting style as the attached reference image: the
-WEIGHING STATION at the end of a wooden dock in a tropical sport-fishing
-harbour, at golden sunset.
+Repaint the attached picture (the weighing station of a tropical sport-
+fishing harbour at golden sunset) in exactly the same rich, detailed, warm
+painting style, the same light and the same harbour behind -- but with
+NOTHING in the foreground except the empty dock.
 
-Straight on, at eye level. Across the very TOP edge of the picture runs the
-thick wooden crossbeam of a tall weighing gallows, held up by two massive
-square wooden posts standing at the far left and the far right edges of
-the picture. Nothing hangs from the beam yet.
+Straight on, at eye level. The ground is the dock: broad, weathered wooden
+planks filling the lower fifth of the picture, seen from a little above,
+completely EMPTY -- no cooler box, no rope, no buckets, no crates, nothing
+on it. Remove the wooden gallows entirely: no posts, no crossbeam, nothing
+standing up from the dock and nothing hanging from above; the sky shows
+all the way to the top edge. Behind the dock, as in the reference: the calm
+harbour glowing orange and gold in the low sun, moored white sport-fishing
+boats with tall outrigger poles, palm trees, a small tackle hut with a
+string of light bulbs, and the sun sinking into the sea -- all of it in
+the distance.
 
-The ground is the dock: broad, weathered wooden planks filling the lower
-fifth of the picture, seen from a little above, with a coiled rope and a
-cooler box near the left post. Behind the dock: the calm harbour glowing
-orange and gold in the low sun, moored white sport-fishing boats with tall
-outrigger poles, palm trees, a small tackle hut with a string of light
-bulbs, and the sun sinking into the sea.
-
-Between the two posts the whole middle of the picture is EMPTY: no fish,
-no scale, no people, no animals there -- a big fish, a scale and children
-are added later. No text, no signs with letters. 4:3 landscape.
+(A big fish on a scale and children standing at their real height are
+added later, at many different sizes: nothing near them may show how big
+they are.) No people, no animals, no text, no signs with letters. 4:3
+landscape.
 """
 
 MAPSELECT_BACKGROUND = """\
@@ -1297,8 +1297,11 @@ JOBS = {
     "ocean":        dict(out="assets/raw/backdrop-ocean.png",
                          refs=["assets/raw/backdrop-greece.png", "assets/raw/layout-ocean.png"],
                          brief=OCEAN_BACKDROP),
+    # (Made from its own first version, which had a gallows, a cooler and a
+    # rope in front: all of them gone, as they did not grow or shrink with
+    # the children. The first version is kept in work/weigh-ocean-v1.png.)
     "weigh":        dict(out="assets/raw/weigh-ocean.png",
-                         refs=["assets/raw/backdrop-greece.png"], brief=WEIGH_BACKDROP),
+                         refs=["work/weigh-ocean-v1.png"], brief=WEIGH_BACKDROP),
     "ui-scale":     dict(out="assets/raw/ui-scale.png", refs=[], brief=UI_SCALE),
     "ocean-baits":  dict(out="assets/raw/baits-ocean.png",
                          refs=["assets/raw/baits-sea.png"], brief=OCEAN_BAITS),

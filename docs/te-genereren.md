@@ -184,3 +184,15 @@ van Gemini Omni bewoog twee seconden, sprong, en stond daarna bijna stil).
 
 Het Gemini-tegoed was op (8 november 2026): zonder tegoed geen Omni en
 geen `listen.py`. Opwaarderen in AI Studio (aistudio.google.com, Billing).
+
+## Ronde van 8 november 2026 (nacht): de weegplaats zonder decor
+
+Bij een grote vis werden de kinderen kleiner maar de koelbox, het touw, de
+galg en de weegschaal niet: de verhoudingen klopten niet.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Weegplaats opnieuw: alleen een leeg dok, de haven in de verte (geen galg, koelbox of touw) | Codex, `weigh` (met de eerste versie, `work/weigh-ocean-v1.png`, als voorbeeld), daarna `make_paintings.py weigh-ocean` | ja |
+
+De weegschaal schaalt nu mee (ongeveer 70 cm), en de ketting loopt door
+tot de staart van de vis.

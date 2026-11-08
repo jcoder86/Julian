@@ -243,13 +243,14 @@ const LURE_REFUSE_TO = 0.8;
 // ---------------------------------------------------------------------------
 // Trolling (the big ocean)
 // ---------------------------------------------------------------------------
-// What is on the line is let out behind the boat as it sails, and trolled
-// there: no float, no reeling it back. A tap anywhere on the water lobs it
-// over the stern (the map's `wake.drop`); the sea takes it back into the
-// wake while the reel pays out line, to a spot along the wake (`wake.from`
-// -> `wake.to`, at `TROLL_AT` of the way). There it is pulled along: it
-// weaves, dives and skips out again, and leaves a trail of foam that
-// streams away with the sea. Now and then a fin cuts the water behind it
+// What is on the line is cast out behind the boat as it sails, and trolled
+// there: no float, no reeling it back. It lands where the water was tapped
+// -- but never right behind the stern (`wake.nearY`) -- and the sea takes
+// it a little further back while the reel pays out line. Then it goes under
+// and is pulled along below the surface, weaving, and now and then skips
+// out with a splash; a trail of bubbles streams away from it with the sea
+// (`wake.from` -> `wake.to` says which way). A tap on the water winds it
+// in again, as anywhere. Now and then a fin cuts the water behind it
 // (a fish having a look); and after a long wait -- the big ones are few --
 // the strike: the water explodes, the reel screams, "Vis aan!". Then a
 // long, hard fight (FishFight's big game):
@@ -262,17 +263,19 @@ const LURE_REFUSE_TO = 0.8;
 const TROLL_WAIT_MIN = 20000;           // ms from the lure landing to the strike
 const TROLL_WAIT_MAX = 45000;
 const TROLL_TEASERS = [1, 3];           // fins seen behind the lure before it
-const TROLL_AT = [0.22, 0.36];          // how far along the wake the lure is trolled
-const TROLL_SIDE_PX = 30;               // ...and how far to one side of its middle
-const TROLL_DROPBACK_MS = 3200;         // from the stern back to that spot
+const TROLL_BACK_PX = 45;               // the sea takes it this much further back (at full scale)...
+const TROLL_DROPBACK_MS = 1800;         // ...in this long, while line runs off the reel
 const TROLL_WEAVE_PX = 16;              // the lure weaves in the wake (at full scale)
 const TROLL_WEAVE_MS = 2300;
 const TROLL_DRIFT_PX = 26;              // ...and the whole spot sways as the boat yaws
 const TROLL_DRIFT_MS = 9000;
 const TROLL_SPRAY_MS = 120;             // a puff of its foam trail this often
 const TROLL_TRAIL_PX = 70;              // ...which streams this far away with the sea
-const TROLL_SKIP_MS = [1400, 2600];     // between dives: under for a moment, then out with a splash
-const TROLL_DIVE_MS = 420;
+const TROLL_SKIP_MS = [2600, 4800];     // under water this long, then it skips out...
+const TROLL_SURFACE_MS = 650;           // ...for this long, with a splash
+// Under water it is fainter and takes on the colour of the sea.
+const TROLL_UNDER_ALPHA = 0.62;
+const TROLL_UNDER_TINT = 0x86b4e6;
 // Spray and foam on the ocean get a thin blue-grey rim, so that they show
 // on the white of the wake too.
 const FOAM_RIM = 0x3f86b8;
@@ -1439,10 +1442,9 @@ export class FishingScene extends Phaser.Scene {
     switch (this.state) {
       case STATE.READY:
         if (this._isInsideWater(x, y)) {
-          // Behind a boat the lure goes over the stern, wherever the tap was.
-          const drop = this._isTrollMode() && this.map.wake ? this.map.wake.drop : null;
-          if (drop) this._beginCast(drop.x, drop.y);
-          else this._beginCast(x, y);
+          // Behind a boat: where the tap was, but never right up against the stern.
+          const near = this._isTrollMode() && this.map.wake ? this.map.wake.nearY : null;
+          this._beginCast(x, near != null ? Math.min(y, near) : y);
         }
         break;
 
@@ -1473,7 +1475,9 @@ export class FishingScene extends Phaser.Scene {
         break;
 
       case STATE.TROLLING:
-        // The lure is out behind the boat: wait for the strike.
+        // The lure is out behind the boat. A tap winds it in again, as on
+        // the other maps -- unless a fish has just struck it.
+        if (this._troll) this._enterReady();
         break;
 
       case STATE.CATCHING:
@@ -1925,6 +1929,7 @@ export class FishingScene extends Phaser.Scene {
     this.lureSprite.setPosition(0, 0);
     this.lureSprite.setRotation(0);
     this.lureSprite.setFlipY(false);
+    this.lureSprite.clearTint();
   }
 
   /**
@@ -2228,24 +2233,23 @@ export class FishingScene extends Phaser.Scene {
     this.bobberHomeY = y;
     this.bobber.setScale(this._bobberDepthScale(y));
     this._pointLureAtRod();
-    // Where it is trolled: along the wake, a little to one side.
+    // The sea runs from the boat toward the horizon (the way the wake
+    // goes): it takes the lure a little further back.
     const wake = this.map.wake;
-    let spot = { x, y };
     if (wake) {
-      const f = Phaser.Math.FloatBetween(...TROLL_AT);
       const dx = wake.to.x - wake.from.x;
       const dy = wake.to.y - wake.from.y;
       const len = Math.hypot(dx, dy) || 1;
-      const side = Phaser.Math.FloatBetween(-1, 1) * TROLL_SIDE_PX;
-      spot = { x: wake.from.x + dx * f - (dy / len) * side, y: wake.from.y + dy * f + (dx / len) * side };
-      // (The sea runs from the boat toward the horizon: the way the foam goes.)
       this._trollFlow = { x: dx / len, y: dy / len };
     } else {
       this._trollFlow = { x: 0, y: -1 };
     }
+    const back = TROLL_BACK_PX * this._bobberDepthScale(y);
+    let spot = { x: x + this._trollFlow.x * back, y: y + this._trollFlow.y * back };
+    if (!this.map.isWater(spot.x, spot.y)) spot = { x, y };
     this._troll = {
       x: spot.x, y: spot.y, from: { x, y }, back: 0,
-      t: 0, sprayIn: 0, skipIn: Phaser.Math.Between(...TROLL_SKIP_MS), diving: 0, timers: [],
+      t: 0, sprayIn: 0, skipIn: Phaser.Math.Between(...TROLL_SKIP_MS), surfacing: 0, timers: [],
     };
     // Line runs off the reel while the lure drops back.
     this.audio.startReelLoop();
@@ -2291,28 +2295,46 @@ export class FishingScene extends Phaser.Scene {
     this.bobber.y = baseY + flow.x * (weave + drift) + bob;
     this._pointLureAtRod();
 
-    // Now and then it dives for a moment and skips out with a splash.
+    // Under water, pulled along; now and then it skips out with a splash.
+    // (It goes under as it drops back.)
+    let under = Phaser.Math.Clamp(tr.back * 2.5 - 0.5, 0, 1);
     if (settled >= 1) {
       tr.skipIn -= delta;
-      if (tr.skipIn <= 0 && !tr.diving) {
-        tr.diving = TROLL_DIVE_MS;
+      if (tr.skipIn <= 0 && !tr.surfacing) {
+        tr.surfacing = TROLL_SURFACE_MS;
         tr.skipIn = Phaser.Math.Between(...TROLL_SKIP_MS);
+        this._skipSplash(this.bobber.x, this.bobber.y, scale);
       }
     }
-    if (tr.diving) {
-      tr.diving = Math.max(0, tr.diving - delta);
-      const p = 1 - tr.diving / TROLL_DIVE_MS;          // 0..1 through the dive
-      this.bobber.setAlpha(1 - 0.75 * Math.sin(p * Math.PI));
-      this.bobber.y += Math.sin(p * Math.PI) * 4 * scale;
-      if (!tr.diving) this._skipSplash(this.bobber.x, this.bobber.y, scale);
+    if (tr.surfacing) {
+      tr.surfacing = Math.max(0, tr.surfacing - delta);
+      const p = 1 - tr.surfacing / TROLL_SURFACE_MS;      // 0..1 out of the water and back
+      under *= 1 - Math.sin(p * Math.PI);
+      if (!tr.surfacing) this._skipSplash(this.bobber.x, this.bobber.y, scale);
     }
+    this._setLureUnder(under);
+    this.bobber.y += under * 4 * scale;
 
-    // Its trail: foam that streams away from it, toward the horizon.
+    // Its trail: bubbles that stream away from it, toward the horizon.
     tr.sprayIn -= delta;
     if (tr.sprayIn <= 0) {
       tr.sprayIn = TROLL_SPRAY_MS;
-      this._trail(this.bobber.x, this.bobber.y, scale, tr.diving ? 0.3 : 0.75);
+      this._trail(this.bobber.x, this.bobber.y, scale, 0.45 + 0.3 * (1 - under));
     }
+  }
+
+  /** How far under the surface the trolled lure is: 0 on top, 1 under. */
+  _setLureUnder(under) {
+    if (!this.bobber) return;
+    this.bobber.setAlpha(Phaser.Math.Linear(1, TROLL_UNDER_ALPHA, under));
+    if (!this.lureSprite) return;
+    if (under <= 0.01) {
+      this.lureSprite.clearTint();
+      return;
+    }
+    const mix = (c) => Math.round(Phaser.Math.Linear(255, c, under));
+    const t = TROLL_UNDER_TINT;
+    this.lureSprite.setTint((mix((t >> 16) & 255) << 16) | (mix((t >> 8) & 255) << 8) | mix(t & 255));
   }
 
   /** A puff of the lure's foam trail: it streams away with the sea and spreads. */
@@ -2430,7 +2452,7 @@ export class FishingScene extends Phaser.Scene {
     if (!this._troll) return;
     for (const t of this._troll.timers) t.remove(false);
     if (this._troll.back < 1) this.audio.stopReelLoop();
-    if (this.bobber) this.bobber.setAlpha(1);
+    this._setLureUnder(0);
     this._troll = null;
   }
 

@@ -294,12 +294,14 @@ The last level fishes differently (`fishing: 'troll'` and `trophy:
 'weigh'` on the map; the code is the "Trolling" part of `FishingScene.js`,
 FishFight's `BIG` and `src/scenes/TrophyScene.js`).
 
-* **Trolling.** A tap anywhere on the water lobs the lure over the stern
-  (`wake.drop` in `maps.js`); the sea takes it back into the wake while
-  the reel pays out line, to a spot along it (`wake.from` -> `wake.to`).
-  There it is pulled along on a taut line: it weaves, sways as the boat
-  yaws, dives for a moment and skips out with a splash, and leaves a trail
-  of foam that streams away with the sea. Then: wait. A strike comes after
+* **Trolling.** The lure is cast where the water is tapped -- but never
+  right behind the stern (`wake.nearY` in `maps.js`); the sea takes it a
+  little further back while the reel pays out line. Then it goes under:
+  pulled along on a taut line below the surface (fainter, the colour of
+  the sea), weaving and swaying as the boat yaws, and now and then it
+  skips out with a splash; a trail of bubbles streams away from it with
+  the sea. A tap on the water winds it in again, as on the other maps.
+  Then: wait. A strike comes after
   20 to 45 seconds (`TROLL_WAIT_MIN/MAX`); before it, a fin or two cuts
   the water behind the lure -- a fish having a look. The strike: the water
   explodes, the reel screams, "Vis aan!" -- and the music turns exciting.
@@ -326,7 +328,10 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   the team stand next to it at their **true height** (`trophy` in
   `teams.js`: Julian 105 cm, Dirk 40, James 120, Boaz 104), all on one
   scale -- a dorado comes up to their nose, a white shark towers over
-  them. Beside a fish of many metres they are only a few pixels tall; then
+  them. The scale is on that scale too (about 70 cm, never too small to
+  see), and nothing else in front has a size of its own: the painting is
+  an empty dock with the harbour far behind (a gallows, a cooler and a
+  rope in the first one stayed the same size while the children shrank). Beside a fish of many metres they are only a few pixels tall; then
   a magnifying glass shows them big, with a dotted line to where they
   really stand. Flash, applause, confetti; for a giant rays of light and
   "Wereldrecord!". The pieces are cut by `scripts/make_trophy.py`.

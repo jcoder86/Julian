@@ -42,7 +42,13 @@ export function trophyFigureKey(who) {
 // ring it is STAGE_H; under the dock there is room for the name plate.
 const STAGE_H = 860;
 const BELOW = 120;
-const SCALE_H = 300;                // the scale, ring to hook
+// The scale is a real thing too: about SCALE_CM from ring to hook, at the
+// same px per cm as the fish and the children -- at most SCALE_H, and never
+// smaller than SCALE_H_MIN (or it could not be seen; the plate says the
+// weight as well).
+const SCALE_CM = 70;
+const SCALE_H = 300;
+const SCALE_H_MIN = 100;
 const FISH_X = 120;                 // where the fish hangs
 const HEAD_GAP = 22;                // between its head and the dock
 const MIN_CHAIN = 26;               // between the hook and its tail
@@ -72,6 +78,37 @@ const CONFETTI = [0xffd23c, 0xff5a5a, 0x4ec3ff, 0x7dff8a, 0xff9de2, 0xffffff];
 // The green "go on fishing" button, as on the catch screen.
 const PLAY_BTN_SIZE = 210;
 const PLAY_BTN_MARGIN = 30;
+
+/**
+ * How many px of empty margin a fish picture has before its tail (on the
+ * left), measured in the middle of its height, where the tail is.
+ */
+const tailInsets = new Map();
+function tailInset(scene, key) {
+  if (tailInsets.has(key)) return tailInsets.get(key);
+  let inset = 0;
+  try {
+    const src = scene.textures.get(key).getSourceImage();
+    const canvas = document.createElement('canvas');
+    canvas.width = src.width;
+    canvas.height = src.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(src, 0, 0);
+    const top = Math.floor(src.height * 0.3);
+    const rows = Math.max(1, Math.floor(src.height * 0.4));
+    const cols = Math.ceil(src.width * 0.4);
+    const data = ctx.getImageData(0, top, cols, rows).data;
+    let first = cols;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < first; x++) {
+        if (data[(y * cols + x) * 4 + 3] > 128) { first = x; break; }
+      }
+    }
+    inset = first < cols ? first : 0;
+  } catch (e) { /* (unreadable: no margin assumed) */ }
+  tailInsets.set(key, inset);
+  return inset;
+}
 
 /** "4,8 m" or "85 cm" */
 function lengthText(cm) {
@@ -157,13 +194,23 @@ export class TrophyScene extends Phaser.Scene {
 
     // The scale hangs from above; its hook tip is where the fish hangs from.
     const sm = meta.scale || { w: 280, h: 560, cx: 140, cy: 254, r: 110, hookX: 140, hookY: 559 };
-    const ks = SCALE_H / sm.h;
+    // One scale for fish, children and the weighing scale alike: px per cm.
+    // (The scale's size and the room under it depend on each other: a few
+    // rounds settle them.)
+    const cm = lengthCm || 100;
+    let scaleH = SCALE_H;
+    let room = 0;
+    let k = 1;
+    for (let i = 0; i < 4; i++) {
+      room = STAGE_H - sm.hookY * (scaleH / sm.h) - HEAD_GAP - MIN_CHAIN;
+      k = Math.min(room / cm, (room * KID_SHARE) / tallest);
+      scaleH = Phaser.Math.Clamp(SCALE_CM * k, SCALE_H_MIN, SCALE_H);
+    }
+    room = STAGE_H - sm.hookY * (scaleH / sm.h) - HEAD_GAP - MIN_CHAIN;
+    k = Math.min(room / cm, (room * KID_SHARE) / tallest);
+    const ks = scaleH / sm.h;
     const scaleTop = -STAGE_H;
     const hookY = scaleTop + sm.hookY * ks;
-    const room = -hookY - HEAD_GAP - MIN_CHAIN;
-    // One scale for fish and children alike: px per cm.
-    const cm = lengthCm || 100;
-    const k = Math.min(room / cm, (room * KID_SHARE) / tallest);
     this.pxPerCm = k;
     const fishPx = cm * k;
 
@@ -186,14 +233,18 @@ export class TrophyScene extends Phaser.Scene {
     stage.add(hang);
     const tailY = -HEAD_GAP - fishPx;            // in stage coordinates
     const chainLen = tailY - hookY;
+    const key = fishTextureKey(species, size);
+    // The picture has a little empty margin before the tail: the chain goes
+    // on down to where the tail really is, and a little round it.
+    const inset = this.textures.exists(key)
+      ? tailInset(this, key) * (fishPx / this.textures.get(key).getSourceImage().width) : 0;
     const chain = this.add.graphics();
     chain.lineStyle(4, 0x3a3a3a, 1);
-    for (let y = 0; y < chainLen; y += 12) {
+    for (let y = 0; y < chainLen + inset + 4; y += 12) {
       chain.strokeEllipse(0, y + 6, 8, 12);
     }
     hang.add(chain);
     let fishHalfW = 40;
-    const key = fishTextureKey(species, size);
     if (this.textures.exists(key)) {
       const fish = this.add.image(0, chainLen + fishPx / 2, key);
       fish.setScale(fishPx / fish.width);

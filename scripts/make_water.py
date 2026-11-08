@@ -167,6 +167,9 @@ WATER = {
         seconds=12,
         clean_stretch=True,
         loop_blend=24,
+        # Right up to the rail: no band of still water along the boat.
+        dry_margin=-3,
+        feather=2,
         prompt=(
             "In a single continuous shot, the camera locked off on the boat: "
             "the open tropical ocean seen from the cockpit of a big-game "
@@ -340,12 +343,22 @@ def compose(map_id):
         # foam of the wake and the deep blue swell, which change too little
         # in brightness for the measure above. All but the deck is film.
         water[:] = True
+    feather = spec.get("feather", MASK_FEATHER_PX)
     first_row = max(top + MASK_FEATHER_PX * 3,                  # the film's own top edge
                     round(far_shore(map_id, width, height)))
     water[:first_row] = False
     # Never what the anglers sit on: a floating pontoon bobs in the film, and
     # even a fixed jetty's planks shimmer a little. It stays the painting.
-    water &= ~ndimage.binary_dilation(dry_land(map_id, width, height), iterations=DRY_MARGIN_PX)
+    # (`dry_margin` below zero: the film reaches a few px onto the dry
+    # edge itself -- a boat's rail is fixed to the camera and as sharp in the
+    # film as in the painting, so no band of still water is left beside it.)
+    dry = dry_land(map_id, width, height)
+    margin = spec.get("dry_margin", DRY_MARGIN_PX)
+    if margin > 0:
+        dry = ndimage.binary_dilation(dry, iterations=margin)
+    elif margin < 0:
+        dry = ndimage.binary_erosion(dry, iterations=-margin)
+    water &= ~dry
     # A fire on the ice (`flames`, design coordinates): there, too, the film
     # -- where it moves: the flames and the smoke, not the iron bowl.
     if spec.get("flames"):
@@ -356,8 +369,8 @@ def compose(map_id):
         water |= polygons_mask(spec["flames"], width, height) & lively
     # ...then pull the edge in a little and soften it.
     pad = MASK_FEATHER_PX * 4
-    water = ndimage.binary_erosion(np.pad(water, pad, mode="edge"), iterations=MASK_FEATHER_PX)
-    mask = ndimage.gaussian_filter(water.astype(np.float32), MASK_FEATHER_PX)[pad:-pad, pad:-pad]
+    water = ndimage.binary_erosion(np.pad(water, pad, mode="edge"), iterations=feather)
+    mask = ndimage.gaussian_filter(water.astype(np.float32), feather)[pad:-pad, pad:-pad]
     Image.fromarray((mask * 255).astype(np.uint8)).save(WORK / f"water-mask-{map_id}.png")
 
     # --- colour: the film's first frame IS the painting, so any overall
