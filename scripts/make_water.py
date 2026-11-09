@@ -167,9 +167,11 @@ WATER = {
         seconds=12,
         clean_stretch=True,
         loop_blend=24,
-        # Right up to the rail: no band of still water along the boat.
-        dry_margin=-3,
-        feather=2,
+        # Right up to the rail: no band of still water along the boat. Not
+        # the map's rough `dry` polygon but each boat's own rail line
+        # (RAIL_LINES in make_boats.py), to the pixel.
+        rail_lines=True,
+        feather=2,                       # (the far edge, at the horizon)
         prompt=(
             "In a single continuous shot, the camera locked off on the boat: "
             "the open tropical ocean seen from the cockpit of a big-game "
@@ -356,7 +358,8 @@ def compose(map_id, painting=None):
     # (`dry_margin` below zero: the film reaches a few px onto the dry
     # edge itself -- a boat's rail is fixed to the camera and as sharp in the
     # film as in the painting, so no band of still water is left beside it.)
-    dry = dry_land(map_id, width, height)
+    dry = (np.zeros((height, width), dtype=bool) if spec.get("rail_lines")
+           else dry_land(map_id, width, height))
     margin = spec.get("dry_margin", DRY_MARGIN_PX)
     if margin > 0:
         dry = ndimage.binary_dilation(dry, iterations=margin)
@@ -375,6 +378,11 @@ def compose(map_id, painting=None):
     pad = MASK_FEATHER_PX * 4
     water = ndimage.binary_erosion(np.pad(water, pad, mode="edge"), iterations=feather)
     mask = ndimage.gaussian_filter(water.astype(np.float32), feather)[pad:-pad, pad:-pad]
+    if spec.get("rail_lines"):
+        # A boat: the film down to the very top of its rail, edge smooth
+        # but sharp (the rail's edge is sharp in film and painting alike).
+        from make_boats import boat_of_painting, sea_above
+        mask *= sea_above(boat_of_painting(spec["painting"]), (width, height))
     Image.fromarray((mask * 255).astype(np.uint8)).save(WORK / f"water-mask-{map_id}.png")
 
     # --- colour: the film's first frame IS the painting, so any overall

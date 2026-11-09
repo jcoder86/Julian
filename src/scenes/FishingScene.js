@@ -13,7 +13,7 @@ import { BAITS_BY_ID, baitOnMap, baitSimpleTextureKey, isLure, isTroll, smallest
 import { getMap } from '../data/maps.js';
 import { getTeam } from '../data/teams.js';
 import { DEFAULT_FLOAT_ID, floatFullTextureKey, floatTipTextureKey } from '../data/floats.js';
-import { getBoat, boatTextureKey, boatImage, boatVideo, boatIconKey } from '../data/boats.js';
+import { getBoat, boatTextureKey, boatImage, boatVideo, boatIconKey, boatBadgeKey } from '../data/boats.js';
 import { TEX } from './BootScene.js';
 import {
   createBobberPlaceholder,
@@ -24,6 +24,7 @@ import { FishingLine } from '../systems/FishingLine.js';
 import { FishFight } from '../systems/FishFight.js';
 import { LureSwim } from '../systems/LureSwim.js';
 import { FishLeap, planLeap, leapExtent, leapSpecies, canBend } from '../systems/FishLeap.js';
+import { BoatProps } from '../systems/BoatProps.js';
 import { UI, COLOR, lettering } from '../systems/Ui.js';
 
 // =============================================================================
@@ -449,6 +450,12 @@ export class FishingScene extends Phaser.Scene {
     this._buildClouds();
     this._buildForeground();
     this._buildCharacters();
+    // What stands on the boat (the big ocean): data/boats.js `props`.
+    this.boatProps = null;
+    if (this.map.boats) {
+      this.boatProps = new BoatProps(this);
+      this.boatProps.show(getBoat(SaveSystem.getSelectedBoat()));
+    }
     this._buildBobber();
     this._buildFishOnIndicator();
     this._buildCollectionButton();
@@ -587,6 +594,7 @@ export class FishingScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    if (this.boatProps) this.boatProps.update();
     // DOM cloud parallax: each layer just scrolls its background. Position
     // and size are set from the layout (see _layoutClouds), so there is no
     // per-frame DOM measuring.
@@ -814,6 +822,9 @@ export class FishingScene extends Phaser.Scene {
       this.backdropImage.setVisible(true);
     }
     this._tryAttachDomVideoBackdrop();
+    // Another boat: the children sit where its deck is, its things around them.
+    if (this.crew) this.crew.moveTo(this._seat());
+    if (this.boatProps) this.boatProps.show(getBoat(SaveSystem.getSelectedBoat()));
   }
 
   _tryAttachDomVideoBackdrop() {
@@ -1101,8 +1112,14 @@ export class FishingScene extends Phaser.Scene {
     // Who is playing follows from the save profile chosen on the title
     // screen. The crew owns the figures; the scene only needs to know
     // where the rod ends.
-    this.crew = new Crew(this, getTeam(SaveSystem.getProfile()), this.map.seat);
+    this.crew = new Crew(this, getTeam(SaveSystem.getProfile()), this._seat());
     this.rodTip = this.crew.tip;
+  }
+
+  /** Where the angler sits: the map's seat, or the boat's own (data/boats.js). */
+  _seat() {
+    const boat = this.map.boats ? getBoat(SaveSystem.getSelectedBoat()) : null;
+    return (boat && boat.seat) || this.map.seat;
   }
 
   _buildBobber() {
@@ -1383,13 +1400,25 @@ export class FishingScene extends Phaser.Scene {
       fish.overlay.setVisible(false);
     }
 
-    // --- Float icon: selected float full sprite (or, behind a boat, the boat) ---
+    // --- Float icon: selected float full sprite (or, behind a boat, the
+    // boat: the whole boat, cut out, so a child sees it is about boats) ---
     const fl = this.hudIcons.float;
     const flId = SaveSystem.getSelectedFloat() || DEFAULT_FLOAT_ID;
-    const flKey = this.map.boats ? boatIconKey(getBoat(SaveSystem.getSelectedBoat())) : floatFullTextureKey(flId);
+    let flKey = floatFullTextureKey(flId);
+    if (this.map.boats) {
+      const boat = getBoat(SaveSystem.getSelectedBoat());
+      flKey = this.textures.exists(boatBadgeKey(boat)) ? boatBadgeKey(boat) : boatIconKey(boat);
+    }
     if (this.textures.exists(flKey)) {
       fl.overlay.setTexture(flKey);
       this._fitOverlayInside(fl.overlay, fl.sizePx * INNER_RATIO);
+      if (this.map.boats) {
+        // A long, low boat (the speedboat) may be wider: it still fits the
+        // round window, corner to corner.
+        const o = fl.overlay;
+        const diagonal = Math.hypot(o.width, o.height);
+        o.setScale(Math.max(o.scaleX, (fl.sizePx * 0.84) / diagonal));
+      }
       fl.overlay.setVisible(true);
     } else {
       fl.overlay.setVisible(false);

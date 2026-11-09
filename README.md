@@ -112,7 +112,19 @@ below the row, bigger, in a golden frame with rays of light behind it.
   (`scripts/make_boats.py` takes it from the first painting), so one water
   film, one fishing area and one set of places fit them all; each boat has
   its own still and video (`make_water.py ocean --compose --painting
-  backdrop-ocean-<boat>`). It plays differently from every other spot: lures are **trolled** behind the
+  backdrop-ocean-<boat>`). The film reaches the very top of each boat's
+  own rail (`RAIL_LINES` in `make_boats.py`, measured on the paintings):
+  no strip of still sea is left above it. Where a boat's walls are higher
+  the children sit further forward on its deck (`seat` in `boats.js`). The
+  boat button and menu show each WHOLE boat from outside, and each boat
+  has its own things (`props`, `src/systems/BoatProps.js`, cut out by
+  `scripts/make_boat_props.py`): a fighting chair and a pennant on the
+  sport-fishing boat, fish crates, a net and gulls following the fishing
+  boat, a treasure chest that sparkles, a cannon, a pirate flag and a
+  parrot on the pirate ship, a cooler and a chequered flag on the
+  speedboat -- on the right of the deck and at the right corner, never
+  where the children sit, where the rod swings back or where the reel
+  comes up; the flags wave (a Rope, like the leaping fish). It plays differently from every other spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Six trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged

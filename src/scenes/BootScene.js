@@ -13,7 +13,10 @@ import { TEAMS, lookTeamId } from '../data/teams.js';
 import { CHARACTERS_KEY, crewTextureKey, buildClipTexture } from '../systems/Crew.js';
 import { UI } from '../systems/Ui.js';
 import { TROPHY, trophyFigureKey } from './TrophyScene.js';
-import { BOATS, boatTextureKey, boatImage, boatIconKey, boatIconImage } from '../data/boats.js';
+import {
+  BOATS, boatTextureKey, boatImage, boatIconKey, boatIconImage, boatBadgeKey, boatBadgeImage,
+  propFiles, propTextureKey, propImage,
+} from '../data/boats.js';
 
 // Texture / video keys used across scenes. Centralised so renames are
 // caught at import time rather than as silent missing-asset errors.
@@ -130,10 +133,15 @@ export class BootScene extends Phaser.Scene {
     this.load.image(TEX.FISHON,      'raw/fishon.png');
 
     // The boats of the big ocean: their paintings (the first one is the
-    // map's own) and a square piece of each for the boat button and menu.
+    // map's own), a picture of each whole boat for the boat button and
+    // menu, and what stands on each.
     for (const boat of BOATS) {
       if (!this.textures.exists(boatTextureKey(boat))) this.load.image(boatTextureKey(boat), boatImage(boat));
       this.load.image(boatIconKey(boat), boatIconImage(boat));
+      this.load.image(boatBadgeKey(boat), boatBadgeImage(boat));
+      for (const prop of boat.props || []) {
+        for (const file of propFiles(prop)) this.load.image(propTextureKey(boat, file), propImage(boat, file));
+      }
     }
 
     // The weighing station of the big ocean: its painting, the scale, and

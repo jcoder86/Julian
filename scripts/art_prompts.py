@@ -1447,3 +1447,173 @@ for _id, (_subject, _view, _extra) in FISH.items():
         refs=["assets/raw/fish-catfish.webp"],
         brief=FISH_STRIP.format(subject=_subject, view=_view, extra=_extra),
     )
+
+# ---------------------------------------------------------------------------
+# The boats, more of each (November 2026): a picture of the WHOLE boat for
+# the boat button and menu (a child must see at once that it is another
+# boat, not another floor), and things that belong on each boat -- cut out
+# on green, placed and moved by the game (`props` in src/data/boats.js), so
+# that they never touch the rail, the water film or the children's place.
+# Processed by scripts/make_boat_props.py.
+# ---------------------------------------------------------------------------
+
+BOAT_ICON = """\
+A painting for a children's fishing game, in exactly the same rich,
+detailed, warm painting style and the same bright tropical sunlight as the
+attached picture -- which shows the back deck of this boat. Now paint the
+WHOLE BOAT, seen from OUTSIDE: {boat}
+
+It sails toward the right over the deep blue tropical ocean, seen from the
+side and a little from behind and above, a curl of white wake behind it, a
+small green island with a volcano far away on the horizon, a clear blue
+sky. The boat is BIG in the picture and COMPLETE from bow to stern, with a
+little sea all around it, so that a small child sees at a glance what kind
+of boat it is.
+
+No people, no animals, no text, no letters, no numbers. Square image.
+"""
+
+BOAT_ICONS = {
+    "sportvis": (
+        "a classic white SPORT-FISHING YACHT: a sleek white hull with a thin "
+        "dark blue stripe, a flybridge with a tall chrome tuna tower on top, two "
+        "long outrigger poles angled out to the sides, and at the stern an open "
+        "teak cockpit with chrome rod holders and a white fighting chair."),
+    "vissersboot": (
+        "a sturdy, cheerful classic WHITE FISHING BOAT: a white-painted wooden "
+        "hull with a bright blue band along its top, a small white wheelhouse "
+        "with round windows, a short mast with a boom and green nets hanging "
+        "from it, orange fish crates and an orange life ring on board."),
+    "piratenschip": (
+        "a wooden PIRATE SHIP: a dark polished wooden hull with carved "
+        "decorations and brass lanterns at its high stern, two masts with "
+        "patched cream-coloured sails, and a black flag with a white skull and "
+        "crossbones flying from the top of the main mast."),
+    "speedboot": (
+        "a cool, tough SPEEDBOAT: a long, low, sleek pointed hull, glossy black "
+        "with fiery red racing stripes, a raked chrome windscreen and two big "
+        "black outboard engines at the stern, racing so fast that spray flies "
+        "up and its bow lifts out of the water."),
+}
+
+BOAT_PROP = """\
+A single object for a children's fishing game, painted in exactly the same
+rich, detailed, warm painting style and the same bright tropical sunlight
+as the attached picture (the back deck of the boat it belongs on): {what}
+
+Seen as it would be on that deck: from a standing person's eye height, a
+little from above. Sunlight from the upper left. The whole object is in
+the picture with plenty of green around it; nothing is cropped.
+
+Solid flat pure green (#00FF00) chroma-key background everywhere around it;
+no shadow on the background, no floor, no deck, no water, no people, no
+text, no letters, no numbers. {shape}
+"""
+
+FLAG = ("{flag}, flying from a thin {pole} flagpole. The pole stands "
+        "upright along the LEFT edge of the picture, from the very top to the "
+        "very bottom; the flag is fixed at the TOP of the pole and flies out "
+        "to the RIGHT, seen flat from the side, filling the top half of the "
+        "picture. Below the flag only the bare pole.")
+
+BOAT_PROPS = {
+    # sport-fishing boat
+    "sportvis-chair": (
+        "a big-game FIGHTING CHAIR as on a sport-fishing yacht: a wide white "
+        "upholstered seat with a padded backrest and armrests on a polished "
+        "chrome swivel pedestal with a round chrome foot plate, a teak "
+        "footrest bar, a chrome rod socket at the front of the seat. Seen from "
+        "BEHIND and a little from the left: its backrest faces us.",
+        "Square image."),
+    "sportvis-flag": (
+        FLAG.format(flag="a small triangular royal-blue pennant with a white "
+                    "leaping marlin silhouette on it", pole="polished chrome"),
+        "Portrait image, twice as tall as wide."),
+    # fishing boat
+    "vissersboot-crates": (
+        "a neat stack of three old, chipped ORANGE plastic fish crates -- two "
+        "side by side at the bottom, one on top -- filled with crushed ice and "
+        "shiny silver mackerel, a few red snappers peeking out.",
+        "Square image."),
+    "vissersboot-net": (
+        "a loose heap of green FISHING NET with round orange floats and "
+        "white corks tangled in it, a coil of thick rope beside it, and two "
+        "red-and-white striped marker buoys leaning against the heap.",
+        "Wide image, a little wider than tall."),
+    "vissersboot-gulls": (
+        "two white-and-grey SEAGULLS in flight, seen from below and a little "
+        "from the side, side by side with plenty of green between them: the "
+        "LEFT one with its wings raised high in a V, the RIGHT one with its "
+        "wings swept down. Bright white bellies, grey backs, black wing tips, "
+        "yellow beaks.",
+        "Wide image, twice as wide as tall."),
+    # pirate ship
+    "piratenschip-chest": (
+        "an old wooden TREASURE CHEST bound with iron bands and a big iron "
+        "lock, its curved lid wide open, overflowing with shining gold coins, "
+        "a few red and green jewels and a pearl necklace hanging over its "
+        "edge.",
+        "Square image."),
+    "piratenschip-cannon": (
+        "a black iron ship's CANNON on a heavy wooden carriage with four small "
+        "wooden wheels, seen from BEHIND and a little from the left: its "
+        "muzzle points away from us; a small pyramid of black cannonballs "
+        "beside it on the left.",
+        "Square image."),
+    "piratenschip-flag": (
+        FLAG.format(flag="a black PIRATE FLAG with a white skull and crossbones, "
+                    "its free end frayed", pole="dark wooden"),
+        "Portrait image, twice as tall as wide."),
+    "piratenschip-parrot": (
+        "a colourful PARROT -- a scarlet macaw, bright red with yellow and "
+        "blue wings -- perched upright as if on a rail, seen from the side, "
+        "its head turned toward us, its long tail feathers hanging down; its "
+        "feet at the very bottom of the picture, gripping nothing.",
+        "Portrait image, a little taller than wide."),
+    # speedboat
+    "speedboot-cooler": (
+        "a sporty white-and-red COOLER BOX with its lid open, full of ice, "
+        "cans of soft drinks and bottles of water; a bright orange WAKEBOARD "
+        "with black bindings leaning upright against its side.",
+        "Square image."),
+    "speedboot-flag": (
+        FLAG.format(flag="a black-and-white CHECKERED racing flag", pole="polished chrome"),
+        "Portrait image, twice as tall as wide."),
+}
+
+_BOAT_PAINTING = {"sportvis": "backdrop-ocean", "vissersboot": "backdrop-ocean-vissersboot",
+                  "piratenschip": "backdrop-ocean-piratenschip", "speedboot": "backdrop-ocean-speedboot"}
+for _id, _boat in BOAT_ICONS.items():
+    JOBS[f"boat-icon-{_id}"] = dict(
+        out=f"assets/raw/boat-icon-{_id}.png",
+        refs=[f"assets/raw/{_BOAT_PAINTING[_id]}.png"],
+        brief=BOAT_ICON.format(boat=_boat),
+    )
+for _name, (_what, _shape) in BOAT_PROPS.items():
+    JOBS[f"prop-{_name}"] = dict(
+        out=f"assets/raw/prop-{_name}.png",
+        refs=[f"assets/raw/{_BOAT_PAINTING[_name.split('-')[0]]}.png"],
+        brief=BOAT_PROP.format(what=_what, shape=_shape),
+    )
+
+# The same whole boat, cut out, for the round boat button in the play
+# screen: there, as on the fish and bait buttons, a thing on its own reads
+# better than a little painting with sea and sky around it.
+BOAT_BADGE = """\
+The boat from the attached picture, ALONE, for a round button in a
+children's fishing game: exactly the same boat -- the same shape, the same
+colours and details, the same rich painting style -- seen the same way
+(from the side and a little from behind and above, its bow to the right),
+but now on a solid flat pure green (#00FF00) chroma-key background: no
+sea, no wake, no spray, no sky, no island, no shadow on the background.
+The WHOLE boat, from the bottom of its hull to the top of its highest mast,
+tower or flag, fills the picture with a little green around it; nothing is
+cropped. No people, no animals, no text, no letters, no numbers. Square
+image.
+"""
+for _id in BOAT_ICONS:
+    JOBS[f"boat-badge-{_id}"] = dict(
+        out=f"assets/raw/boat-badge-{_id}.png",
+        refs=[f"assets/raw/boat-icon-{_id}.png"],
+        brief=BOAT_BADGE,
+    )

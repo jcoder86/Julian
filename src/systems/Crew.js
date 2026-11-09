@@ -152,6 +152,14 @@ class Figure {
     this.pose = pose;
   }
 
+  /** Somewhere else on the deck (another boat). */
+  moveBy(dx, dy) {
+    if (this._hop) { this._hop.stop(); this._hop = null; }
+    if (this._baseY != null) { this.root.y = this._baseY; this._baseY += dy; }
+    this.root.x += dx;
+    this.root.y += dy;
+  }
+
   /** A little jump: up and down again, the anchor stays put. */
   hop(height = 14, ms = 150) {
     if (this._hop) this._hop.stop();
@@ -201,6 +209,14 @@ class ClipFigure {
 
   setPose() {}
 
+  moveBy(dx, dy) {
+    if (!this.sprite) return;
+    if (this._hop) { this._hop.stop(); this._hop = null; }
+    this.sprite.y = this._baseY + dy;
+    this.sprite.x += dx;
+    this._baseY += dy;
+  }
+
   hop(height = 10, ms = 130) {
     if (!this.sprite) return;
     if (this._hop) this._hop.stop();
@@ -246,6 +262,20 @@ export class Crew {
     this._timers = [];
     this._mood = null;
     this.mood('ready', 0);
+    if (this.angler) this.angler.update(0);
+  }
+
+  /**
+   * Sit somewhere else: another boat has its deck nearer or further
+   * (`seat` in data/boats.js). The figures keep their poses.
+   */
+  moveTo(seat) {
+    const dx = seat.x - this.seat.x;
+    const dy = seat.y - this.seat.y;
+    if (!dx && !dy) return;
+    if (this.angler) this.angler.moveBy(dx, dy);
+    if (this.buddy) this.buddy.moveBy(dx, dy);
+    this.seat = { x: seat.x, y: seat.y };
     if (this.angler) this.angler.update(0);
   }
 

@@ -208,6 +208,19 @@ en zit in het spel.
 | Schone schilderijen | `python scripts/make_paintings.py backdrop-ocean-<boot>` | ja |
 | Bewegend water per boot (dezelfde film) | `python scripts/make_water.py ocean --compose --painting backdrop-ocean-<boot>` | ja |
 
+## Ronde van 9 november 2026 (middag): meer boot per boot
+
+Na het testen: een strookje stilstaand water boven de reling (bij de andere
+boten breder), de kinderen tegen de hoge wand van de vissersboot en het
+piratenschip, te weinig eigens aan elke boot, en een bootknop die alleen een
+stuk dek liet zien.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| De bovenkant van elke reling gemeten; de zee en de waterfilm tot precies daar | `RAIL_LINES` in `scripts/make_boats.py`, daarna `make_boats.py`, `make_paintings.py`, `make_water.py ocean --compose [--painting ...]` | ja |
+| Elke hele boot van buiten, voor de bootknop en het bootmenu | Codex, `boat-icon-<boot>`, daarna `python scripts/make_boat_props.py` | ja |
+| Spullen per boot: vechtstoel en wimpel; viskratten, net en meeuwen; schatkist, kanon, piratenvlag en papegaai; koelbox met wakeboard en geblokte vlag | Codex, `prop-<boot>-<ding>`, daarna `python scripts/make_boat_props.py` | ja |
+
 ## Ronde van 9 november 2026: zestien vissen op de Grote oceaan
 
 Het laatste level heeft meer vissen dan de andere: zestien. Zijn bladzijde
