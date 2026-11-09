@@ -128,16 +128,18 @@ below the row, bigger, in a golden frame with rays of light behind it.
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Six trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
-  ballyhoo, a whole mackerel, a big shark bait -- and the South Pole's glow
-  jig, trolled deep. As the last level it has more fish than any other
+  ballyhoo, a whole mackerel, a big shark bait -- and a big live bait fish
+  (Grote aasvis, a blue runner), let down deep. As the last level it has more fish than any other
   spot, **sixteen** of the biggest there are: goudmakreel (dorado), wahoo,
   geelvintonijn, tandbaars (giant grouper), zeilvis, blauwe marlijn,
   zwaardvis, diepzeehengelvis (the deep-sea anglerfish with its lantern),
   mako-haai, hamerhaai, tijgerhaai, mantarog (giant manta), maanvis (the
   ocean sunfish, up to 2.3 tonnes), witte haai, orka (rarer than the white
   shark, not as rare as the whale shark) -- and the legend, the walvishaai
-  (whale shark, up to 18.8 m). The glow jig is how the deep ones are
-  caught: the anglerfish and the manta take nothing else. The swordfish
+  (whale shark, up to 18.8 m). The big bait fish is how the deep ones are
+  caught: the anglerfish and the manta take nothing else. (For a day the
+  South Pole's glow jig was fished here instead; another lure was not what
+  that menu needed.) The swordfish
   lives in Greece too and has a card on each page (`swordfish@ocean`).
 
 A species that is taken off a map keeps its id and its catches: they stay
@@ -172,7 +174,12 @@ centimetres but how close it comes to the biggest its kind can be -- a
 58 cm perch is a rarer catch than a 140 cm catfish. `node
 scripts/fish-odds.js` prints what bites on what, per map, and for every
 species how often one comes within 10 % of its record -- and how often it
-is a giant.
+is a giant. `node scripts/test-catchable.js` checks that every fish can be
+caught where it lives, in all three sizes of its card, and that every bait
+in a menu catches something: a lure never hooks a small fish, so a species
+that takes only lures must take a bait too (the barracuda a strip of squid)
+-- or the lure must have tiny hooks (`tinyHooks`: the feather rig, on which
+small herring are caught).
 
 **A giant** is a catch within 5 % of its species' record (`GIANT_SHARE`,
 `isGiant` in `fish.js`). It gets the works on the catch screen -- rays of

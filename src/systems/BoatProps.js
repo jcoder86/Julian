@@ -41,7 +41,7 @@ export class BoatProps {
     for (const prop of boat.props || []) {
       const keys = propFiles(prop).map((file) => propTextureKey(boat, file));
       if (!keys.every((key) => this.scene.textures.exists(key))) continue;
-      if (prop.kind === 'flag') this._flag(prop, keys[0]);
+      if (prop.kind === 'flag') this._flag(prop, keys);
       else if (prop.kind === 'perch') this._perch(prop, keys[0]);
       else if (prop.kind === 'gulls') this._gulls(prop, keys);
       else this._deck(prop, keys[0]);
@@ -91,35 +91,45 @@ export class BoatProps {
     }
   }
 
-  /** A flag on its pole, waving: its picture bent along a wave (a Rope). */
-  _flag(prop, key) {
+  /**
+   * A flag on its pole: the pole stands still (it is fixed to the boat), the
+   * cloth waves from it -- its picture bent along a wave (a Rope) that is
+   * still at the pole and swings ever more toward the free end.
+   */
+  _flag(prop, keys) {
     const scene = this.scene;
+    const [poleKey, clothKey] = keys;
+    const pole = this._add(scene.add.image(prop.x, prop.y, poleKey).setOrigin(prop.flip ? 1 : 0, 1));
+    const k = prop.height / pole.height;
+    pole.setScale(k).setFlipX(!!prop.flip).setDepth(HIGH_DEPTH + 0.1);
+    if (!clothKey) return;
     if (!canBend(scene)) {
-      const img = this._add(scene.add.image(prop.x, prop.y, key).setOrigin(prop.flip ? 1 : 0, 1));
-      img.setScale(prop.height / img.height).setFlipX(!!prop.flip).setDepth(HIGH_DEPTH);
+      const still = this._add(scene.add.image(prop.x, prop.y - pole.height * k, clothKey));
+      still.setOrigin(prop.flip ? 1 : 0, 0).setScale(k).setFlipX(!!prop.flip).setDepth(HIGH_DEPTH);
       return;
     }
-    const frame = scene.textures.getFrame(key);
+    const frame = scene.textures.getFrame(clothKey);
     const W = frame.width;
-    const H = frame.height;
-    // Local (0, 0) is the foot of the pole; the picture lies to the right of
+    const H = pole.height;                 // the cloth hangs from the top of the pole
+    const top = -H + frame.height / 2;     // the middle of the cloth, from the foot of the pole
+    // Local (0, 0) is the foot of the pole; the cloth lies to the right of
     // it, or (flipped) to the left.
     const points = [];
     for (let i = 0; i < FLAG_POINTS; i++) {
       const u = i / (FLAG_POINTS - 1);
-      points.push(new Phaser.Math.Vector2(prop.flip ? -W + u * W : u * W, -H / 2));
+      points.push(new Phaser.Math.Vector2(prop.flip ? -W + u * W : u * W, top));
     }
-    const rope = this._add(scene.add.rope(prop.x, prop.y, key, null, points).setDepth(HIGH_DEPTH));
-    rope.setScale(prop.height / H);
+    const rope = this._add(scene.add.rope(prop.x, prop.y, clothKey, null, points).setDepth(HIGH_DEPTH));
+    rope.setScale(k);
     if (prop.flip) rope.flipX = true;
-    const amp = H * FLAG_WAVE;
+    const amp = frame.height * FLAG_WAVE * 2;
     const phase = Math.random() * 10;
     this.flags.push((t) => {
       const w = (t + phase) * Math.PI * 2 * FLAG_WAVE_HZ;
       for (let i = 0; i < FLAG_POINTS; i++) {
         const u = i / (FLAG_POINTS - 1);
         const out = prop.flip ? 1 - u : u;          // 0 at the pole, 1 at the free end
-        rope.points[i].y = -H / 2 + Math.sin(w - out * 5) * amp * out ** 1.3;
+        rope.points[i].y = top + Math.sin(w - out * 5) * amp * out * out;
       }
       rope.setDirty();
     });

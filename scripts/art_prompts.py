@@ -1617,3 +1617,31 @@ for _id in BOAT_ICONS:
         refs=[f"assets/raw/boat-icon-{_id}.png"],
         brief=BOAT_BADGE,
     )
+
+# The big ocean's sixth bait (November 2026), instead of the South Pole's
+# glow jig there: a big bait fish -- for the grouper, the deep-sea
+# anglerfish and the manta. One picture, the two versions side by side;
+# cut by scripts/split_atlas.py (bait-groteaasvis).
+BIG_BAIT_FISH = """\
+A big-game fishing bait for a game, in exactly the same realistic painting
+style as the attached reference sheet: a BIG whole live bait fish -- a blue
+runner, a deep-bodied, silvery jack with a shining blue-green back, a
+golden-yellow tinge along its sides, a dark spot on its gill cover and a
+big deeply forked tail -- hooked through the back just in front of its
+dorsal fin on a heavy stainless circle hook, with a short piece of heavy
+clear leader rising from the hook. Clearly bigger and deeper-bodied than a
+mackerel.
+
+Two versions of the same bait, side by side with plenty of plain green
+between them: on the LEFT it hangs vertically "on the line", the leader
+going straight up from the hook at the top and the fish hanging head down
+below it; on the RIGHT it lies flat and horizontal, head to the RIGHT, the
+leader end at the LEFT.
+
+Solid flat pure green (#00FF00) chroma-key background. Nothing on the bait
+is green. Each version is one solid, connected object. No shadows on the
+background, no text, no labels, no grid lines. Crisp edges. Landscape,
+about 3:2.
+"""
+JOBS["bait-groteaasvis"] = dict(out="assets/raw/bait-groteaasvis.png",
+                                refs=["assets/raw/baits-ocean.png"], brief=BIG_BAIT_FISH)

@@ -13,7 +13,10 @@ The boats' own pictures (src/data/boats.js), from Codex's (scripts/art_prompts.p
       -> assets/clean/prop_<boat>_<name>.png  cut out (the green keyed away and
          despilled), trimmed to what is in it
   (the gulls: two birds side by side, wings up and wings down
-      -> prop_<boat>_gull-up.png, prop_<boat>_gull-down.png)
+      -> prop_<boat>_gull-up.png, prop_<boat>_gull-down.png;
+   a flag: its pole and its cloth apart, on canvases of one size, so that
+   only the cloth waves and the pole stands still
+      -> prop_<boat>_flag-pole.png, prop_<boat>_flag-cloth.png)
 """
 
 import sys
@@ -96,6 +99,41 @@ def save_frames(frames, outs):
         print(f"[ok]   {out.relative_to(ROOT)}  {canvas.width}x{canvas.height}")
 
 
+def flag_parts(img):
+    """
+    A flag on its pole (the pole along the left edge, top to bottom; the
+    cloth flying to the right from its top): the pole alone, and the cloth
+    alone, cut at the bottom of the cloth -- both from the same top-left
+    corner, so that they fit together again in the game.
+    """
+    img = auto_crop(img)
+    arr = np.asarray(img).copy()
+    solid = arr[..., 3] > 64
+    h, w = solid.shape
+    cover = solid.mean(axis=0)
+    first = int(np.argmax(cover > 0.6))
+    right = first
+    while right + 1 < w and cover[right + 1] > 0.6:
+        right += 1
+    # The cloth: the rows that reach well out from the pole.
+    reach = np.array([np.nonzero(row)[0].max() if row.any() else 0 for row in solid])
+    cloth_rows = np.nonzero(reach > right + 0.15 * w)[0]
+    bottom = int(cloth_rows.max()) + 4
+    cloth = arr[:bottom + 1].copy()
+    cloth[:, :right + 2, 3] = 0
+    pole = arr.copy()
+    pole[:bottom + 1, right + 2:, 3] = 0
+    return Image.fromarray(pole, "RGBA"), Image.fromarray(cloth, "RGBA")
+
+
+def save_whole(img, out, scale):
+    """Saved as it is (no trimming), only scaled: parts that must fit together."""
+    if scale < 1:
+        img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
+    img.save(out, "PNG", optimize=True)
+    print(f"[ok]   {out.relative_to(ROOT)}  {img.width}x{img.height}")
+
+
 def halves(img):
     """Two things side by side: split at the emptiest column in the middle."""
     alpha = np.asarray(img.getchannel("A")).astype(np.float32)
@@ -113,6 +151,11 @@ def props(boat):
             up, down = (centred_on_body(half) for half in halves(cut))
             save_frames([up, down], [CLEAN / f"prop_{boat}_gull-up.png",
                                      CLEAN / f"prop_{boat}_gull-down.png"])
+        elif name == "flag":
+            pole, cloth = flag_parts(cut)
+            scale = min(1.0, PROP_MAX / max(pole.size))
+            save_whole(pole, CLEAN / f"prop_{boat}_flag-pole.png", scale)
+            save_whole(cloth, CLEAN / f"prop_{boat}_flag-cloth.png", scale)
         else:
             save_cutout(cut, CLEAN / f"prop_{boat}_{name}.png")
 

@@ -15,7 +15,9 @@
 //   "lure" -- no float: cast, then reel the lure back yourself; a fish may
 //             grab it on the way in, and is hooked at once: keep reeling.
 //             A lure is too big a mouthful for a small fish (see
-//             smallestCatchOn below).
+//             smallestCatchOn below) -- unless its hooks are tiny
+//             (`tinyHooks`: the feather rig, on which even a small
+//             herring is caught).
 //
 // A lure's `swim` says how it moves when reeled in (systems/LureSwim.js):
 //   depth   how deep it runs while cranked (m)
@@ -76,7 +78,7 @@ export const BAITS = [
   { id: "aasvisje", maps: [...SEA, ...ICE], kind: "bait", displayName: "Aasvisje", nlName: "Aasvisje" },
   // Feathers flutter at mid-water; a spoon wobbles wide and flashes; a
   // pilker is a heavy jig: deep, jerked up and down, quick to the bottom.
-  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6,
+  { id: "veren",    maps: SEA,   kind: "lure", displayName: "Veertjes", nlName: "Veertjes", lengthCm: 6, tinyHooks: true,
     swim: { depth: 0.9, sink: 0.35, sway: 3, roll: 8, beat: 4 } },
   { id: "blinker",  maps: SEA,   kind: "lure", displayName: "Blinker",  nlName: "Blinker", lengthCm: 7,
     swim: { depth: 0.9, sink: 0.4, sway: 7, roll: 24, beat: 3.5, flash: true } },
@@ -95,19 +97,22 @@ export const BAITS = [
   // -- chrome head, rubber tentacles -- for the tuna, marlin, dorado and,
   // because it looks like a jellyfish, the sunfish; a big diving plug for
   // the wahoo and the tuna; a rigged ballyhoo for the billfish; a live
-  // mackerel, which everything big eats; and a chunk of tuna with a trail
-  // of chum, for the sharks.
+  // mackerel, which everything big eats; a chunk of tuna with a trail of
+  // chum, for the sharks; and (since November 2026, instead of the South
+  // Pole's glow jig there) a big live bait fish, a blue runner, let down
+  // deep: for the grouper, the deep-sea anglerfish and the manta.
   { id: "rokjeslure", maps: OCEAN, kind: "troll", displayName: "Rokjeslure", nlName: "Rokjeslure", lengthCm: 25 },
   { id: "duikplug", maps: OCEAN, kind: "troll", displayName: "Duikplug", nlName: "Duikplug", lengthCm: 22 },
   { id: "ballyhoo", maps: OCEAN, kind: "troll", displayName: "Ballyhoo", nlName: "Ballyhoo", lengthCm: 28 },
   { id: "makreel",  maps: OCEAN, kind: "troll", displayName: "Makreel",  nlName: "Makreel",  lengthCm: 35 },
   { id: "haaienaas", maps: OCEAN, kind: "troll", displayName: "Haaienaas", nlName: "Haaienaas", lengthCm: 25 },
+  { id: "groteaasvis", maps: OCEAN, kind: "troll", displayName: "Grote aasvis", nlName: "Grote aasvis", lengthCm: 40 },
 
   // The South Pole's own lure (also the pilker above): a glow jig, painted
   // with glow paint that shines in the dark, cold water; jigged slowly, deep.
-  // (On the big ocean too, since November 2026: trolled deep, it brings
-  // up the grouper, the deep-sea anglerfish and the manta.)
-  { id: "lichtjig", maps: [...ICE, "ocean"], kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
+  // (For a day in November 2026 it was on the big ocean too; there a big
+  // bait fish took its place: a spinner more was not what that menu needed.)
+  { id: "lichtjig", maps: ICE, kind: "lure", displayName: "Lichtjig", nlName: "Lichtjig", lengthCm: 8,
     swim: { depth: 1.8, sink: 0.8, sway: 2, roll: 10, beat: 1.3, jig: 0.6, glow: true } },
 ];
 
@@ -143,7 +148,7 @@ const LURE_SMALLEST_CATCH = { size: "medium", cm: 20 };
  * goes. (What that does to the odds: catchableSizes in data/fish.js.)
  */
 export function smallestCatchOn(baitId) {
-  return isLure(baitId) ? LURE_SMALLEST_CATCH : null;
+  return isLure(baitId) && !BAITS_BY_ID[baitId].tinyHooks ? LURE_SMALLEST_CATCH : null;
 }
 
 /** Texture key for selection-menu (full) bait sprite. */

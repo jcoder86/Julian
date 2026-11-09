@@ -16,8 +16,9 @@
 // `height` how tall it is drawn, and `kind`:
 //   deck    stands on the deck, a soft shadow under it (`glints`: gold that
 //           sparkles)
-//   flag    a flag on its pole (the pole is the picture's left edge; `flip`:
-//           the right), waving in the wind
+//   flag    a flag on its pole (`frames`: the pole and the cloth, cut apart
+//           on canvases of one size; the pole is the left edge, `flip`: the
+//           right): the pole stands still, the cloth waves from it
 //   perch   a bird on the rail: it shifts and looks about
 //   gulls   two gulls now and then flying over the wake (`frames`: wings up,
 //           wings down)
@@ -30,7 +31,7 @@ export const BOATS = [
   { id: 'sportvis',     nlName: 'Sportvisboot', painting: 'backdrop-ocean',
     props: [
       { name: 'chair', kind: 'deck', x: 900, y: 655, height: 230 },
-      { name: 'flag', kind: 'flag', x: 1118, y: 437, height: 200, flip: true },
+      { name: 'flag', kind: 'flag', frames: ['flag-pole', 'flag-cloth'], x: 1118, y: 437, height: 200, flip: true },
     ] },
   // (Its bulwark is higher than the sport-fishing boat's: the children sit
   // further forward on the deck, not against the wall: `seat`, as in maps.js.)
@@ -44,13 +45,13 @@ export const BOATS = [
     props: [
       { name: 'chest', kind: 'deck', x: 800, y: 700, height: 130, glints: true },
       { name: 'cannon', kind: 'deck', x: 1010, y: 665, height: 150 },
-      { name: 'flag', kind: 'flag', x: 1118, y: 437, height: 210, flip: true },
+      { name: 'flag', kind: 'flag', frames: ['flag-pole', 'flag-cloth'], x: 1118, y: 437, height: 210, flip: true },
       { name: 'parrot', kind: 'perch', x: 905, y: 438, height: 85 },
     ] },
   { id: 'speedboot',    nlName: 'Speedboot',    painting: 'backdrop-ocean-speedboot',
     props: [
       { name: 'cooler', kind: 'deck', x: 930, y: 640, height: 150 },
-      { name: 'flag', kind: 'flag', x: 1118, y: 437, height: 190, flip: true },
+      { name: 'flag', kind: 'flag', frames: ['flag-pole', 'flag-cloth'], x: 1118, y: 437, height: 190, flip: true },
     ] },
 ];
 

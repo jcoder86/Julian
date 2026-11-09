@@ -219,13 +219,23 @@ stuk dek liet zien.
 |---|---|---|
 | De bovenkant van elke reling gemeten; de zee en de waterfilm tot precies daar | `RAIL_LINES` in `scripts/make_boats.py`, daarna `make_boats.py`, `make_paintings.py`, `make_water.py ocean --compose [--painting ...]` | ja |
 | Elke hele boot van buiten, voor de bootknop en het bootmenu | Codex, `boat-icon-<boot>`, daarna `python scripts/make_boat_props.py` | ja |
-| Spullen per boot: vechtstoel en wimpel; viskratten, net en meeuwen; schatkist, kanon, piratenvlag en papegaai; koelbox met wakeboard en geblokte vlag | Codex, `prop-<boot>-<ding>`, daarna `python scripts/make_boat_props.py` | ja |
+| Spullen per boot: vechtstoel en wimpel; viskratten, net en meeuwen; schatkist, kanon, piratenvlag en papegaai; koelbox met wakeboard en geblokte vlag | Codex, `prop-<boot>-<ding>`, daarna `python scripts/make_boat_props.py` (een vlag wordt in mast en doek geknipt: alleen het doek wappert) | ja |
+
+## Ronde van 9 november 2026 (avond): een grote aasvis
+
+In plaats van nog een kunstaas (de lichtjig) op de oceaan: een grote
+levende aasvis voor de tandbaars, de diepzeehengelvis en de mantarog.
+
+| Wat | Hoe | Klaar |
+|---|---|---|
+| Grote aasvis (blue runner aan een cirkelhaak), hangend en liggend | Codex, `bait-groteaasvis`, daarna `python scripts/split_atlas.py bait-groteaasvis` | ja |
 
 ## Ronde van 9 november 2026: zestien vissen op de Grote oceaan
 
 Het laatste level heeft meer vissen dan de andere: zestien. Zijn bladzijde
-in het vissenboek heeft een vierde rij. De lichtjig van de Zuidpool is ook
-op de oceaan te koop: diep gesleept vangt hij de vissen van de diepte.
+in het vissenboek heeft een vierde rij. De vissen van de diepte vang je
+met een grote aasvis (de dag ervoor was dat de lichtjig van de Zuidpool,
+zie hieronder).
 
 | Wat | Hoe | Klaar |
 |---|---|---|

@@ -211,8 +211,9 @@ export const FISH_SPECIES = [
   { id: "horsemackerel", nlName: "Mediterrane horsmakreel", baits: ["garnaal", "inktvis", "werpjig"], speciesWeight: 85, sizeWeights: [55, 35, 10],
     lengthCm: { small: [12, 18], medium: [20, 30], large: [ 35,  60] } },
 
-  // Hunters, out in the blue -- lures.
-  { id: "barracuda", nlName: "Geelstaartbarracuda", baits: ["plug", "shad", "werpjig"],       speciesWeight:  25, sizeWeights: [45, 40, 15],
+  // Hunters, out in the blue -- lures. (The barracuda also takes a strip
+  // of squid: so a small one, too small for a lure, can be caught.)
+  { id: "barracuda", nlName: "Geelstaartbarracuda", baits: ["plug", "shad", "werpjig", "inktvis"], speciesWeight:  25, sizeWeights: [45, 40, 15],
     lengthCm: { small: [30, 45], medium: [55, 80], large: [ 90, 128] }, maxReelTurns: 10 },
   // A small tuna that races through. (Taken off the Greek coast again in
   // October 2026: it looked too much like the North Sea's tuna. Its id stays,
@@ -346,17 +347,17 @@ export const FISH_SPECIES = [
   { id: "whaleshark", nlName: "Walvishaai", baits: ["haaienaas"],                            speciesWeight: 1.0, sizeWeights: [55, 30, 15],
     lengthCm: { small: [400, 620], medium: [700, 1000], large: [1100, 1880] }, kg: [1500, 15000] },
   // Four more (November 2026): the big ocean has sixteen. Deep down, where
-  // the glow jig goes, the giant grouper, the deep-sea anglerfish -- it
-  // hunts with a light of its own -- and the manta, which comes to light
-  // (it draws the plankton it eats); and, rarer than a white shark but not
+  // the big bait fish is let down, the giant grouper, the deep-sea
+  // anglerfish -- it hunts with a light of its own -- and the manta; and,
+  // rarer than a white shark but not
   // as rare as the whale shark, the orca. (It is no fish but a dolphin:
   // the children wanted it all the same.) Orca and manta leap clear of the
   // water, as they do.
-  { id: "grouper",  nlName: "Tandbaars", baits: ["makreel", "lichtjig", "duikplug"],          speciesWeight:  25, sizeWeights: [45, 40, 15],
+  { id: "grouper",  nlName: "Tandbaars", baits: ["makreel", "groteaasvis", "duikplug"],          speciesWeight:  25, sizeWeights: [45, 40, 15],
     lengthCm: { small: [40, 70], medium: [80, 140], large: [150, 270] }, kg: [270, 400] },
-  { id: "anglerfish", nlName: "Diepzeehengelvis", baits: ["lichtjig"],                       speciesWeight:   6, sizeWeights: [50, 35, 15],
+  { id: "anglerfish", nlName: "Diepzeehengelvis", baits: ["groteaasvis"],                    speciesWeight:   6, sizeWeights: [50, 35, 15],
     lengthCm: { small: [15, 30], medium: [35, 60], large: [65, 120] }, kg: [120, 25] },
-  { id: "mantaray", nlName: "Mantarog",  baits: ["lichtjig"],                                  speciesWeight:   4, sizeWeights: [45, 40, 15],
+  { id: "mantaray", nlName: "Mantarog",  baits: ["groteaasvis"],                               speciesWeight:   4, sizeWeights: [45, 40, 15],
     lengthCm: { small: [150, 250], medium: [260, 400], large: [420, 550] }, kg: [550, 2400], jumps: true },
   { id: "orca",     nlName: "Orka",      baits: ["haaienaas", "makreel"],                      speciesWeight:   2, sizeWeights: [50, 35, 15],
     lengthCm: { small: [400, 560], medium: [580, 750], large: [780, 980] }, kg: [980, 10000], jumps: true },

@@ -667,6 +667,26 @@ def process_baits_ocean(atlas_path: Path) -> int:
     return saved
 
 
+# The big ocean's sixth bait (raw/bait-groteaasvis.png, November 2026): one
+# bait, hanging on the left and lying flat on the right.
+def process_bait_pair(atlas_path: Path, name: str) -> int:
+    img = Image.open(atlas_path)
+    cleaned = chromakey_remove(img, chroma_high=STRIP_CHROMA_HIGH)
+    alpha = np.asarray(cleaned.getchannel("A")).astype(np.float32)
+    w = alpha.shape[1]
+    cut = w // 4 + int(np.argmin(alpha[:, w // 4:w // 2].sum(axis=0)))
+    for label, box in (("full", (0, 0, cut, img.height)), ("simple", (cut, 0, w, img.height))):
+        cell = auto_crop(cleaned.crop(box))
+        # (As big as the other ocean baits' pictures: about 640 px long.)
+        k = min(1.0, 640 / max(cell.size))
+        if k < 1:
+            cell = cell.resize((round(cell.width * k), round(cell.height * k)), Image.LANCZOS)
+        out = CLEAN_DIR / f"bait_{name}_{label}.png"
+        cell.save(out, "PNG")
+        print(f"[info] {atlas_path.name} -> {out.name} ({cell.width}x{cell.height})")
+    return 2
+
+
 def process_baits(atlas_path: Path) -> int:
     img = Image.open(atlas_path)
     cleaned = chromakey_remove(img)
@@ -860,6 +880,7 @@ def main():
         ("baits-greece.png", process_baits_greece),   # shrimp, squid, plug, jig
         ("baits-antarctica.png", process_baits_antarctica),   # krill, glow jig
         ("baits-ocean.png", process_baits_ocean),     # the trolling baits
+        ("bait-groteaasvis.png", lambda p: process_bait_pair(p, "groteaasvis")),
         ("floats.png", process_floats),
         ("rod.png",    process_rod),      # reel body + crank handle
     ]
