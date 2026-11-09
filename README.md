@@ -34,6 +34,7 @@ src/
     Crew.js                   # the figures on the jetty: poses, rod tip, the dog
     FishingLine.js            # the line, in every phase of fishing
     FishFight.js              # a hooked fish: swimming about, runs
+    FishLeap.js               # a fish leaping out of the sea, its picture bent along its path
     Ui.js                     # lettering, glow, buttons, menus
     ReelOverlay.js            # the reel you crank
     SaveSystem.js             # localStorage wrapper (see "Save data")
@@ -328,13 +329,28 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   A fish that is let alone slips back only slowly (`BIG_DECAY`): a hand may
   rest. Fish that jump (`jumps` in `fish.js`: dorado, sailfish, marlin,
   swordfish, mako, white shark, manta, orca) leap clear of the water at the
-  start of most runs -- never out of the top of the picture; the manta,
-  wings spread, leaps smaller (`JUMP_TALL`).
-* **The last leap.** Brought alongside, the fish makes one slow leap out of
+  start of most runs.
+* **How they leap** (`src/systems/FishLeap.js`). Not a stiff picture
+  turning along an arc: the picture is bent along a curve (a Phaser
+  *Rope*, WebGL only -- on a canvas renderer there are no leaps). The body
+  follows its own path, so it comes up out of the water head first,
+  arches over and dives back in, beating its tail; what is under the
+  surface is masked off (a sharp water line, white water where it cuts
+  it) and shows only as a faint dark shape. Water drips off it in the air,
+  and the line runs to its mouth. Each species its own way
+  (`LEAP_SPECIES`): the billfish **tail-walk** -- up on the tail, across
+  the water, shaking the head, then over forward; the white shark and the
+  orca **breach** -- straight up, turning over at the top, crashing back
+  on their side; the mako leaps highest, the dorado low and often twice,
+  the manta glides flat, flapping, and belly-flops. A leap is made smaller
+  (or left out) where it would not fit: on screen, clear of the buttons,
+  over open water only (`_fitLeap`); the manta, wings spread, is smaller
+  to start with (`JUMP_TALL`).
+* **The last leap.** Brought alongside, the fish comes slowly up out of
   the wake behind the boat (`leap` in `maps.js`: clear of the stern and
-  the children) and a camera flash freezes it at the top -- a tall one
-  (manta, sunfish) no bigger than the sky above the water there. Jumps during the fight
-  also go out over open water, away from the boat.
+  the children), arched, its tail just clear, and a camera flash freezes
+  it at the top (FishLeap's `photo`; a round one like the sunfish hardly
+  bends).
 * **The weighing station** (`TrophyScene`). At sunset in the harbour the
   fish hangs by its tail from a big brass scale, head down. The needle
   swings round to its weight (`weightKg` in `fish.js`: a species' `kg` is

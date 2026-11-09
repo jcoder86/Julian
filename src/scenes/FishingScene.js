@@ -23,6 +23,7 @@ import { Crew, CAST_WINDUP_MS } from '../systems/Crew.js';
 import { FishingLine } from '../systems/FishingLine.js';
 import { FishFight } from '../systems/FishFight.js';
 import { LureSwim } from '../systems/LureSwim.js';
+import { FishLeap, planLeap, leapExtent, leapSpecies, canBend } from '../systems/FishLeap.js';
 import { UI, COLOR, lettering } from '../systems/Ui.js';
 
 // =============================================================================
@@ -288,10 +289,12 @@ const BIG_CM_PER_TURN = 22;
 const BIG_TURNS_MIN = 8;
 const BIG_TURNS_MAX = 34;
 const BIG_DECAY = 0.04;
-// A fish that leaps during the fight: at most this wide (design px), up
-// for this long.
+// A fish that leaps during the fight: at most this long (design px), and
+// no leap at all when it would have to be smaller than this. It keeps
+// clear of the buttons on the right (JUMP_HUD_ROOM px).
 const JUMP_MAX_PX = 560;
 const JUMP_MIN_PX = 140;
+const JUMP_HUD_ROOM = 130;
 // A picture taller than this (height / width) -- the manta, its wings
 // spread -- leaps smaller: as big across as an ordinary fish is long.
 const JUMP_TALL = 0.5;
@@ -299,10 +302,8 @@ function tallFactor(img) {
   const tall = img.height / img.width;
   return tall > JUMP_TALL ? JUMP_TALL / tall : 1;
 }
-const JUMP_MS = 950;
-// The last leap: at most this wide, rising for so long, the flash at its top.
+// The last leap: at most this long, the flash at its top.
 const TROPHY_LEAP_MAX_PX = 1050;
-const TROPHY_LEAP_MS = 2100;
 const TROPHY_FLASH_MS = 650;
 // The voice: "Vis aan!" (a phrase of a voice atlas).
 const VOICE_FISH_ON = 'fish_on';
@@ -608,6 +609,13 @@ export class FishingScene extends Phaser.Scene {
       this.fight.update(delta);
       this.bobber.x = this.fight.x;
       this.bobber.y = this.fight.y;
+      // A fish in the air: the line runs to its mouth.
+      const leap = this._jumping;
+      if (leap && leap.body && leap.lineWeight > 0) {
+        const m = leap.mouth;
+        this.bobber.x += (m.x - this.bobber.x) * leap.lineWeight;
+        this.bobber.y += (m.y - this.bobber.y) * leap.lineWeight;
+      }
       if (this.fight.overcranks > this._overcranksSeen) {
         this._overcranksSeen = this.fight.overcranks;
         if (Math.random() < OVERCRANK_ESCAPE) this._escapeAt = 0;
@@ -2411,9 +2419,9 @@ export class FishingScene extends Phaser.Scene {
   }
 
   /** A puff of white water at (x, y), drifting off. */
-  _spray(x, y, scale, strength = 1) {
+  _spray(x, y, scale, strength = 1, depth = 19) {
     const k = scale ** 0.6;
-    const puff = this.add.ellipse(x, y, 16 * k, 6 * k, 0xffffff, 0.7 * strength).setDepth(19);
+    const puff = this.add.ellipse(x, y, 16 * k, 6 * k, 0xffffff, 0.7 * strength).setDepth(depth);
     puff.setStrokeStyle(Math.max(1, 1.4 * k), FOAM_RIM, 0.45 * strength);
     this.tweens.add({
       targets: puff,
@@ -2499,62 +2507,127 @@ export class FishingScene extends Phaser.Scene {
     this._troll = null;
   }
 
-  /** The fish leaps clear of the water during the fight, and crashes back. */
-  _fishJump(pick, x, y) {
-    if (this.state !== STATE.REELING) return;
+  /**
+   * The fish leaps clear of the water during the fight, and crashes back --
+   * each species its own way (src/systems/FishLeap.js), its picture bent
+   * along its path. A dorado often leaps twice (`chained`: the second).
+   */
+  _fishJump(pick, x, y, chained = false) {
+    if (this.state !== STATE.REELING || this._jumping) return;
+    if (!canBend(this)) return;
     const key = fishTextureKey(pick.species, pick.size);
     if (!this.textures.exists(key)) return;
+    const src = this.textures.get(key).getSourceImage();
     const scale = this._bobberDepthScale(y);
-    const fish = this.add.image(x, y, key).setDepth(23);
-    this._jumping = fish;
-    let width = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale) * tallFactor(fish);
-    // It leaps out over open water, never back over the boat: a way where
-    // the water goes on under its whole arc.
-    const open = (d) => [0.15, 0.3, 0.45, 0.6].every((f) => this.map.isWater(x + d * width * f, y));
-    const right = open(1);
-    const left = open(-1);
-    let dir;
-    if (right && left) {
-      // (Behind a boat the children sit on the left: away from them.)
-      dir = this._isTrollMode() ? 1 : (Math.random() < 0.5 ? -1 : 1);
-    } else {
-      dir = left ? -1 : 1;
-    }
-    // Its tail, coming up out of the water last, must not show over the
-    // stern or the jetty: close to them a leap is smaller (a fish that is
-    // further off looks smaller anyway), and right at them there is none.
-    while (width >= JUMP_MIN_PX && !this.map.isWater(x - dir * width * 0.45, y + width * 0.26)) width *= 0.85;
-    if (width < JUMP_MIN_PX) {
-      fish.destroy();
-      this._jumping = null;
-      return;
-    }
-    fish.setScale(width / fish.width);
-    fish.setFlipX(dir < 0);
-    // Not so high that it leaves the picture at the top.
-    const half = Math.max(fish.displayWidth, fish.displayHeight) / 2;
-    const height = Math.max(20, Math.min(width * 0.55 + 30 * scale,
-                                         y - half - this.cameras.main.worldView.y - 10));
-    const t = { p: 0 };
-    this.audio.playSfx(SFX.SPLASH, { volume: 0.6 });
-    for (let i = 0; i < 6; i++) this._spray(x + Phaser.Math.Between(-20, 20) * scale, y, scale, 1);
-    this.tweens.add({
-      targets: t, p: 1, duration: JUMP_MS, ease: 'Linear',
-      onUpdate: () => {
-        const p = t.p;
-        fish.x = x + dir * width * 0.5 * p;
-        fish.y = y - height * 4 * p * (1 - p);
-        fish.rotation = dir * Phaser.Math.Linear(-0.55, 0.6, p);
-      },
-      onComplete: () => {
-        this.audio.playSfx(SFX.SPLASH, { volume: 0.7 });
-        for (let i = 0; i < 10; i++) {
-          this._spray(fish.x + Phaser.Math.Between(-30, 30) * scale, y, scale, 1);
+    const natural = Math.min(JUMP_MAX_PX, (pick.lengthCm ?? 100) * PX_PER_CM * scale) * tallFactor(src);
+    // (Behind a boat the children sit on the left: away from them.)
+    const prefer = this._isTrollMode() ? 1 : (Math.random() < 0.5 ? -1 : 1);
+    const fit = this._fitLeap(pick.species, null, src, x, y, natural, [prefer, -prefer]);
+    if (!fit) return;
+    const sp = leapSpecies(pick.species);
+    const leap = new FishLeap(this, {
+      key, species: pick.species, plan: fit.plan, length: fit.length, dir: fit.dir, x, y,
+      isWater: (px, py) => this.map.isWater(px, py),
+      depth: 23,
+      onSpray: (sx, sy, strength, depth) => this._spray(sx, sy, this._bobberDepthScale(sy), strength, depth),
+      onSplash: (sx, sy, info) => this._leapSplash(sx, sy, info),
+      onDrip: (dx, dy) => this._drip(dx, dy, y),
+      onDone: (done) => {
+        if (this._jumping === done) this._jumping = null;
+        if (!chained && sp.again && Math.random() < sp.again && this.state === STATE.REELING) {
+          // On again at once, from where it went in.
+          this.time.delayedCall(120, () => this._fishJump(pick, done.entryX ?? x, y, true));
         }
-        if (this._jumping === fish) this._jumping = null;
-        fish.destroy();
       },
     });
+    this._jumping = leap;
+  }
+
+  /**
+   * How big a leap can be at (x, y) -- on screen, over open water, clear of
+   * the buttons -- trying the directions in `dirs` and taking the first
+   * unless another allows a much bigger one. `force`: never none at all.
+   * Returns { dir, length, plan } or null.
+   */
+  _fitLeap(species, kind, src, x, y, natural, dirs, force = false) {
+    const aspect = src.height / src.width;
+    const extent = leapExtent(planLeap(species, kind, natural, aspect), aspect);
+    const view = this.cameras.main.worldView;
+    const minX = view.x + 8;
+    const maxX = view.right - JUMP_HUD_ROOM;
+    const fits = (dir, L) => {
+      const a = x + dir * extent.left * L;
+      const b = x + dir * extent.right * L;
+      const lo = Math.min(a, b);
+      const hi = Math.max(a, b);
+      if (lo < minX || hi > maxX || y + extent.top * L < view.y + 8) return false;
+      for (let i = 0; i <= 6; i++) {
+        const wx = Phaser.Math.Linear(lo, hi, i / 6);
+        if (!this.map.isWater(wx, y) || !this.map.isWater(wx, y + 6)) return false;
+      }
+      return true;
+    };
+    const tries = dirs.map((dir) => {
+      let L = natural;
+      while (L >= JUMP_MIN_PX && !fits(dir, L)) L *= 0.9;
+      return { dir, length: L };
+    });
+    let best = tries[0];
+    for (const t of tries) if (t.length > best.length * 1.25) best = t;
+    if (best.length < JUMP_MIN_PX) {
+      if (!force) return null;
+      best = { dir: dirs[0], length: Math.max(JUMP_MIN_PX, Math.min(natural, best.length)) };
+    }
+    return { ...best, plan: planLeap(species, kind, best.length, aspect) };
+  }
+
+  /** A fish bursts out of the water, or crashes back into it. */
+  _leapSplash(x, y, { big = false, from, to } = {}) {
+    const scale = this._bobberDepthScale(y);
+    if (big) {
+      // Flat on its side: white water all along it.
+      this.audio.playSfx(SFX.BIG_SPLASH, { volume: 0.75 });
+      const a = Number.isFinite(from) ? from : x - 80 * scale;
+      const b = Number.isFinite(to) ? to : x + 80 * scale;
+      for (let i = 0; i < 18; i++) {
+        this._spray(Phaser.Math.Linear(a, b, Math.random()), y, Math.max(scale, 0.7), 1);
+      }
+      this._splashRing((a + b) / 2, y, scale, Math.max(1.4, (b - a) / (110 * scale)));
+    } else {
+      this.audio.playSfx(SFX.SPLASH, { volume: 0.6 });
+      for (let i = 0; i < 7; i++) this._spray(x + Phaser.Math.Between(-24, 24) * scale, y, scale, 1);
+      this._splashRing(x, y, scale, 1);
+    }
+  }
+
+  /** A ring of foam spreading where something went into the water. */
+  _splashRing(x, y, scale, size) {
+    const k = scale ** 0.7;
+    const ring = this.add.ellipse(x, y, 70 * k * size, 22 * k * size).setDepth(19);
+    ring.setStrokeStyle(Math.max(2, 3.5 * k), 0xffffff, 0.9);
+    this.tweens.add({
+      targets: ring, scale: { from: 0.4, to: 1.7 }, alpha: { from: 0.9, to: 0 }, duration: 800,
+      ease: 'Sine.easeOut', onComplete: () => ring.destroy(),
+    });
+  }
+
+  /** A drop of water falling off a leaping fish, down to the sea. */
+  _drip(x, y, waterY) {
+    const k = this._bobberDepthScale(waterY) ** 0.6;
+    const drop = this.add.ellipse(x, y, 4 * k, 6 * k, 0xffffff, 0.85).setDepth(24);
+    const fall = Math.max(8, waterY - 2 - y);
+    this.tweens.add({
+      targets: drop, y: waterY - 2, alpha: 0.3, duration: Math.min(650, 32 * Math.sqrt(fall)),
+      ease: 'Quad.easeIn', onComplete: () => drop.destroy(),
+    });
+  }
+
+  /** Stop a leap that is still in the air (the fight is over). */
+  _endJump() {
+    if (this._jumping) {
+      this._jumping.destroy();
+      this._jumping = null;
+    }
   }
 
   /**
@@ -2576,7 +2649,12 @@ export class FishingScene extends Phaser.Scene {
         species: pick.species, size: pick.size, lengthCm: pick.lengthCm, mapId: this.map.id,
       });
     };
-    if (!this.textures.exists(key)) { go(); return; }
+    this._endJump();
+    if (!this.textures.exists(key) || !canBend(this)) {
+      this.cameras.main.flash(TROPHY_FLASH_MS, 255, 255, 255);
+      this.time.delayedCall(TROPHY_FLASH_MS * 0.7, go);
+      return;
+    }
 
     // Where it leaps: the map's `leap` spot (open water clear of the boat
     // and the children), or else beside the landing spot -- all of it over
@@ -2586,49 +2664,43 @@ export class FishingScene extends Phaser.Scene {
     const baseY = spot ? spot.y : home.y;
     const scale = this._bobberDepthScale(baseY);
     const natural = (pick.lengthCm ?? 100) * PX_PER_CM * scale;
-    let width;
+    let length;
     let startX;
     if (spot) {
-      width = Math.min(TROPHY_LEAP_MAX_PX, spot.width, natural);
+      length = Math.min(TROPHY_LEAP_MAX_PX, spot.width, natural);
       startX = spot.x;
     } else {
       let edge = home.x;
       while (edge > WORLD_LEFT && this.map.isWater(edge - 10, home.y)) edge -= 10;
-      width = Math.min(TROPHY_LEAP_MAX_PX, WORLD_RIGHT - edge - 30, natural);
-      startX = edge + width * 0.5;
+      length = Math.min(TROPHY_LEAP_MAX_PX, WORLD_RIGHT - edge - 30, natural);
+      startX = edge + length * 0.5;
     }
-    const fish = this.add.image(startX, baseY + 30, key).setDepth(30);
-    // A tall picture (the manta, the sunfish) no taller than the sky above
-    // the water there: at the top of its leap it is clear of the sea.
-    width = Math.min(width, (baseY - this.cameras.main.worldView.y - 20) * fish.width / fish.height);
-    const endX = Math.min(startX + width * 0.12, WORLD_RIGHT - width * 0.5);
-    fish.setScale(width / fish.width);
-    // (Its top stays in the picture.)
-    const peakY = Math.max(baseY - width * 0.32 - 80,
-                           this.cameras.main.worldView.y + fish.displayHeight / 2 + 10);
+    // Slowly up out of the sea, arched, its tail just clear -- and frozen
+    // there by the camera flash (FishLeap's 'photo').
+    const src = this.textures.get(key).getSourceImage();
+    const fit = this._fitLeap(pick.species, 'photo', src, startX, baseY, length, [1], true);
     for (let i = 0; i < 14; i++) {
       this._spray(startX + Phaser.Math.Between(-60, 60) * scale, baseY, Math.max(scale, 0.8), 1);
     }
-    const t = { p: 0 };
-    this.tweens.add({
-      targets: t, p: 1, duration: TROPHY_LEAP_MS, ease: 'Sine.easeOut',
-      onUpdate: () => {
-        const p = t.p;
-        fish.x = Phaser.Math.Linear(startX, endX, p);
-        fish.y = Phaser.Math.Linear(baseY + 30, peakY, Math.sin(p * Math.PI / 2));
-        fish.rotation = Phaser.Math.Linear(-0.5, -0.12, p);
-        // The line runs to its mouth (its head is on the right).
-        const head = width * 0.45;
-        this.bobber.x = fish.x + Math.cos(fish.rotation) * head;
-        this.bobber.y = fish.y + Math.sin(fish.rotation) * head;
-        if (Math.random() < 0.5) this._spray(fish.x - Math.cos(fish.rotation) * head * 0.6, baseY, 1, 0.8);
+    this._splashRing(startX, baseY, scale, 1.6);
+    new FishLeap(this, {
+      key, species: pick.species, kind: 'photo', plan: fit.plan, length: fit.length, dir: 1,
+      x: startX, y: baseY, isWater: (px, py) => this.map.isWater(px, py), depth: 30,
+      ease: 'Sine.easeOut', keep: true,
+      onSpray: (sx, sy, strength, depth) => this._spray(sx, sy, Math.max(scale, 0.8), strength, depth),
+      onDrip: (dx, dy) => this._drip(dx, dy, baseY),
+      // The line runs to its mouth.
+      onPose: (leap) => {
+        const m = leap.mouth;
+        this.bobber.x = m.x;
+        this.bobber.y = m.y;
       },
-      onComplete: () => {
+      onDone: (leap) => {
         // Click -- the photo.
         this.audio.playSfx(SFX.SHUTTER, { volume: 0.9 });
         this.cameras.main.flash(TROPHY_FLASH_MS, 255, 255, 255);
         this.time.delayedCall(TROPHY_FLASH_MS * 0.7, () => {
-          fish.destroy();
+          leap.destroy();
           go();
         });
       },
