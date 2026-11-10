@@ -70,7 +70,7 @@ const WAKE_SPEED = 70;
 const WAKE_MS = 70;
 
 // BIG GAME (the big ocean, `bigGame`): a giant of the open sea fights much
-// longer and harder, but fairly. It makes many runs, each of seconds: then
+// longer and harder, but fairly. It makes a few runs, each of seconds: then
 // cranking is worth next to nothing and the reel shows red -- wait. After
 // each run it is tired for a while and the reel shows green -- crank now!
 // Runs take back more of the fight, but all together never more than half.
@@ -80,13 +80,15 @@ const WAKE_MS = 70;
 // the scene may let the hook tear out (FishingScene's OVERCRANK_ESCAPE).
 const BIG = {
   powerFullCm: 420,
-  cmPerRun: 70, minRuns: 3, maxRuns: 8,
+  // (Two to five runs, by length; until November 2026 three to eight, of
+  // up to 3.4 s: the red came too often and took the pace out of a fight.)
+  cmPerRun: 120, minRuns: 2, maxRuns: 5,
   takeMin: 0.06, takeMax: 0.1, takeTotal: 0.5,
-  runMsMin: 1800, runMsMax: 3400,
+  runMsMin: 1500, runMsMax: 2800,
   crankGain: 0.05,
   from: 0.08, until: 0.9,
   restMs: 2200,
-  jumpChance: 0.65,
+  jumpChance: 0.75,
   overcrankTurns: 1.5,
 };
 
@@ -135,7 +137,7 @@ export class FishFight {
 
     // The runs: where along the fight each one starts.
     const count = bigGame
-      ? Phaser.Math.Clamp(Math.round(cm / BIG.cmPerRun) + 2, BIG.minRuns, BIG.maxRuns)
+      ? Phaser.Math.Clamp(Math.round(cm / BIG.cmPerRun) + 1, BIG.minRuns, BIG.maxRuns)
       : Phaser.Math.Clamp(Math.floor(cm / CM_PER_RUN), 0, MAX_RUNS);
     const [takeMin, takeMax, takeTotal] = bigGame
       ? [BIG.takeMin, BIG.takeMax, BIG.takeTotal] : [RUN_TAKE_MIN, RUN_TAKE_MAX, RUN_TAKE_TOTAL];

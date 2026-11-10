@@ -19,7 +19,9 @@
 //   flag    a flag on its pole (`frames`: the pole and the cloth, cut apart
 //           on canvases of one size; the pole is the left edge, `flip`: the
 //           right): the pole stands still, the cloth waves from it
-//   perch   a bird on the rail: it shifts and looks about
+//   perch   a bird on the rail: it shifts and looks about (`foot`: how far
+//           down its picture its claws are -- they grip the rail at `y`,
+//           the tail hangs down over the wall)
 //   gulls   two gulls now and then flying over the wake (`frames`: wings up,
 //           wings down)
 //
@@ -46,7 +48,7 @@ export const BOATS = [
       { name: 'chest', kind: 'deck', x: 800, y: 700, height: 130, glints: true },
       { name: 'cannon', kind: 'deck', x: 1010, y: 665, height: 150 },
       { name: 'flag', kind: 'flag', frames: ['flag-pole', 'flag-cloth'], x: 1118, y: 437, height: 210, flip: true },
-      { name: 'parrot', kind: 'perch', x: 905, y: 438, height: 85 },
+      { name: 'parrot', kind: 'perch', x: 905, y: 437, height: 120, foot: 0.55 },
     ] },
   { id: 'speedboot',    nlName: 'Speedboot',    painting: 'backdrop-ocean-speedboot',
     props: [

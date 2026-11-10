@@ -339,7 +339,8 @@ FishFight's `BIG` and `src/scenes/TrophyScene.js`).
   the water behind the lure -- a fish having a look. The strike: the water
   explodes, the reel screams, "Vis aan!" -- and the music turns exciting.
 * **Big game** (`bigGame` in FishFight). Many more turns of the reel (8 to
-  34, by length: `bigGameTurnsFor`) and three to eight long runs. During a
+  34, by length: `bigGameTurnsFor`) and two to five runs (`BIG`; three to
+  eight longer ones at first made the red come too often). During a
   run the reel is ringed in pulsing **red**: cranking is worth almost
   nothing (5 %), and cranking hard against it may cost the fish (see
   above). After each run the fish is tired for a while and the ring turns

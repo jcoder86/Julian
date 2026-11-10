@@ -138,7 +138,7 @@ export class BoatProps {
   /** A bird on the rail: it shifts its weight and now and then looks about. */
   _perch(prop, key) {
     const scene = this.scene;
-    const bird = this._add(scene.add.image(prop.x, prop.y, key).setOrigin(0.5, 1).setDepth(HIGH_DEPTH));
+    const bird = this._add(scene.add.image(prop.x, prop.y, key).setOrigin(0.5, prop.foot ?? 1).setDepth(HIGH_DEPTH));
     bird.setScale(prop.height / bird.height);
     scene.tweens.add({
       targets: bird, angle: { from: -2.5, to: 2.5 }, duration: 1300, yoyo: true, repeat: -1,
