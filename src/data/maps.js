@@ -397,6 +397,21 @@ const MAP_DEFS = [
     // Fished from a boat of your choice (data/boats.js): its painting and
     // video take the place of the ones below, which are the first boat's.
     boats: true,
+    // The volcano on the island far away erupts now and then: a modest
+    // plume, glowing lumps, lava down some of its gullies -- and then,
+    // slowly, back to green (src/systems/Volcano.js). Design px: its
+    // crater, and each gully from the crater down (they stop well above
+    // the village on the shore). Seconds: before the first, between two.
+    volcano: {
+      crater: { x: 345, y: 11 },
+      flows: [
+        [[343, 12], [338, 19], [331, 27], [322, 35], [311, 43], [300, 50]],
+        [[347, 13], [349, 21], [352, 30], [355, 39], [357, 48]],
+        [[352, 13], [361, 20], [372, 27], [385, 35], [397, 43], [407, 49]],
+      ],
+      firstS: [40, 80],
+      everyS: [170, 290],
+    },
     backdropKey: 'backdrop-ocean',
     backdropImage: 'clean/backdrop-ocean.jpg',
     backdropVideo: 'clean/backdrop-ocean.mp4',

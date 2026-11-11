@@ -25,6 +25,7 @@ import { FishFight } from '../systems/FishFight.js';
 import { LureSwim } from '../systems/LureSwim.js';
 import { FishLeap, planLeap, leapExtent, leapSpecies, canBend } from '../systems/FishLeap.js';
 import { BoatProps } from '../systems/BoatProps.js';
+import { Volcano } from '../systems/Volcano.js';
 import { UI, COLOR, lettering } from '../systems/Ui.js';
 
 // =============================================================================
@@ -450,6 +451,8 @@ export class FishingScene extends Phaser.Scene {
     this._buildClouds();
     this._buildForeground();
     this._buildCharacters();
+    // A volcano on the far island, erupting now and then (the big ocean).
+    this.volcano = this.map.volcano ? new Volcano(this, this.map.volcano) : null;
     // What stands on the boat (the big ocean): data/boats.js `props`.
     this.boatProps = null;
     if (this.map.boats) {
@@ -595,6 +598,7 @@ export class FishingScene extends Phaser.Scene {
 
   update(_time, delta) {
     if (this.boatProps) this.boatProps.update();
+    if (this.volcano) this.volcano.update(delta);
     // DOM cloud parallax: each layer just scrolls its background. Position
     // and size are set from the layout (see _layoutClouds), so there is no
     // per-frame DOM measuring.

@@ -35,6 +35,8 @@ src/
     FishingLine.js            # the line, in every phase of fishing
     FishFight.js              # a hooked fish: swimming about, runs
     FishLeap.js               # a fish leaping out of the sea, its picture bent along its path
+    BoatProps.js              # what stands on each boat of the big ocean
+    Volcano.js                # the big ocean's island volcano, erupting now and then
     Ui.js                     # lettering, glow, buttons, menus
     ReelOverlay.js            # the reel you crank
     SaveSystem.js             # localStorage wrapper (see "Save data")
@@ -124,7 +126,18 @@ below the row, bigger, in a golden frame with rays of light behind it.
   parrot on the pirate ship, a cooler and a chequered flag on the
   speedboat -- on the right of the deck and at the right corner, never
   where the children sit, where the rod swings back or where the reel
-  comes up; the flags wave (a Rope, like the leaping fish). It plays differently from every other spot: lures are **trolled** behind the
+  comes up; the flags wave (a Rope, like the leaping fish). The volcano
+  on the island far away erupts now and then -- every three to five
+  minutes, the first a minute or so after arriving (`volcano` in
+  `maps.js`, `src/systems/Volcano.js`): a glow and wisps of steam, then a
+  modest ash plume that drifts off with the wind, glowing lumps thrown
+  up, and lava creeping down some of its gullies (each time others, and
+  never as far as the village on the shore). Then, slowly, back to green:
+  the plume thins and drifts away, the lava cools from its tips back to
+  the crater -- yellow, orange, red, dark -- steams, and its dark crust
+  fades into the slope, tips first. Nothing jumps back. All drawn by the
+  game over the painting (particles and lines); its clock is the scene's,
+  so an eruption waits while a catch is weighed. It plays differently from every other spot: lures are **trolled** behind the
   boat, bites are few, fights are long, and a catch is **weighed** in the
   harbour instead of shown on the catch screen (see "The big ocean" below).
   Six trolling baits: a skirted lure (rokjeslure), a diving plug, a rigged
